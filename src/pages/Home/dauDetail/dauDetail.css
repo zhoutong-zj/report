@@ -1,0 +1,427 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f5f7fa;
+    color: #333;
+    padding: 24px;
+    min-height: 100vh;
+}
+
+.page-container {
+    max-width: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    padding: 20px 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+.header-left h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #303133;
+    margin-bottom: 6px;
+}
+
+.header-left .subtitle {
+    font-size: 13px;
+    color: #909399;
+}
+
+.back-btn {
+    background-color: #ecf5ff;
+    color: #409eff;
+    border: 1px solid #b3d8ff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.back-btn:hover {
+    background-color: #409eff;
+    color: #ffffff;
+    border-color: #409eff;
+    box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+}
+
+/* Warning alert */
+.warning-alert {
+    padding: 12px 16px;
+    background-color: #fdf6ec;
+    border: 1px solid #f5dab1;
+    border-radius: 6px;
+    color: #e6a23c;
+    font-size: 13px;
+}
+
+/* Card */
+.card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Control panel */
+.control-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.filter-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #606266;
+    font-weight: 500;
+}
+
+.filter-item input[type="date"] {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #dcdfe6;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.filter-item input[type="date"]:focus {
+    border-color: #409eff;
+}
+
+.filter-item select {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #dcdfe6;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    background-color: #ffffff;
+    color: #303133;
+    transition: border-color 0.2s;
+    min-width: 160px;
+}
+
+.filter-item select:focus {
+    border-color: #409eff;
+}
+
+.search-item input[type="text"] {
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid #dcdfe6;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    width: 260px;
+    transition: border-color 0.2s, width 0.2s;
+}
+
+.search-item input[type="text"]:focus {
+    border-color: #409eff;
+    width: 320px;
+}
+
+.dau-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    background-color: #f0f9eb;
+    border: 1px solid #c2e7b0;
+    color: #67c23a;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.dau-refresh-btn:hover {
+    background-color: #67c23a;
+    color: #ffffff;
+    border-color: #67c23a;
+    box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
+}
+
+.dau-sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    background-color: #ecf5ff;
+    border: 1px solid #b3d8ff;
+    color: #409eff;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.dau-sort-btn:hover {
+    background-color: #409eff;
+    color: #ffffff;
+    border-color: #409eff;
+}
+
+/* Table */
+.table-panel {
+    padding: 0;
+    overflow: hidden;
+}
+
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.dau-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    table-layout: fixed;
+}
+
+.dau-table th {
+    background-color: #f8f9fa;
+    color: #606266;
+    font-weight: 600;
+    padding: 14px 10px;
+    text-align: left;
+    border-bottom: 2px solid #ebeef5;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dau-table td {
+    padding: 14px 10px;
+    border-bottom: 1px solid #ebeef5;
+    color: #303133;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dau-table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.dau-table tbody tr:hover {
+    background-color: #f5f7fa;
+}
+
+/* 选中的排查行高亮样式 */
+.dau-table tbody tr.dau-row-selected {
+    background-color: #e6f7ff !important;
+}
+
+.dau-table tbody tr.dau-row-selected td {
+    background-color: #e6f7ff !important;
+}
+
+.dau-table tbody tr.dau-row-selected td:first-child {
+    border-left: 4px solid #1890ff;
+    font-weight: 700;
+}
+
+.dau-table tbody tr.dau-row-selected:hover td {
+    background-color: #d4edff !important;
+}
+
+.dau-school-id {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    font-size: 12px;
+    color: #606266;
+    background-color: #f4f4f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.dau-version-badge {
+    color: #67c23a;
+    background-color: #f0f9eb;
+    border: 1px solid #c2e7b0;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.dau-os-badge {
+    color: #409eff;
+    background-color: #ecf5ff;
+    border: 1px solid #b3d8ff;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.dau-time-badge {
+    color: #303133;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.dau-action-btn {
+    background: #e6f7ff;
+    border: 1px solid #91d5ff;
+    color: #1890ff;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.dau-action-btn:hover {
+    background: #1890ff;
+    color: #ffffff;
+}
+
+.dau-action-btn.selected {
+    background: #1890ff;
+    color: #ffffff;
+    border-color: #1890ff;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(24, 144, 255, 0.35);
+}
+
+/* Chart Panel */
+.chart-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.panel-header {
+    border-bottom: 1px solid #ebeef5;
+    padding-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.panel-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.panel-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+}
+
+.panel-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.school-total-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0f7ff;
+    border: 1px solid #bae7ff;
+    color: #0083b0;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.school-total-badge strong {
+    color: #00779e;
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 3px;
+}
+
+.student-total-badge {
+    background: #f6ffed;
+    border: 1px solid #b7eb8f;
+    color: #389e0d;
+}
+
+.student-total-badge strong {
+    color: #237804;
+}
+
+.reset-school-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    background-color: #fff7eb;
+    border: 1px solid #ffd591;
+    color: #d46b08;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+    white-space: nowrap;
+}
+
+.reset-school-btn:hover {
+    background-color: #ff9900;
+    color: #ffffff;
+    border-color: #ff9900;
+    box-shadow: 0 2px 8px rgba(255, 153, 0, 0.3);
+}
+

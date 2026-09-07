@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>错误详情</title>
+    <link rel="stylesheet" href="homeDetail.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>错误详情</h1>
+            <button id="backBtn" class="back-btn">返回</button>
+        </div>
+
+        <div class="detail-content">
+            <div class="info-section">
+                <div class="section-header">
+                    <div class="header-title-wrap">
+                        <h2>基本信息</h2>
+                        <div class="header-status">
+                            <span id="status">-</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>登录名</label>
+                        <span id="loginName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>用户ID</label>
+                        <span id="userId">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>学生姓名</label>
+                        <span id="nickName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>学校</label>
+                        <span id="schoolName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>学校ID</label>
+                        <span id="schoolId">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>教学老师</label>
+                        <span id="teacherName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>卡类型</label>
+                        <span id="serviceName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>评测内容</label>
+                        <span id="identity">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>错误时间</label>
+                        <span id="errorTime">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>报告时间</label>
+                        <span id="reportTime">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>版本</label>
+                        <span id="appVersion">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>设备型号</label>
+                        <span id="deviceName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>系统版本</label>
+                        <span id="phonePlatformVersion">-</span>
+                    </div>
+                    <div class="info-item" style="display: none;">
+                        <label>操作</label>
+                        <button id="downloadCrashBtn" class="download-btn" style="display: none;">下载评测crash文件</button>
+                    </div>
+                    <div class="info-item" id="mediaContentItem" style="display: none;">
+                        <label>音视频内容</label>
+                        <span id="mediaContent">-</span>
+                    </div>
+                    <div class="info-item" id="mediaUrlItem" style="display: none;">
+                        <label>音视频地址</label>
+                        <span id="mediaUrl">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="section-header">
+                    <h2>错误信息</h2>
+                    <div class="header-actions">
+                        <button class="copy-btn">复制</button>
+                        <button class="collapse-btn"></button>
+                    </div>
+                </div>
+                <div class="error-box">
+                    <label>错误数据</label>
+                    <pre id="errorData">-</pre>
+                </div>
+            </div>
+
+            <div class="info-section collapsed">
+                <div class="section-header">
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <h2>训练任务</h2>
+                        <div class="task-info-header">
+                            <span class="label">训练教材：</span>
+                            <span id="studyTextbook" class="value">-</span>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button class="copy-btn">复制</button>
+                        <button class="collapse-btn"></button>
+                    </div>
+                </div>
+                <div class="task-box">
+                    <pre id="scheduleTask">-</pre>
+                </div>
+            </div>
+
+            <div class="info-section collapsed">
+                <div class="section-header">
+                    <h2 style="display: flex; align-items: center;">
+                        任务详情
+                        <span id="sceneType"
+                            style="font-size: 13px; font-weight: 600; color: #409eff; background-color: #ecf5ff; border: 1px solid #d9ecff; padding: 3px 8px; border-radius: 4px; margin-left: 20px; display: none; line-height: 1.5;"></span>
+                    </h2>
+                    <div class="header-actions">
+                        <button class="copy-btn">复制</button>
+                        <button class="collapse-btn"></button>
+                    </div>
+                </div>
+                <div class="task-box">
+                    <pre id="learningDetail">-</pre>
+                </div>
+            </div>
+
+            <div class="info-section collapsed">
+                <div class="section-header">
+                    <h2>学生信息</h2>
+                    <div class="header-actions">
+                        <button class="copy-btn">复制</button>
+                        <button class="collapse-btn"></button>
+                    </div>
+                </div>
+                <div class="task-box">
+                    <pre id="studentInfoDetail">-</pre>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="section-header">
+                    <h2>堆栈信息</h2>
+                    <div class="header-actions">
+                        <button class="copy-btn">复制</button>
+                        <button class="collapse-btn"></button>
+                    </div>
+                </div>
+                <div class="stack-box">
+                    <pre id="stackTrace">-</pre>
+                </div>
+            </div>
+
+            <div class="info-section" id="crashSection" style="display: none;">
+                <div class="section-header">
+                    <h2>评测crash数据</h2>
+                    <div class="header-actions">
+                        <button class="copy-btn">复制</button>
+                        <button class="collapse-btn"></button>
+                    </div>
+                </div>
+                <div class="crash-box">
+                    <pre id="crashData">加载中...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="homeDetail.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日志报表</title>
+    <link rel="stylesheet" href="logReport.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div>
+                <h1>日志分析控制台</h1>
+                <p class="subtitle">学练习系统客户端及接口异常数据汇总分析</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="reportDate"
+                        style="font-size: 13px; font-weight: 500; color: #606266; white-space: nowrap;">选择报表日期：</label>
+                    <input type="date" id="reportDate"
+                        style="height: 32px; padding: 0 10px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; outline: none; cursor: pointer;">
+                </div>
+                <div class="date-badge">
+                    <span id="currentDate">-</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Credentials Warning Alert -->
+        <div id="noConfigAlert"
+            style="display: none; padding: 12px 16px; background-color: #fdf6ec; border: 1px solid #f5dab1; border-radius: 6px; color: #e6a23c; font-size: 13px; margin-bottom: 5px; flex-direction: row; align-items: center; gap: 8px; width: 100%;">
+            <span>⚠️ <strong>尚未配置 OSS 凭证</strong>。当前展示为静态演示数据。请前往左侧菜单的 <strong>「OSS 工具」</strong>
+                配置并保存凭证以启用实时报表分析。</span>
+        </div>
+
+        <!-- Stats Grid -->
+        <section class="stats-grid">
+            <div class="stat-card error">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor"
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">所选日异常事件</span>
+                    <span class="stat-value" id="todayErrorCount">128</span>
+                    <span class="stat-trend negative" id="todayErrorTrend">累计错误日志数量</span>
+                </div>
+            </div>
+
+            <div class="stat-card warning" id="topAccountCard" style="cursor: pointer;" title="点击跳转至单个查询排查该账号">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor"
+                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label"
+                        style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        单天报错最多账号
+                        <span style="font-size: 11px; color: #e6a23c; font-weight: 500;">排查 →</span>
+                    </span>
+                    <span class="stat-value" id="mainErrorType"
+                        style="font-size: 16px; font-weight: 600; min-height: 38px; display: flex; align-items: center; word-break: break-all;">-</span>
+                    <span class="stat-trend warning-trend" id="mainErrorTypePercent">报错 0 次 · 最后时间 -</span>
+                </div>
+            </div>
+
+            <div class="stat-card info">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor"
+                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label" id="userCardLabel">当前异常用户数</span>
+                    <span class="stat-value" id="activeUserCount">8</span>
+                    <span class="stat-trend positive">产生异常的独立账号</span>
+                </div>
+            </div>
+
+            <div class="stat-card success">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor"
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">日志监控服务</span>
+                    <span class="stat-value" id="monitorStatus" style="color: #67c23a;">正常运行</span>
+                    <span class="stat-trend success-trend" id="monitorStatusLabel">OSS 通道就绪</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Visual Panel -->
+        <div class="dashboard-body">
+            <!-- Left: Two Charts splitting previous width (50%-50%) -->
+            <div class="main-panel-group" style="display: flex; gap: 20px; flex: 1; min-width: 0;">
+                <!-- Chart 1: 10-day DAU Statistics Line Chart -->
+                <div class="card" style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                    <div class="panel-header"
+                        style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2>近10日日活统计折线图</h2>
+                        <button id="viewDauBtn" class="view-dau-btn" title="点击查看单日日活详细数据">查看日活详细数据 →</button>
+                    </div>
+                    <div style="margin-top: 8px; display: flex; align-items: baseline; gap: 6px;">
+                        <span style="font-size: 13px; color: #606266; font-weight: 500;">本日日活：</span>
+                        <span id="todayDauCount" style="font-size: 24px; font-weight: 700; color: #409eff; line-height: 1;">-</span>
+                        <span style="font-size: 13px; color: #909399; font-weight: 500;">个账号</span>
+                    </div>
+                    <div class="chart-container"
+                        style="position: relative; height: 240px; width: 100%; display: flex; justify-content: center; align-items: center; padding: 10px 0;">
+                        <canvas id="dauLineChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Exception Type & Severity -->
+                <div class="card" style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                    <div class="panel-header"
+                        style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2>异常类型占比与严重程度分析</h2>
+                        <button id="viewExceptionDetailBtn" class="view-dau-btn" title="点击查看异常分类详细数据">查看详细数据 →</button>
+                    </div>
+                    <div class="chart-container"
+                        style="position: relative; height: 280px; width: 100%; display: flex; justify-content: center; align-items: center; padding: 10px 0;">
+                        <canvas id="errorTypePieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Search History and Direct Jump -->
+            <div class="side-panel card">
+                <div class="panel-header">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h2>今日报错账号</h2>
+                        <span class="badge-count" id="historyBadge">0</span>
+                    </div>
+                    <select id="sortSelector"
+                        style="padding: 4px 8px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 12px; color: #606266; outline: none; cursor: pointer; background: #fff;">
+                        <option value="count">按报错数量排序</option>
+                        <option value="time">按最后时间排序</option>
+                    </select>
+                </div>
+
+                <div class="history-list" id="historyList">
+                    <!-- Dynamic rendering of history search accounts -->
+                    <div class="empty-history" id="emptyHistory">
+                        <svg viewBox="0 0 24 24" width="40" height="40" style="color: #c0c4cc; margin-bottom: 10px;">
+                            <path fill="currentColor"
+                                d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
+                        </svg>
+                        <p>暂无历史查询账号</p>
+                        <p style="font-size: 12px; margin-top: 4px;">在「单个查询」搜索后，账号将显示在这里</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom: User Exception Distribution Line Chart -->
+        <section class="bottom-panel card" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+            <div class="panel-header"
+                style="border-bottom: 1px solid #ebeef5; padding-bottom: 10px; margin-bottom: 5px;">
+                <h2 style="font-size: 16px; font-weight: 600; color: #303133; margin: 0;">用户报错分布统计折线图</h2>
+                <span style="font-size: 12px; color: #909399;">横向显示异常用户，纵向显示报错日志数量</span>
+            </div>
+            <div class="chart-wrapper" style="position: relative; height: 280px; width: 100%;">
+                <canvas id="userErrorLineChart"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <!-- Chart.js for rendering the line chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Aliyun OSS JS SDK for loading dynamic report data -->
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
+    <script src="logReport.js?v=1722247990000"></script>
+</body>
+
+</html>

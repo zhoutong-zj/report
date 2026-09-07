@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSS 文件助手</title>
+    <link rel="stylesheet" href="ossTool.css">
+</head>
+<body>
+    <div class="oss-container">
+        <!-- Sidebar/Left Panel: Credentials Config -->
+        <aside class="config-panel">
+            <div class="panel-section">
+                <h3>OSS 凭证配置</h3>
+                <div class="form-group">
+                    <label for="accessKeyId">AccessKey ID</label>
+                    <input type="text" id="accessKeyId" placeholder="请输入 AccessKey ID">
+                </div>
+                <div class="form-group">
+                    <label for="accessKeySecret">AccessKey Secret</label>
+                    <input type="text" id="accessKeySecret" placeholder="请输入 AccessKey Secret">
+                </div>
+                <div class="form-group">
+                    <label for="endpoint">访问域名 (Endpoint)</label>
+                    <input type="text" id="endpoint" value="oss-cn-shanghai.aliyuncs.com" placeholder="例如 oss-cn-shanghai.aliyuncs.com">
+                </div>
+                <div class="form-group">
+                    <label for="bucket">存储空间 (Bucket)</label>
+                    <input type="text" id="bucket" value="zhongtai-prod" placeholder="请输入 Bucket 名称">
+                </div>
+                <div class="btn-row">
+                    <button id="saveConfigBtn" class="primary-btn">保存配置</button>
+                    <button id="clearConfigBtn" class="text-btn">清除配置</button>
+                </div>
+            </div>
+
+            <!-- Help Tips Card -->
+            <div class="help-card">
+                <h4>💡 温馨提示（关于跨域 CORS）</h4>
+                <p>在浏览器端直接访问 OSS，需要在阿里云 OSS 控制台对应的 Bucket 中配置<strong>跨域访问 (CORS)</strong> 规则：</p>
+                <ol>
+                    <li>来源 (Allowed Origin): 填写您的本地调试地址，例如 <code>*</code> 或 <code>http://127.0.0.1:*</code></li>
+                    <li>允许 Methods: 勾选 <code>GET</code>, <code>PUT</code>, <code>POST</code>, <code>DELETE</code>, <code>HEAD</code></li>
+                    <li>允许 Headers: 填写 <code>*</code></li>
+                    <li>暴露 Headers: 填写 <code>ETag</code>, <code>x-oss-request-id</code></li>
+                </ol>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="workspace-panel">
+            <!-- Tabs Menu -->
+            <div class="workspace-tabs">
+                <button class="tab-btn active" data-target="queryTab">查询与管理</button>
+                <button class="tab-btn" data-target="uploadTab">文件夹上传</button>
+            </div>
+
+            <!-- Tab 1: Query & List Objects -->
+            <div id="queryTab" class="tab-content active">
+                <div class="search-bar">
+                    <div class="form-inline">
+                        <label for="queryPrefix">目标前缀 (目录)</label>
+                        <input type="text" id="queryPrefix" value="usertemp/xuelianxitong/" placeholder="如: usertemp/xuelianxitong/">
+                    </div>
+                    <div class="form-inline" style="max-width: 180px; flex: 0 0 180px; margin-right: 10px;">
+                        <label for="queryDate">日期</label>
+                        <input type="date" id="queryDate">
+                    </div>
+                    <button id="queryBtn" class="primary-btn">查询文件</button>
+                </div>
+
+                <div class="table-container">
+                    <table class="oss-table">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>文件路径 (Key)</th>
+                                <th>大小</th>
+                                <th>修改时间</th>
+                                <th style="width: 150px; text-align: center;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ossFileList">
+                            <tr>
+                                <td colspan="5" class="empty-row">请输入凭证并点击上方“查询文件”按钮</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 2: Folder Upload -->
+            <div id="uploadTab" class="tab-content">
+                <div class="upload-header-bar">
+                    <div class="form-inline">
+                        <label for="uploadPrefix">上传目标目录前缀</label>
+                        <input type="text" id="uploadPrefix" value="usertemp/xuelianxitong/" placeholder="如: usertemp/xuelianxitong/">
+                    </div>
+                    <div class="file-picker-wrapper">
+                        <!-- webkitdirectory triggers folder selection -->
+                        <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;">
+                        <button id="selectFolderBtn" class="secondary-btn">选择本地文件夹</button>
+                    </div>
+                </div>
+
+                <!-- Drag & Drop Zone -->
+                <div id="dropZone" class="drop-zone">
+                    <svg viewBox="0 0 24 24" width="48" height="48" style="color: #c0c4cc; margin-bottom: 12px;">
+                        <path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+                    </svg>
+                    <p class="drop-text">点击右上方按钮选择文件夹，或将本地文件夹/文件拖拽到此处</p>
+                    <p id="folderNameDisplay" class="folder-name-active" style="display: none;"></p>
+                </div>
+
+                <!-- Upload Progress Panel -->
+                <div id="progressPanel" class="progress-panel" style="display: none;">
+                    <div class="progress-stats">
+                        <span id="progressCount">已上传 0 / 0 个文件</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar-track">
+                        <div id="progressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="btn-row" style="margin-top: 10px; justify-content: flex-end;">
+                        <button id="startUploadBtn" class="primary-btn">开始上传</button>
+                        <button id="clearQueueBtn" class="text-btn">清空队列</button>
+                    </div>
+                </div>
+
+                <!-- Upload Queue List -->
+                <div class="queue-container">
+                    <h4>上传队列 (<span id="queueCount">0</span> 个文件)</h4>
+                    <div class="queue-list" id="queueList">
+                        <div class="empty-queue">暂无待上传文件，请先选择文件夹</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Official Aliyun OSS Browser SDK -->
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
+    <script src="ossTool.js"></script>
+</body>
+</html>

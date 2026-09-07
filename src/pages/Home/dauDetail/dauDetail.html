@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单日日活详细数据列表</title>
+    <link rel="stylesheet" href="dauDetail.css">
+</head>
+
+<body>
+    <div class="page-container">
+        <!-- Header -->
+        <header class="page-header">
+            <div class="header-left">
+                <h1>单日日活详细数据列表</h1>
+                <p class="subtitle" id="dauPageSubtitle">报表日期：- · 共 0 条活跃记录</p>
+            </div>
+            <div class="header-right">
+                <button id="backBtn" class="back-btn">← 返回日志报表</button>
+            </div>
+        </header>
+
+        <!-- Credentials Warning Alert -->
+        <div id="noConfigAlert" class="warning-alert" style="display: none;">
+            <span>⚠️ <strong>尚未配置 OSS 凭证</strong>。当前展示为静态演示数据。请前往「OSS 工具」配置凭证以查看实时日活详情。</span>
+        </div>
+
+        <!-- School DAU Bar Chart Section (Placed directly below header) -->
+        <div class="chart-panel card">
+            <div class="panel-header">
+                <div class="panel-header-left">
+                    <h2>各学校日活人数分布柱状图</h2>
+                    <span class="subtitle">根据 schoolId 分类汇总各学校日活人数（横轴：学校，纵轴：日活人数）</span>
+                </div>
+                <div class="panel-header-right">
+                    <div id="studentTotalBadge" class="school-total-badge student-total-badge" title="当前统计的学生总人数">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="opacity: 0.85;">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                        <span>学生总人数：<strong id="studentTotalCount">0</strong> 人</span>
+                    </div>
+                    <div id="schoolTotalBadge" class="school-total-badge" title="当前统计的学校总数">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="opacity: 0.85;">
+                            <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
+                        </svg>
+                        <span>学校总数：<strong id="schoolTotalCount">0</strong> 所</span>
+                    </div>
+                    <button id="resetSchoolFilterBtn" class="reset-school-btn" style="display: none;" title="取消柱状图选中，查看全部学校">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                        <span id="resetSchoolFilterText">取消选中学校</span>
+                    </button>
+                </div>
+            </div>
+            <div class="chart-container" style="position: relative; height: 280px; width: 100%; margin-top: 16px;">
+                <canvas id="schoolDauLineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Filter & Control Panel -->
+        <div class="control-panel card">
+            <div class="filter-group">
+                <div class="filter-item">
+                    <label for="dauDateInput">选择报表日期：</label>
+                    <input type="date" id="dauDateInput">
+                </div>
+                <div class="filter-item search-item">
+                    <label for="dauSearchInput">搜索：</label>
+                    <input type="text" id="dauSearchInput" placeholder="按用户名 / 学校 / 设备 / 账号搜索..." />
+                </div>
+                <div class="filter-item">
+                    <label for="dauSchoolSelect">学校分类：</label>
+                    <select id="dauSchoolSelect">
+                        <option value="all">全部学校</option>
+                    </select>
+                </div>
+            </div>
+            <div class="action-group" style="display: flex; gap: 10px; align-items: center;">
+                <button id="dauRefreshBtn" class="dau-refresh-btn" title="点击重新从 OSS 获取最新日活数据">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                    </svg>
+                    <span>刷新数据</span>
+                </button>
+                <button id="dauSortBtn" class="dau-sort-btn" title="点击切换最后活跃时间排序方向">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z" />
+                    </svg>
+                    <span id="dauSortText">最新在前 (最后活跃时间 ↓)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Data Table Panel -->
+        <div class="table-panel card">
+            <div class="table-wrapper">
+                <table class="dau-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 4%; text-align: center;">#</th>
+                            <th style="width: 11%;">账号 ID</th>
+                            <th style="width: 9%;">用户名</th>
+                            <th style="width: 18%;">学校名称</th>
+                            <th style="width: 10%;">学校 ID</th>
+                            <th style="width: 8%;">版本号</th>
+                            <th style="width: 12%;">设备型号</th>
+                            <th style="width: 9%;">系统版本</th>
+                            <th style="width: 14%;">最后活跃时间</th>
+                            <th style="width: 5%; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dauTableBody">
+                        <!-- Dynamic DAU rows rendered here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart.js for line chart rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Aliyun OSS JS SDK -->
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
+    <script src="dauDetail.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>异常分类详细数据列表</title>
+    <link rel="stylesheet" href="exceptionDetail.css">
+</head>
+
+<body>
+    <div class="page-container">
+        <!-- Header -->
+        <header class="page-header">
+            <div class="header-left">
+                <h1>异常分类详细数据列表</h1>
+                <p class="subtitle" id="pageSubtitle">报表日期：- · 共 0 条异常日志记录</p>
+            </div>
+            <div class="header-right">
+                <button id="backBtn" class="back-btn">← 返回日志报表</button>
+            </div>
+        </header>
+
+        <!-- Credentials Warning Alert -->
+        <div id="noConfigAlert" class="warning-alert" style="display: none;">
+            <span>⚠️ <strong>尚未配置 OSS 凭证</strong>。当前展示为静态演示数据。请前往「OSS 工具」配置凭证以查看实时日志详情。</span>
+        </div>
+
+        <!-- Exception Ratio Bar Chart Section -->
+        <div class="chart-panel card">
+            <div class="panel-header">
+                <h2>异常类型占比与严重程度分析</h2>
+                <span class="subtitle">点击柱状图的对应色条可直接筛选下方的异常列表</span>
+            </div>
+            <div class="chart-container" style="position: relative; height: 280px; width: 100%; margin-top: 16px;">
+                <canvas id="errorTypePieChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Filter & Control Panel -->
+        <div class="control-panel card">
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label for="exceptionDateInput">选择报表日期：</label>
+                    <input type="date" id="exceptionDateInput">
+                </div>
+                <div class="filter-item search-item">
+                    <label for="exceptionSearchInput">账号搜索：</label>
+                    <input type="text" id="exceptionSearchInput" placeholder="请输入账号ID或用户名进行搜索..." />
+                </div>
+                <div class="filter-item">
+                    <button id="exceptionRefreshBtn" class="exception-refresh-btn" title="点击重新从 OSS 获取最新异常数据">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                        </svg>
+                        <span>刷新数据</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Dynamic Category Filter Tabs -->
+            <div class="tabs-wrapper">
+                <span class="tabs-label">分类过滤：</span>
+                <div class="tabs-group" id="categoryTabs">
+                    <button class="tab-btn" data-category="all">
+                        全部 <span class="badge" id="badge-all">0</span>
+                    </button>
+                    <button class="tab-btn active" data-category="evaluation_error">
+                        <span class="color-dot eval"></span>评测异常 <span class="badge" id="badge-eval">0</span>
+                    </button>
+                    <button class="tab-btn" data-category="data_error">
+                        <span class="color-dot data"></span>数据异常 <span class="badge" id="badge-data">0</span>
+                    </button>
+                    <button class="tab-btn" data-category="platform_error">
+                        <span class="color-dot platform"></span>平台异常 <span class="badge" id="badge-platform">0</span>
+                    </button>
+                    <button class="tab-btn" data-category="audio_video_error">
+                        <span class="color-dot av"></span>音视频异常 <span class="badge" id="badge-av">0</span>
+                    </button>
+                    <button class="tab-btn" data-category="other_error">
+                        <span class="color-dot other"></span>其他异常 <span class="badge" id="badge-other">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Data Table Panel -->
+        <div class="table-panel card">
+            <div class="table-wrapper">
+                <table class="exception-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%; text-align: center;">#</th>
+                            <th style="width: 20%;">账号 ID</th>
+                            <th style="width: 20%;">学生姓名</th>
+                            <th style="width: 15%;">异常类型</th>
+                            <th style="width: 15%;">日志发生时间</th>
+                            <th style="width: 10%;">文件大小</th>
+                            <th style="width: 15%; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exceptionTableBody">
+                        <!-- Dynamic Exception rows rendered here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Dialog for viewing log file content -->
+    <div id="logModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <header class="modal-header">
+                <div>
+                    <h3 id="modalTitle">日志文件内容</h3>
+                    <span id="modalSubtitle" style="font-size: 12px; color: #909399;">-</span>
+                </div>
+                <button id="modalCloseX" class="modal-close-x">&times;</button>
+            </header>
+            <div class="modal-body">
+                <pre><code id="modalCodeBlock">-</code></pre>
+            </div>
+            <footer class="modal-footer">
+                <button id="modalCopyBtn" class="modal-copy-btn">复制日志</button>
+                <button id="modalCloseBtn" class="modal-close-btn">关闭</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- 鼠标悬停停顿错误数据弹框 -->
+    <div id="errorDataPopover" class="error-popover" style="display: none;">
+        <div class="popover-header">
+            <div class="popover-title-wrap">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="#faad14">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+                <span class="popover-title">错误数据预览</span>
+                <span id="popoverTypeBadge" class="popover-type-badge"></span>
+            </div>
+            <div class="popover-actions">
+                <button id="popoverCopyBtn" class="popover-copy-btn" title="复制错误数据">复制</button>
+                <button id="popoverCloseBtn" class="popover-close-btn" title="关闭">✕</button>
+            </div>
+        </div>
+        <div class="popover-meta" id="popoverMeta"></div>
+        <div class="popover-body">
+            <pre id="popoverContent"></pre>
+        </div>
+        <div class="popover-footer">
+            <span>💡 提示：点击行可选中高亮，点击「查看内容」查看完整日志</span>
+        </div>
+    </div>
+
+    <!-- Chart.js for rendering the bar chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Aliyun OSS JS SDK for loading dynamic report data -->
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
+    <script src="exceptionDetail.js"></script>
+</body>
+
+</html>

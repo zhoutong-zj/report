@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户列表</title>
+    <link rel="stylesheet" href="singleQuery.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="search-panel">
+            <div class="search-filters">
+                <div class="filter-item">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" list="usernameList" placeholder="请输入用户名">
+                    <datalist id="usernameList"></datalist>
+                </div>
+                <div class="filter-item">
+                    <label for="date">日期</label>
+                    <input type="date" id="date">
+                </div>
+                <div class="filter-item">
+                    <label for="exceptionType">异常类型</label>
+                    <select id="exceptionType">
+                        <option value="all">全部</option>
+                        <option value="dataException">数据异常</option>
+                        <option value="platformException">平台异常</option>
+                        <option value="otherException">其他异常</option>
+                        <option value="evaluationException">评测异常</option>
+                        <option value="audioVideoException">音视频异常</option>
+                    </select>
+                </div>
+                <button id="searchBtn" class="search-btn">搜索</button>
+                <div class="filter-actions-right">
+                    <button id="backToDauBtn" class="back-to-dau-btn" style="display: none;" title="返回日活详情页">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                        </svg>
+                        <span>返回日活详情</span>
+                    </button>
+                    <button id="backToExceptionBtn" class="back-to-dau-btn back-to-exception-btn" style="display: none;"
+                        title="返回异常分类详情页">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                        </svg>
+                        <span>返回异常分类详情</span>
+                    </button>
+                    <button id="exportExcelBtn" class="export-btn" title="导出数据表格为 Excel">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                        </svg>
+                        <span>导出数据表格</span>
+                    </button>
+                    <button id="deleteUserDataBtn" class="delete-user-btn" title="删除该用户所有数据">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                        </svg>
+                        <span>删除个人数据</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>用户ID</th>
+                        <th>学生姓名</th>
+                        <th>错误时间</th>
+                        <th>文件大小</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="userList">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 鼠标悬停停顿错误数据弹框 -->
+    <div id="errorDataPopover" class="error-popover" style="display: none;">
+        <div class="popover-header">
+            <div class="popover-title-wrap">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="#faad14">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                </svg>
+                <span class="popover-title">错误数据预览</span>
+                <span id="popoverTypeBadge" class="popover-type-badge"></span>
+            </div>
+            <div class="popover-actions">
+                <button id="popoverCopyBtn" class="popover-copy-btn" title="复制错误数据">复制</button>
+                <button id="popoverCloseBtn" class="popover-close-btn" title="关闭">✕</button>
+            </div>
+        </div>
+        <div class="popover-meta" id="popoverMeta"></div>
+        <div class="popover-body">
+            <pre id="popoverContent"></pre>
+        </div>
+        <div class="popover-footer">
+            <span>💡 提示：点击行可选中高亮，点击「查看详情」进入完整报告</span>
+        </div>
+    </div>
+
+    <!-- Aliyun OSS JS SDK for loading dynamic query data -->
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
+    <!-- SheetJS for exporting data to Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="singleQuery.js"></script>
+</body>
+
+</html>
