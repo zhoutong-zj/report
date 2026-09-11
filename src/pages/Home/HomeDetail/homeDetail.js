@@ -3,7 +3,8 @@ const exceptionTypeNames = {
     'platformException': '平台异常',
     'otherException': '其他异常',
     'evaluationException': '评测异常',
-    'audioVideoException': '音视频异常'
+    'audioVideoException': '音视频异常',
+    'audioVideoTest': '音视频测试'
 };
 
 const exceptionTypeColors = {
@@ -11,7 +12,8 @@ const exceptionTypeColors = {
     'platformException': '#f5a623',
     'otherException': '#909090',
     'evaluationException': '#48e59e',
-    'audioVideoException': '#ab47bc'
+    'audioVideoException': '#ab47bc',
+    'audioVideoTest': '#2196f3'
 };
 
 const reportTypeMapping = {
@@ -19,7 +21,9 @@ const reportTypeMapping = {
     1: 'platformException',
     2: 'otherException',
     3: 'evaluationException',
-    4: 'audioVideoException'
+    4: 'audioVideoException',
+    5: 'audioVideoException',
+    6: 'audioVideoTest'
 };
 
 class DetailApp {
@@ -249,8 +253,8 @@ class DetailApp {
         document.getElementById('loginName').textContent = data.loginName || studentInfo.loginName || '-';
         document.getElementById('userId').textContent = data.userId || studentInfo.id || studentInfo.userId || '-';
         document.getElementById('nickName').textContent = data.nickName || studentInfo.nickName || '-';
-        document.getElementById('schoolName').textContent = studentInfo.schoolName || data.schoolName || '-';
-        document.getElementById('schoolId').textContent = studentInfo.schoolId || data.schoolId || '-';
+        document.getElementById('schoolName').textContent = studentInfo.shopName || data.shopName || studentInfo.schoolName || data.schoolName || '-';
+        document.getElementById('schoolId').textContent = studentInfo.shopId || data.shopId || studentInfo.schoolId || data.schoolId || '-';
         document.getElementById('teacherName').textContent = studentInfo.teacherName || data.teacherName || '-';
         document.getElementById('serviceName').textContent = studentInfo.serviceName || data.serviceName || '-';
         document.getElementById('identity').innerHTML = `<span style="color: #f56c6c;">${data.identity || '-'}</span>`;
@@ -267,7 +271,7 @@ class DetailApp {
         const mediaContentEl = document.getElementById('mediaContent');
         const mediaUrlItem = document.getElementById('mediaUrlItem');
         const mediaUrlEl = document.getElementById('mediaUrl');
-        if (exceptionType === 'audioVideoException') {
+        if (exceptionType === 'audioVideoException' || exceptionType === 'audioVideoTest') {
             if (mediaContentItem && mediaContentEl) {
                 mediaContentItem.style.display = 'flex';
                 let contentVal = data.content !== undefined && data.content !== null ? data.content : (data.studentInfo && data.studentInfo.content);

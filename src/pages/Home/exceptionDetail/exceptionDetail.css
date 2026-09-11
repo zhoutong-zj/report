@@ -275,6 +275,7 @@ body.modal-open {
 .color-dot.data { background-color: #ff8e53; }
 .color-dot.platform { background-color: #ffd200; }
 .color-dot.av { background-color: #bb86fc; }
+.color-dot.av-test { background-color: #42a5f5; }
 .color-dot.other { background-color: #bac8e0; }
 
 /* Table styling */

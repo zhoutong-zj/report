@@ -269,19 +269,46 @@ body {
     background-color: #f0f7ff;
 }
 
-/* 选中Item的背景高亮样式 */
+/* 选中Item的背景与左侧边框高亮样式 */
 .user-table tbody tr.selected-row {
     background-color: #e6f4ff !important;
-    position: relative;
-    box-shadow: inset 4px 0 0 #1677ff;
-}
-
-.user-table tbody tr.selected-row:hover {
-    background-color: #dbeeff !important;
 }
 
 .user-table tbody tr.selected-row td {
+    background-color: #e6f4ff !important;
     color: #1f2329;
+    font-weight: 500;
+}
+
+.user-table tbody tr.selected-row td:first-child {
+    border-left: 4px solid #1677ff;
+    font-weight: 700;
+    color: #1677ff;
+}
+
+.user-table tbody tr.selected-row:hover td {
+    background-color: #d4ecff !important;
+}
+
+/* 选中Item内的操作按钮高亮样式 */
+.view-detail-btn.selected,
+.user-table tbody tr.selected-row .view-detail-btn {
+    background-color: #1677ff;
+    color: #ffffff;
+    border-color: #1677ff;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(22, 119, 255, 0.4);
+}
+
+.view-detail-btn.selected svg,
+.user-table tbody tr.selected-row .view-detail-btn svg {
+    color: #ffffff;
+}
+
+.view-detail-btn.selected:hover,
+.user-table tbody tr.selected-row .view-detail-btn:hover {
+    background-color: #409eff;
+    border-color: #409eff;
 }
 
 /* 文件大小标签样式 */

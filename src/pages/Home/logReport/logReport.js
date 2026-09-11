@@ -301,23 +301,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render horizontal bar chart for exception type distribution
     let errorBarChart = null;
-    function renderPieChart(evalCount, dataCount, platformCount, otherCount, audioVideoCount = 0) {
+    function renderPieChart(evalCount, dataCount, platformCount, otherCount, audioVideoCount = 0, audioVideoTestCount = 0) {
         const ctx = document.getElementById('errorTypePieChart').getContext('2d');
 
         if (errorBarChart) {
             errorBarChart.destroy();
         }
 
-        const total = evalCount + dataCount + platformCount + otherCount + audioVideoCount;
+        const total = evalCount + dataCount + platformCount + otherCount + audioVideoCount + audioVideoTestCount;
         const getPercent = (count) => total === 0 ? 0 : ((count / total) * 100).toFixed(1);
 
         errorBarChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['评测异常', '数据异常', '平台异常', '音视频异常', '其他异常'],
+                labels: ['评测异常', '数据异常', '平台异常', '音视频异常', '音视频测试', '其他异常'],
                 datasets: [{
                     label: '异常数量',
-                    data: [evalCount, dataCount, platformCount, audioVideoCount, otherCount],
+                    data: [evalCount, dataCount, platformCount, audioVideoCount, audioVideoTestCount, otherCount],
                     backgroundColor: function (context) {
                         const chart = context.chart;
                         const { ctx, chartArea } = chart;
@@ -358,7 +358,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             return avGradient;
                         }
 
-                        if (dataIndex === 4) { // 其他异常：风尚蓝灰 (Soft Slate Steel -> Light Ice Platinum)
+                        if (dataIndex === 4) { // 音视频测试：明亮天蓝 (Ocean Blue -> Vibrant Sky Blue)
+                            const testGradient = ctx.createLinearGradient(startX, 0, endX, 0);
+                            testGradient.addColorStop(0, '#1976d2');
+                            testGradient.addColorStop(1, '#42a5f5');
+                            return testGradient;
+                        }
+
+                        if (dataIndex === 5) { // 其他异常：风尚蓝灰 (Soft Slate Steel -> Light Ice Platinum)
                             const otherGradient = ctx.createLinearGradient(startX, 0, endX, 0);
                             otherGradient.addColorStop(0, '#6a85b6');
                             otherGradient.addColorStop(1, '#bac8e0');
@@ -372,6 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         '#e05656',
                         '#d98214',
                         '#732d91',
+                        '#1565c0',
                         '#5872a0'
                     ],
                     borderWidth: 1,
@@ -721,12 +729,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let platformCount = 0;
         let otherCount = 0;
         let audioVideoCount = 0;
+        let audioVideoTestCount = 0;
         const uniqueUsers = new Set();
         const userErrorCounts = {};
         const userLastTime = {}; // username -> latest time string
 
         // Only count files within the designated error folders
-        const validFolders = new Set(['data_error', 'platform_error', 'other_error', 'evaluation_error', 'audio_video_error']);
+        const validFolders = new Set(['data_error', 'platform_error', 'other_error', 'evaluation_error', 'audio_video_error', 'audio_video_test']);
 
         objects.forEach(obj => {
             const key = obj.name;
@@ -773,6 +782,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         platformCount++;
                     } else if (folder === 'audio_video_error') {
                         audioVideoCount++;
+                    } else if (folder === 'audio_video_test') {
+                        audioVideoTestCount++;
                     } else if (folder === 'other_error') {
                         otherCount++;
                     }
@@ -780,7 +791,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        const total = evalCount + dataCount + platformCount + otherCount + audioVideoCount;
+        const total = evalCount + dataCount + platformCount + otherCount + audioVideoCount + audioVideoTestCount;
 
         // Set metrics card
         todayErrorCountEl.textContent = total;
@@ -791,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const getPercent = (count) => total === 0 ? 0 : parseFloat(((count / total) * 100).toFixed(1));
 
         // Update charts UI (Render Pie Chart)
-        renderPieChart(evalCount, dataCount, platformCount, otherCount, audioVideoCount);
+        renderPieChart(evalCount, dataCount, platformCount, otherCount, audioVideoCount, audioVideoTestCount);
 
         // Aggregate error counts per user
         const sortedUserEntries = Object.entries(userErrorCounts).sort((a, b) => b[1] - a[1]);
@@ -833,6 +844,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (audioVideoCount > 0) {
                     suggestionsHTML += `<li><strong>音视频异常报告 (${audioVideoCount} 次)</strong>：这通常代表音视频录制、播放或流媒体传输错误，请检查设备媒体权限及播放通道。</li>`;
                 }
+                if (audioVideoTestCount > 0) {
+                    suggestionsHTML += `<li><strong>音视频测试报告 (${audioVideoTestCount} 次)</strong>：记录音视频播放或录制专项测试日志，可排查专项测试参数与指标。</li>`;
+                }
                 if (suggestionsHTML === '') {
                     suggestionsHTML = `<li>当前系统异常主要由其他偶发性错误组成，错误频率在合理区间，无需立即处理。</li>`;
                 }
@@ -862,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mainErrorTypeEl.textContent = '无数据';
             mainErrorTypePercentEl.textContent = '报错 0 次 · 最后时间 -';
 
-            renderPieChart(0, 0, 0, 0, 0);
+            renderPieChart(0, 0, 0, 0, 0, 0);
             if (suggestionList) {
                 suggestionList.innerHTML = `<li>⚠️ 无法获取实时 data。请检查密钥跨域 CORS 设置及网络链接。</li>`;
             }
@@ -877,7 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
         todayErrorTrendEl.textContent = '↑ 18.4% 较昨日';
         activeUserCountEl.textContent = '8';
 
-        renderPieChart(59, 34, 23, 12, 10);
+        renderPieChart(59, 34, 23, 12, 10, 8);
 
         // Render mock 10-day DAU line chart
         const mockDauCounts = [18, 25, 32, 28, 42, 50, 46, 62, 75, 88];

@@ -166,8 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         loginName = fileData.loginName || studentInfo.loginName || fallbackUsername;
                         username = fileData.nickName || studentInfo.nickName || loginName || fileData.userName || studentInfo.userName || fallbackUsername;
-                        schoolName = studentInfo.schoolName || fileData.schoolName || '-';
-                        schoolId = studentInfo.schoolId || fileData.schoolId || '-';
+                        // 优先使用 shopName/shopId，同时兼容历史 schoolName/schoolId
+                        schoolName = studentInfo.shopName || fileData.shopName || studentInfo.schoolName || fileData.schoolName || '-';
+                        schoolId = studentInfo.shopId || fileData.shopId || studentInfo.schoolId || fileData.schoolId || '-';
                         appVersion = fileData.versionName || studentInfo.versionName || fileData.appVersion || fileData.version || fileData.clientVersion || studentInfo.appVersion || studentInfo.version || '-';
                         deviceName = fileData.deviceName || studentInfo.deviceName || '-';
                         phonePlatformVersion = fileData.phonePlatformVersion || studentInfo.phonePlatformVersion || '-';
@@ -188,6 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     account: loginName || fallbackUsername,
                     schoolName: schoolName,
                     schoolId: schoolId,
+                    shopName: schoolName,
+                    shopId: schoolId,
                     appVersion: appVersion,
                     deviceName: deviceName,
                     phonePlatformVersion: phonePlatformVersion
@@ -223,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let filteredList = currentDauList.filter(item => {
             if (selectedSchool !== 'all') {
-                if (item.schoolId !== selectedSchool && item.schoolName !== selectedSchool) {
+                if (item.schoolId !== selectedSchool && item.schoolName !== selectedSchool && item.shopId !== selectedSchool && item.shopName !== selectedSchool) {
                     return false;
                 }
             }
@@ -231,6 +234,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return (item.username && item.username.toLowerCase().includes(query)) ||
                 (item.loginName && item.loginName.toLowerCase().includes(query)) ||
                 (item.account && item.account.toLowerCase().includes(query)) ||
+                (item.shopName && item.shopName.toLowerCase().includes(query)) ||
+                (item.shopId && item.shopId.toLowerCase().includes(query)) ||
                 (item.schoolName && item.schoolName.toLowerCase().includes(query)) ||
                 (item.schoolId && item.schoolId.toLowerCase().includes(query)) ||
                 (item.appVersion && item.appVersion.toLowerCase().includes(query)) ||
@@ -326,8 +331,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return item.username.toLowerCase().includes(query) ||
                     (item.loginName && item.loginName.toLowerCase().includes(query)) ||
                     (item.account && item.account.toLowerCase().includes(query)) ||
-                    item.schoolName.toLowerCase().includes(query) ||
-                    item.schoolId.toLowerCase().includes(query) ||
+                    (item.shopName && item.shopName.toLowerCase().includes(query)) ||
+                    (item.shopId && item.shopId.toLowerCase().includes(query)) ||
+                    (item.schoolName && item.schoolName.toLowerCase().includes(query)) ||
+                    (item.schoolId && item.schoolId.toLowerCase().includes(query)) ||
                     item.appVersion.toLowerCase().includes(query) ||
                     item.deviceName.toLowerCase().includes(query) ||
                     item.phonePlatformVersion.toLowerCase().includes(query) ||
@@ -339,13 +346,14 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSchoolDauChart(schoolData, totalStudents);
     }
 
-    // 8.1 Aggregate DAU List by School (using schoolId & schoolName, deduplicated by loginName)
+    // 8.1 Aggregate DAU List by School / Shop (using shopId/schoolId & shopName/schoolName, deduplicated by loginName)
     function aggregateDauBySchool(dauList) {
         const schoolMap = {};
 
         dauList.forEach(item => {
-            const sId = item.schoolId || '未知学校';
-            const sName = (item.schoolName && item.schoolName !== '-') ? item.schoolName : sId;
+            const sId = item.shopId || item.schoolId || '未知学校';
+            const nameCandidate = item.shopName || item.schoolName;
+            const sName = (nameCandidate && nameCandidate !== '-') ? nameCandidate : sId;
             // 严格根据 loginName（用户登录名/账号）进行去重
             const userLoginName = item.loginName || item.account || item.key;
 
@@ -353,6 +361,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 schoolMap[sId] = {
                     schoolId: sId,
                     schoolName: sName,
+                    shopId: sId,
+                    shopName: sName,
                     users: new Set()
                 };
             }
@@ -364,6 +374,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = Object.values(schoolMap).map(item => ({
             schoolId: item.schoolId,
             schoolName: item.schoolName,
+            shopId: item.shopId,
+            shopName: item.shopName,
             dauCount: item.users.size
         }));
 
@@ -415,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 borderColors.push('#0083b0');
                 labelColors.push('#0083b0');
                 borderWidths.push(1);
-            } else if (item.schoolId === selectedSchool || item.schoolName === selectedSchool) {
+            } else if (item.schoolId === selectedSchool || item.schoolName === selectedSchool || item.shopId === selectedSchool || item.shopName === selectedSchool) {
                 const highlightGradient = ctx.createLinearGradient(0, 0, 0, 250);
                 highlightGradient.addColorStop(0, '#ff9900'); // 选中顶端：温暖活力橙
                 highlightGradient.addColorStop(1, '#ffdd6b'); // 选中底端：明亮暖阳黄
@@ -469,9 +481,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             const val = dataset.data[index];
                             if (val !== undefined && val !== null) {
                                 chartCtx.fillStyle = labelColors[index] || '#409eff';
-                                chartCtx.font = (selectedSchool !== 'all' && (schoolData[index].schoolId === selectedSchool || schoolData[index].schoolName === selectedSchool))
-                                    ? 'bold 12px Arial'
-                                    : 'bold 11px Arial';
+                                const isHighlighted = selectedSchool !== 'all' && (
+                                    schoolData[index].schoolId === selectedSchool ||
+                                    schoolData[index].schoolName === selectedSchool ||
+                                    schoolData[index].shopId === selectedSchool ||
+                                    schoolData[index].shopName === selectedSchool
+                                );
+                                chartCtx.font = isHighlighted ? 'bold 12px Arial' : 'bold 11px Arial';
                                 chartCtx.textAlign = 'center';
                                 chartCtx.textBaseline = 'bottom';
                                 chartCtx.fillText(val + ' 人', point.x, point.y - 6);
@@ -488,11 +504,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         const idx = elements[0].index;
                         const clickedItem = schoolData[idx];
                         if (dauSchoolSelect) {
+                            const targetId = clickedItem.shopId || clickedItem.schoolId;
                             // 如果已选中当前柱子，再次点击则取消选中
-                            if (dauSchoolSelect.value === clickedItem.schoolId || dauSchoolSelect.value === clickedItem.schoolName) {
+                            if (dauSchoolSelect.value === clickedItem.schoolId || dauSchoolSelect.value === clickedItem.schoolName || dauSchoolSelect.value === clickedItem.shopId || dauSchoolSelect.value === clickedItem.shopName) {
                                 dauSchoolSelect.value = 'all';
                             } else {
-                                dauSchoolSelect.value = clickedItem.schoolId;
+                                dauSchoolSelect.value = targetId;
                             }
                             saveCurrentStateToCache();
                             renderDauTable();
@@ -630,16 +647,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const schoolMap = {};
         (list || []).forEach(item => {
-            const sId = item.schoolId || item.schoolName || 'other';
-            const sName = (item.schoolName && item.schoolName !== '-') ? item.schoolName : sId;
+            const sId = item.shopId || item.schoolId || item.shopName || item.schoolName || 'other';
+            const nameCandidate = item.shopName || item.schoolName;
+            const sName = (nameCandidate && nameCandidate !== '-') ? nameCandidate : sId;
             if (!schoolMap[sId]) {
-                schoolMap[sId] = { schoolId: sId, schoolName: sName };
+                schoolMap[sId] = { schoolId: sId, schoolName: sName, shopId: sId, shopName: sName };
             }
         });
 
         let html = '<option value="all">全部学校</option>';
         Object.values(schoolMap).forEach(s => {
-            html += `<option value="${s.schoolId}">${s.schoolName} (${s.schoolId})</option>`;
+            const targetId = s.shopId || s.schoolId;
+            const targetName = s.shopName || s.schoolName;
+            html += `<option value="${targetId}">${targetName} (${targetId})</option>`;
         });
 
         dauSchoolSelect.innerHTML = html;

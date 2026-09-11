@@ -6,7 +6,8 @@ const exceptionTypeMapping = {
     'platformException': 'platform_error', // 平台异常
     'otherException': 'other_error',       // 其他异常
     'evaluationException': 'evaluation_error', // 评测异常
-    'audioVideoException': 'audio_video_error' // 音视频异常
+    'audioVideoException': 'audio_video_error', // 音视频异常
+    'audioVideoTest': 'audio_video_test'   // 音视频测试
 };
 
 /**
@@ -17,7 +18,8 @@ const exceptionTypeNames = {
     'platformException': '平台异常',
     'otherException': '其他异常',
     'evaluationException': '评测异常',
-    'audioVideoException': '音视频异常'
+    'audioVideoException': '音视频异常',
+    'audioVideoTest': '音视频测试'
 };
 
 /**
@@ -28,7 +30,8 @@ const exceptionTypeColors = {
     'platformException': '#f5a623',    // 橙色系
     'otherException': '#909090',       // 灰色系
     'evaluationException': '#48e59e',   // 绿色系
-    'audioVideoException': '#ab47bc'   // 紫色系
+    'audioVideoException': '#ab47bc',   // 紫色系
+    'audioVideoTest': '#2196f3'        // 蓝色系
 };
 
 /**
@@ -39,13 +42,15 @@ const reportTypeMapping = {
     1: 'platformException',
     2: 'otherException',
     3: 'evaluationException',
-    4: 'audioVideoException'
+    4: 'audioVideoException',
+    5: 'audioVideoException',
+    6: 'audioVideoTest'
 };
 
 /**
  * 所有合法的异常类型数组
  */
-const allExceptionTypes = ['dataException', 'platformException', 'otherException', 'evaluationException', 'audioVideoException'];
+const allExceptionTypes = ['dataException', 'platformException', 'otherException', 'evaluationException', 'audioVideoException', 'audioVideoTest'];
 
 /**
  * 用户列表应用主类，负责页面交互、数据请求、过滤及渲染
@@ -59,7 +64,7 @@ class UserListApp {
             exceptionType: 'all'     // 默认过滤类型为“全部”
         };
         this.allData = []; // 存储所有从OSS拉取下来的原始数据
-        this.selectedItemKey = null; // 当前点击选中的Item唯一标识
+        this.selectedItemKey = sessionStorage.getItem('singleQuery_selectedItemKey') || null; // 当前点击选中的Item唯一标识
         this.hoverTimer = null;      // 鼠标悬停停顿计时器
         this.popoverHideTimer = null;// 弹框延时关闭计时器
         this.currentPopoverItem = null; // 当前弹框展示的Item数据
@@ -77,6 +82,11 @@ class UserListApp {
         this.loadUsernameHistory(); // 加载并渲染历史查询账号
         this.restoreData();         // 从sessionStorage恢复上次查询的数据及条件
         this.checkBackBtnVisibility(); // 检查是否需要显示返回日活详情按钮
+
+        // 同步父级框架中的左侧导航高亮为“单个查询”
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ action: 'navigate', activeMenu: 'singleQuery/singleQuery.html' }, '*');
+        }
 
         // 检查是否有来自仪表盘的快捷搜索请求
         const autoSearchUser = sessionStorage.getItem('autoSearchUsername');
@@ -205,6 +215,11 @@ class UserListApp {
     restoreData() {
         const savedData = sessionStorage.getItem('listData');
         const savedFilters = sessionStorage.getItem('listFilters');
+        const savedSelectedKey = sessionStorage.getItem('singleQuery_selectedItemKey');
+
+        if (savedSelectedKey) {
+            this.selectedItemKey = savedSelectedKey;
+        }
 
         if (savedData && savedFilters) {
             try {
@@ -431,6 +446,8 @@ class UserListApp {
 
         // 初始化/清空已有数据并展示加载状态
         this.allData = [];
+        this.selectedItemKey = null;
+        sessionStorage.removeItem('singleQuery_selectedItemKey');
         this.renderLoading();
         this.saveUsernameToHistory(username);
 
@@ -870,23 +887,35 @@ class UserListApp {
             tr.style.cursor = 'pointer';
 
             // 生成唯一的Item标识
-            const itemKey = `${item.loginName || item.userId}_${item.reportTime || item.errorTime || ''}_${item.index || index}`;
+            const itemKey = `${item.loginName || item.userId || ''}_${item.reportTime || item.errorTime || ''}_${item.id !== undefined ? item.id : (item.index !== undefined ? item.index : index)}`;
             tr.dataset.itemKey = itemKey;
 
-            // 如果该项之前已被选中，恢复其高亮背景
-            if (this.selectedItemKey === itemKey) {
+            // 如果该项之前已被选中，恢复其高亮背景与选中状态
+            const isSelected = (this.selectedItemKey === itemKey);
+            if (isSelected) {
                 tr.classList.add('selected-row');
             }
 
             // 单击行：更换背景颜色（选中当前Item，取消其他Item的选中状态）
-            tr.addEventListener('click', () => {
-                // 移除所有已选行的选中样式
+            tr.addEventListener('click', (e) => {
+                // 如果点击的是查看详情按钮本身，由按钮自己的事件处理
+                if (e.target.closest('.view-detail-btn')) return;
+
+                // 移除所有已选行的选中样式与按钮高亮
                 tbody.querySelectorAll('tr.selected-row').forEach(row => {
                     row.classList.remove('selected-row');
                 });
-                // 为当前点击的行添加选中样式
+                tbody.querySelectorAll('.view-detail-btn.selected').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+
+                // 为当前点击的行添加选中样式与按钮高亮
                 tr.classList.add('selected-row');
+                const btn = tr.querySelector('.view-detail-btn');
+                if (btn) btn.classList.add('selected');
+
                 this.selectedItemKey = itemKey;
+                sessionStorage.setItem('singleQuery_selectedItemKey', itemKey);
             });
 
             // 鼠标悬停停顿逻辑：悬停超过350ms时弹出错误数据弹框
@@ -950,7 +979,7 @@ class UserListApp {
                 <td><span class="file-size-badge">${fileSizeDisplay}</span></td>
                 <td><span style="background-color: ${color}; color: #fff; padding: 4px 8px; border-radius: 4px;">${exceptionTypeNames[exceptionType] || '-'}</span></td>
                 <td>
-                    <button class="view-detail-btn" title="查看完整详情">
+                    <button class="view-detail-btn ${isSelected ? 'selected' : ''}" title="查看完整详情">
                         <span>查看详情</span>
                         <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
                             <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
@@ -962,12 +991,20 @@ class UserListApp {
             // 双击行 或 点击“查看详情”按钮：跳转至详情页
             const navigateToDetail = (e) => {
                 if (e) e.stopPropagation();
-                // 保持该行选中状态
+                // 保持该行选中状态与按钮高亮
                 tbody.querySelectorAll('tr.selected-row').forEach(row => {
                     row.classList.remove('selected-row');
                 });
+                tbody.querySelectorAll('.view-detail-btn.selected').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+
                 tr.classList.add('selected-row');
+                const btn = tr.querySelector('.view-detail-btn');
+                if (btn) btn.classList.add('selected');
+
                 this.selectedItemKey = itemKey;
+                sessionStorage.setItem('singleQuery_selectedItemKey', itemKey);
                 this.hideErrorPopover();
 
                 const itemWithIndex = { ...item, index: index + 1 };
@@ -1114,10 +1151,10 @@ class UserListApp {
             const userId = item.userId || studentInfo.id || studentInfo.userId || '-';
 
             // 8. 学校
-            const schoolName = studentInfo.schoolName || item.schoolName || '-';
+            const schoolName = studentInfo.shopName || item.shopName || studentInfo.schoolName || item.schoolName || '-';
 
             // 9. 学校ID
-            const schoolId = studentInfo.schoolId || item.schoolId || '-';
+            const schoolId = studentInfo.shopId || item.shopId || studentInfo.schoolId || item.schoolId || '-';
 
             // 10. 教学老师
             const teacherName = studentInfo.teacherName || item.teacherName || '-';
@@ -1354,6 +1391,8 @@ class UserListApp {
 
             // 清理当前页面数据及缓存
             this.allData = [];
+            this.selectedItemKey = null;
+            sessionStorage.removeItem('singleQuery_selectedItemKey');
             sessionStorage.removeItem('listData');
             this.renderUserList([]);
             this.hideErrorPopover();

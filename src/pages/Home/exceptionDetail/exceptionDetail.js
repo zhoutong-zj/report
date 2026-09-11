@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const badgeData = document.getElementById('badge-data');
     const badgePlatform = document.getElementById('badge-platform');
     const badgeAv = document.getElementById('badge-av');
+    const badgeAvTest = document.getElementById('badge-av-test');
     const badgeOther = document.getElementById('badge-other');
 
     // Modal elements
@@ -43,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'data_error': '数据异常',
         'platform_error': '平台异常',
         'audio_video_error': '音视频异常',
+        'audio_video_test': '音视频测试',
         'other_error': '其他异常'
     };
 
@@ -51,12 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'data_error': '#ff6b6b',
         'platform_error': '#f7971e',
         'audio_video_error': '#8e44ad',
+        'audio_video_test': '#2196f3',
         'other_error': '#6a85b6',
         'dataException': '#e5837a',
         'platformException': '#f5a623',
         'otherException': '#909090',
         'evaluationException': '#48e59e',
-        'audioVideoException': '#ab47bc'
+        'audioVideoException': '#ab47bc',
+        'audioVideoTest': '#2196f3'
     };
 
     const folderToClass = {
@@ -64,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'data_error': 'data',
         'platform_error': 'platform',
         'audio_video_error': 'av',
+        'audio_video_test': 'av-test',
         'other_error': 'other'
     };
 
@@ -209,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const objects = result.objects || [];
-            const validFolders = new Set(['data_error', 'platform_error', 'other_error', 'evaluation_error', 'audio_video_error']);
+            const validFolders = new Set(['data_error', 'platform_error', 'other_error', 'evaluation_error', 'audio_video_error', 'audio_video_test']);
 
             const filteredObjects = objects.filter(obj => {
                 const key = obj.name;
@@ -286,25 +291,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Render Statistics Chart
-    function renderExceptionChart(evalCount, dataCount, platformCount, avCount, otherCount) {
+    function renderExceptionChart(evalCount, dataCount, platformCount, avCount, avTestCount = 0, otherCount = 0) {
         const ctx = document.getElementById('errorTypePieChart').getContext('2d');
 
         if (errorBarChart) {
             errorBarChart.destroy();
         }
 
-        const total = evalCount + dataCount + platformCount + avCount + otherCount;
+        const total = evalCount + dataCount + platformCount + avCount + avTestCount + otherCount;
         const getPercent = (count) => total === 0 ? 0 : ((count / total) * 100).toFixed(1);
 
-        const categoryKeys = ['evaluation_error', 'data_error', 'platform_error', 'audio_video_error', 'other_error'];
+        const categoryKeys = ['evaluation_error', 'data_error', 'platform_error', 'audio_video_error', 'audio_video_test', 'other_error'];
 
         errorBarChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['评测异常', '数据异常', '平台异常', '音视频异常', '其他异常'],
+                labels: ['评测异常', '数据异常', '平台异常', '音视频异常', '音视频测试', '其他异常'],
                 datasets: [{
                     label: '异常数量',
-                    data: [evalCount, dataCount, platformCount, avCount, otherCount],
+                    data: [evalCount, dataCount, platformCount, avCount, avTestCount, otherCount],
                     backgroundColor: function (context) {
                         const chart = context.chart;
                         const { ctx: chartCtx, chartArea } = chart;
@@ -348,7 +353,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             avGradient.addColorStop(1, '#bb86fc');
                             return avGradient;
                         }
-                        if (dataIndex === 4) { // 其他异常
+                        if (dataIndex === 4) { // 音视频测试
+                            const testGradient = chartCtx.createLinearGradient(startX, 0, endX, 0);
+                            testGradient.addColorStop(0, '#1976d2');
+                            testGradient.addColorStop(1, '#42a5f5');
+                            return testGradient;
+                        }
+                        if (dataIndex === 5) { // 其他异常
                             const otherGradient = chartCtx.createLinearGradient(startX, 0, endX, 0);
                             otherGradient.addColorStop(0, '#6a85b6');
                             otherGradient.addColorStop(1, '#bac8e0');
@@ -361,6 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         '#e05656',
                         '#d98214',
                         '#732d91',
+                        '#1565c0',
                         '#5872a0'
                     ],
                     borderWidth: 1,
@@ -1020,6 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let dataCount = 0;
         let platformCount = 0;
         let avCount = 0;
+        let avTestCount = 0;
         let otherCount = 0;
 
         currentLogsList.forEach(item => {
@@ -1027,6 +1040,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (item.category === 'data_error') dataCount++;
             else if (item.category === 'platform_error') platformCount++;
             else if (item.category === 'audio_video_error') avCount++;
+            else if (item.category === 'audio_video_test') avTestCount++;
             else if (item.category === 'other_error') otherCount++;
         });
 
@@ -1036,10 +1050,11 @@ document.addEventListener('DOMContentLoaded', () => {
         badgeData.textContent = dataCount;
         badgePlatform.textContent = platformCount;
         badgeAv.textContent = avCount;
+        if (badgeAvTest) badgeAvTest.textContent = avTestCount;
         badgeOther.textContent = otherCount;
 
         // Render Chart
-        renderExceptionChart(evalCount, dataCount, platformCount, avCount, otherCount);
+        renderExceptionChart(evalCount, dataCount, platformCount, avCount, avTestCount, otherCount);
     }
 
     // Load Data Main Routine
@@ -1094,6 +1109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let dataCount = 0;
         let platformCount = 0;
         let avCount = 0;
+        let avTestCount = 0;
         let otherCount = 0;
 
         currentLogsList.forEach(item => {
@@ -1101,6 +1117,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (item.category === 'data_error') dataCount++;
             else if (item.category === 'platform_error') platformCount++;
             else if (item.category === 'audio_video_error') avCount++;
+            else if (item.category === 'audio_video_test') avTestCount++;
             else if (item.category === 'other_error') otherCount++;
         });
 
@@ -1110,6 +1127,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'data_error': dataCount,
             'platform_error': platformCount,
             'audio_video_error': avCount,
+            'audio_video_test': avTestCount,
             'other_error': otherCount
         };
 
@@ -1160,17 +1178,18 @@ document.addEventListener('DOMContentLoaded', () => {
             'teacher_admin': '教师管理员',
             'test_account': '测试学生'
         };
-        const mockFolders = ['evaluation_error', 'data_error', 'platform_error', 'audio_video_error', 'other_error'];
+        const mockFolders = ['evaluation_error', 'data_error', 'platform_error', 'audio_video_error', 'audio_video_test', 'other_error'];
         const mockLogs = [];
 
         const dateClean = dateStr.replace(/-/g, '_');
 
-        // Let's seed numbers based on the user's report stats (59, 34, 23, 10, 12)
+        // Let's seed numbers based on the user's report stats (59, 34, 23, 10, 8, 12)
         const counts = {
             'evaluation_error': 59,
             'data_error': 34,
             'platform_error': 23,
             'audio_video_error': 10,
+            'audio_video_test': 8,
             'other_error': 12
         };
 
@@ -1279,6 +1298,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (errorType === 'audio_video_error') {
             mockPayload.errorMessage = "MediaRecorder: Failed to start recording session: microphone resource occupied";
             mockPayload.stackTrace = "DOMException: Could not start video source: Permission denied or resource busy\n  at navigator.mediaDevices.getUserMedia (media_api.js:12)\n  at AudioRecorder.start (recorder.js:72)";
+        } else if (errorType === 'audio_video_test') {
+            mockPayload.errorMessage = "AudioVideoTest: Video playback test metric completed (fps: 30, dropped: 0)";
+            mockPayload.stackTrace = "Benchmark: Test session completed successfully\n  at runAvBenchmark (av_test.js:88)\n  at VideoPlayerTester.onMetrics (tester.js:145)";
+            mockPayload.mediaUrl = "https://example.com/test_video.mp4";
         } else {
             mockPayload.errorMessage = "Unexpected runtime crash: OutOfMemoryError in Javascript VM thread";
             mockPayload.stackTrace = "Fatal Error: Heap out of memory\n  at Array.map (<anonymous>)\n  at parseBigLogs (analyzer.js:204)\n  at runScheduleTask (cron.js:42)";
