@@ -365,6 +365,7 @@ class UserListApp {
      */
     handleBackToException() {
         sessionStorage.removeItem('fromExceptionDetail');
+        sessionStorage.setItem('fromExceptionDetail_back', 'true');
         if (window.self !== window.parent) {
             window.parent.postMessage({
                 action: 'navigate',

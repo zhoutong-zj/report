@@ -669,13 +669,20 @@ document.addEventListener('DOMContentLoaded', () => {
         setLoadingState();
 
         try {
-            // Fetch objects under prefix (up to 1000 files representing logs)
-            const result = await ossClient.list({
-                prefix: prefix,
-                'max-keys': 1000
-            });
+            // Fetch objects under prefix (supports pagination if > 1000 files)
+            let objects = [];
+            let marker = null;
+            do {
+                const listParams = {
+                    prefix: prefix,
+                    'max-keys': 1000
+                };
+                if (marker) listParams.marker = marker;
+                const result = await ossClient.list(listParams);
+                objects = objects.concat(result.objects || []);
+                marker = result.isTruncated ? result.nextMarker : null;
+            } while (marker);
 
-            const objects = result.objects || [];
             analyzeAndRenderData(objects);
 
             // Fetch recent 10 days of DAU user_activity file counts from OSS concurrently
@@ -1060,6 +1067,8 @@ document.addEventListener('DOMContentLoaded', () => {
         viewExceptionDetailBtn.addEventListener('click', () => {
             const dateVal = reportDateInput ? reportDateInput.value : '';
             sessionStorage.setItem('exceptionReportDate', dateVal);
+            sessionStorage.removeItem('exception_state_cache');
+            sessionStorage.setItem('force_refresh_exception', 'true');
             window.location.href = '../exceptionDetail/exceptionDetail.html';
         });
     }

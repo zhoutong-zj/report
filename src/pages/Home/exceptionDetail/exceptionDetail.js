@@ -208,12 +208,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const prefix = `usertemp/xuelianxitong/${formattedDate}/`;
 
         try {
-            const result = await ossClient.list({
-                prefix: prefix,
-                'max-keys': 1000
-            });
+            // 分页完整拉取指定前缀下的所有对象（彻底解决超过1000条截断导致数据不一致问题）
+            let objects = [];
+            let marker = null;
+            do {
+                const listParams = {
+                    prefix: prefix,
+                    'max-keys': 1000
+                };
+                if (marker) listParams.marker = marker;
+                const result = await ossClient.list(listParams);
+                objects = objects.concat(result.objects || []);
+                marker = result.isTruncated ? result.nextMarker : null;
+            } while (marker);
 
-            const objects = result.objects || [];
             const validFolders = new Set(['data_error', 'platform_error', 'other_error', 'evaluation_error', 'audio_video_error', 'audio_video_test']);
 
             const filteredObjects = objects.filter(obj => {
@@ -227,7 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             });
 
-            const itemPromises = filteredObjects.map(async (obj) => {
+            // 1. 同步瞬间构建完整的异常日志基础列表（包含精确的统计分类与时间信息，无需任何网络GET请求）
+            const parsedLogs = filteredObjects.map(obj => {
                 const key = obj.name;
                 const parts = key.split('/');
                 const username = parts[3];
@@ -246,47 +255,98 @@ document.addEventListener('DOMContentLoaded', () => {
                     errorTime = `${h}:${m}:${s}`;
                 }
 
-                // Asynchronously load student name and content from JSON
-                let studentName = '-';
-                let rawContent = '';
-                let parsedLogData = null;
-                try {
-                    const fileRes = await ossClient.get(key);
-                    const fileContent = fileRes.content ? fileRes.content.toString() : '';
-                    if (fileContent && fileContent.trim() !== '') {
-                        rawContent = fileContent;
-                        const parsed = JSON.parse(fileContent);
-                        parsedLogData = parsed;
-                        const data = Array.isArray(parsed) ? (parsed[0] || {}) : parsed;
-                        const studentInfo = data.studentInfo || {};
-                        studentName = data.nickName || studentInfo.nickName || data.userName || studentInfo.userName || '-';
-                    }
-                } catch (e) {
-                    console.warn(`Failed to read content for ${key}:`, e);
-                }
-
                 return {
                     key: key,
                     username: username,
-                    studentName: studentName,
+                    studentName: '-',
                     category: folder,
                     fileName: fileName,
                     timeStr: errorTime || '-',
                     lastModified: obj.lastModified || new Date().toISOString(),
                     size: obj.size,
-                    rawContent: rawContent,
-                    parsedData: parsedLogData
+                    rawContent: '',
+                    parsedData: null
                 };
             });
 
-            const parsedLogs = await Promise.all(itemPromises);
-
-            // Sort logs by time (newest first)
+            // 按日志时间倒序排列（最新优先）
             parsedLogs.sort((a, b) => b.lastModified.localeCompare(a.lastModified));
+
+            // 2. 异步后台安全并发解析学生姓名（同账号缓存+限制并发数，杜绝并发风暴与丢包）
+            enrichStudentNames(parsedLogs);
+
             return parsedLogs;
         } catch (e) {
             console.error('Failed to list files from OSS:', e);
             return generateMockLogs(dateStr, true);
+        }
+    }
+
+    /**
+     * 异步后台并发解析日志中的学生姓名，并实时局部刷新到表格中
+     */
+    async function enrichStudentNames(logsList) {
+        if (!ossClient || !logsList || logsList.length === 0) return;
+
+        const userToNameCache = {};
+        const concurrency = 6;
+        let index = 0;
+
+        async function worker() {
+            while (index < logsList.length) {
+                const currentIndex = index++;
+                const item = logsList[currentIndex];
+                if (!item || !item.key) continue;
+
+                // 同一账号直接复用已解析的学生姓名，极大减少请求量
+                if (userToNameCache[item.username]) {
+                    item.studentName = userToNameCache[item.username];
+                    updateTableRowStudentName(item.key, item.studentName);
+                    continue;
+                }
+
+                try {
+                    const fileRes = await ossClient.get(item.key);
+                    const fileContent = fileRes.content ? fileRes.content.toString() : '';
+                    if (fileContent && fileContent.trim() !== '') {
+                        item.rawContent = fileContent;
+                        const parsed = JSON.parse(fileContent);
+                        item.parsedData = parsed;
+                        const data = Array.isArray(parsed) ? (parsed[0] || {}) : parsed;
+                        const studentInfo = data.studentInfo || {};
+                        const name = data.nickName || studentInfo.nickName || data.userName || studentInfo.userName || '';
+                        if (name) {
+                            item.studentName = name;
+                            userToNameCache[item.username] = name;
+                            updateTableRowStudentName(item.key, name);
+                        }
+                    }
+                } catch (e) {
+                    // 局部读取错误不影响全局统计
+                }
+            }
+        }
+
+        const workers = [];
+        for (let i = 0; i < Math.min(concurrency, logsList.length); i++) {
+            workers.push(worker());
+        }
+        await Promise.all(workers);
+        saveExceptionStateToCache();
+    }
+
+    /**
+     * 局部更新表格指定行的学生姓名
+     */
+    function updateTableRowStudentName(key, name) {
+        if (!key || !name || name === '-') return;
+        const rows = exceptionTableBody.querySelectorAll('tr[data-key]');
+        for (const row of rows) {
+            if (row.dataset.key === key) {
+                const cell = row.querySelector('.student-name-cell');
+                if (cell) cell.textContent = name;
+                break;
+            }
         }
     }
 
@@ -817,12 +877,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectedClass = isSelected ? 'exception-row-selected' : '';
 
             html += `
-                <tr class="${selectedClass}">
+                <tr class="${selectedClass}" data-key="${item.key}">
                     <td style="text-align: center; color: ${isSelected ? '#f5222d' : '#909399'}; font-weight: ${isSelected ? '700' : '500'};">
                         ${isSelected ? '👉 ' + serialNum : serialNum}
                     </td>
                     <td style="font-weight: 600; color: #303133;">${item.username}</td>
-                    <td style="font-weight: 600; color: #303133;">${item.studentName}</td>
+                    <td class="student-name-cell" style="font-weight: 600; color: #303133;">${item.studentName}</td>
                     <td>
                         <span class="type-badge ${categoryClass}">
                             <span class="color-dot ${categoryClass}"></span>
@@ -1062,8 +1122,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedDate = exceptionDateInput.value;
         sessionStorage.setItem('exceptionReportDate', selectedDate);
 
-        // 如果不是强制刷新，且已存在当前日期的持久化缓存数据，则直接使用缓存数据
-        if (!forceRefresh) {
+        // 只有从单查询排查页面点击“返回异常分类详情”返回，且存在持久化缓存时，才直接恢复现场；常规进入或刷新一律拉取实时最新数据
+        const isBackFromSingleQuery = sessionStorage.getItem('fromExceptionDetail_back') === 'true';
+        if (isBackFromSingleQuery) {
+            sessionStorage.removeItem('fromExceptionDetail_back');
+        }
+
+        if (!forceRefresh && isBackFromSingleQuery) {
             const cache = getGlobalCache();
             if (cache && cache.date === selectedDate && cache.list && cache.list.length > 0) {
                 currentLogsList = cache.list;
