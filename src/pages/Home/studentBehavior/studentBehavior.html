@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生行为分析</title>
+    <link rel="icon" type="image/x-icon" href="../favicon.ico">
+    <link rel="shortcut icon" href="../favicon.ico">
+    <link rel="stylesheet" href="studentBehavior.css">
+</head>
+
+<body>
+    <div class="dashboard-container" id="dashboardContainer">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div>
+                <div class="header-title-row">
+                    <span class="header-badge">游戏行为监控</span>
+                    <h1>学生行为与游戏数据分析</h1>
+                </div>
+                <p class="subtitle">全景监控学生玩游戏情况，涵盖水果商店（切水果）、卡册（抽卡）、E宝游戏各模块行为与频次统计</p>
+            </div>
+            <div class="header-controls">
+                <div class="date-picker-wrap">
+                    <label for="reportDate">选择日期：</label>
+                    <input type="date" id="reportDate">
+                </div>
+                <div class="quick-dates">
+                    <button class="quick-date-btn active" data-offset="0">今天</button>
+                    <button class="quick-date-btn" data-offset="-1">昨天</button>
+                    <button class="quick-date-btn" data-offset="-2">前天</button>
+                </div>
+                <button id="refreshBtn" class="refresh-btn" title="重新获取数据">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                    </svg>
+                    <span>刷新数据</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Credentials Warning Alert -->
+        <div id="noConfigAlert" class="alert-box warning" style="display: none;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#e6a23c">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <span>⚠️ <strong>尚未检测到 OSS 凭证配置</strong>。当前为您展示预设的演示数据。请前往左侧 <strong>「OSS 工具」</strong> 配置并保存凭证以读取云端真实游戏行为日志。</span>
+        </div>
+
+        <!-- Core Metric Stat Cards -->
+        <section class="stats-grid">
+            <!-- Card 1: 活跃玩家 -->
+            <div class="stat-card player-card">
+                <div class="stat-card-top">
+                    <span class="stat-label">今日玩游戏学生数</span>
+                    <div class="stat-icon player-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 3s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-value" id="activePlayersCount">-</div>
+                <div class="stat-sub">独立学生 (UV) 参与人数</div>
+            </div>
+
+            <!-- Card 2: 总游戏行为频次 -->
+            <div class="stat-card event-card">
+                <div class="stat-card-top">
+                    <span class="stat-label">总游戏行为次数</span>
+                    <div class="stat-icon event-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-value" id="totalGamesCount">-</div>
+                <div class="stat-sub">全部模块累计上报记录 (PV)</div>
+            </div>
+
+            <!-- Card 3: 水果商店系统 -->
+            <div class="stat-card fruit-card">
+                <div class="stat-card-top">
+                    <div>
+                        <span class="stat-label">🍎 水果商店系统</span>
+                        <span class="system-tag">含切水果</span>
+                    </div>
+                    <div class="stat-icon fruit-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M20 10V8h-4V4h-2v4h-4V4H8v4H4v2h16zM4 12v8c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8H4zm7 8H6v-6h5v6zm7 0h-5v-6h5v6z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-value" id="fruitSystemCount">-</div>
+                <div class="stat-breakdown">
+                    <span class="badge fruit-main">水果商店主页: <strong id="fruitStoreCount">-</strong></span>
+                    <span class="badge fruit-sub">切水果: <strong id="fruitCuttingCount">-</strong></span>
+                </div>
+            </div>
+
+            <!-- Card 4: 卡册系统 -->
+            <div class="stat-card card-system-card">
+                <div class="stat-card-top">
+                    <div>
+                        <span class="stat-label">🎴 卡册系统</span>
+                        <span class="system-tag">含抽卡</span>
+                    </div>
+                    <div class="stat-icon card-system-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zm-6-1l4-5H9l3 4 2-2.5z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-value" id="cardSystemCount">-</div>
+                <div class="stat-breakdown">
+                    <span class="badge card-main">卡册主页: <strong id="cardAlbumCount">-</strong></span>
+                    <span class="badge card-sub">抽卡玩法: <strong id="cardGachaCount">-</strong></span>
+                </div>
+            </div>
+
+            <!-- Card 5: E宝游戏 -->
+            <div class="stat-card ebao-card">
+                <div class="stat-card-top">
+                    <div>
+                        <span class="stat-label">🤖 E宝游戏</span>
+                        <span class="system-tag">单体游戏</span>
+                    </div>
+                    <div class="stat-icon ebao-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.38-1 1.72V7h4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3h4V5.72c-.6-.34-1-.98-1-1.72a2 2 0 0 1 2-2zm-4 9a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-6 6h4v-1.5h-4V17z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-value" id="eBaoCount">-</div>
+                <div class="stat-sub">独立游戏关卡与交互</div>
+            </div>
+        </section>
+
+        <!-- Visual Charts Section -->
+        <section class="charts-grid">
+            <!-- Chart 1: Game Distribution Donut -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <h3>游戏与子玩法占比分布</h3>
+                        <span class="chart-sub">各大类游戏系统及子集页面调用频次</span>
+                    </div>
+                </div>
+                <div class="chart-container donut-wrap">
+                    <canvas id="gameDistributionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: 24h Hourly Trend -->
+            <div class="chart-card wide-chart">
+                <div class="chart-header">
+                    <div>
+                        <h3>24 小时学生游戏活跃时段趋势</h3>
+                        <span class="chart-sub">全天各整点时间段游戏游玩与上报热度走势</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="hourlyTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 3: Top Students Bar Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <h3>学生游戏活跃排行 Top 8</h3>
+                        <span class="chart-sub">当日游戏频次最高的学生</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="topStudentsChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Data Table Panel -->
+        <section class="table-section card">
+            <div class="table-toolbar">
+                <!-- Tabs -->
+                <div class="view-tabs">
+                    <button class="tab-btn active" data-view="summary">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 3s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                        </svg>
+                        <span>学生聚合统计 (按人)</span>
+                    </button>
+                    <button class="tab-btn" data-view="logs">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0 4H7v-2h10v2zm0-8H7V7h10v2z"/>
+                        </svg>
+                        <span>行为流水明细 (按次)</span>
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="table-filters">
+                    <div class="filter-input-wrap">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="#909399">
+                            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="搜索学生账号、姓名、学校...">
+                    </div>
+
+                    <select id="gameFilter" class="filter-select">
+                        <option value="all">🎮 全部游戏模块</option>
+                        <optgroup label="🍎 水果商店系统">
+                            <option value="group_fruit">全部水果商店系统</option>
+                            <option value="fruit_store">&nbsp;&nbsp;├ 水果商店主页</option>
+                            <option value="fruit_cutting">&nbsp;&nbsp;└ 🍉 切水果 (子页面)</option>
+                        </optgroup>
+                        <optgroup label="🎴 卡册系统">
+                            <option value="group_card">全部卡册系统</option>
+                            <option value="card_album">&nbsp;&nbsp;├ 卡册主页</option>
+                            <option value="card_gacha">&nbsp;&nbsp;└ 🎴 抽卡 (子页面)</option>
+                        </optgroup>
+                        <optgroup label="🤖 E宝游戏">
+                            <option value="e_bao">E宝游戏</option>
+                        </optgroup>
+                    </select>
+
+                    <button id="exportExcelBtn" class="export-btn" title="导出表格数据到 Excel">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+                            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                        </svg>
+                        <span>导出 Excel</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table 1: Student Summary View -->
+            <div id="summaryTableView" class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">序号</th>
+                            <th>学生账号</th>
+                            <th>学生姓名</th>
+                            <th>所属学校</th>
+                            <th>教学老师</th>
+                            <th style="text-align: center;">总游玩次数</th>
+                            <th>参与游戏分布</th>
+                            <th>最新活动时间</th>
+                            <th style="text-align: center; width: 110px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryTableBody">
+                        <tr>
+                            <td colspan="9" class="loading-cell">正在加载学生游戏汇总数据...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table 2: Event Logs View -->
+            <div id="logsTableView" class="table-wrapper" style="display: none;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 190px;">发生时间</th>
+                            <th>学生账号</th>
+                            <th>学生姓名</th>
+                            <th>所属学校</th>
+                            <th>主系统归属</th>
+                            <th>具体游戏/子页面</th>
+                            <th>设备型号</th>
+                            <th>系统版本</th>
+                            <th style="text-align: center; width: 100px;">详情</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                        <tr>
+                            <td colspan="9" class="loading-cell">正在加载行为流水数据...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Footer / Pagination -->
+            <div class="table-footer">
+                <div class="table-info" id="tableInfo">显示 0 条数据</div>
+                <div class="pagination-controls" id="paginationControls" style="display: none;">
+                    <button id="prevPageBtn" class="page-btn">上一页</button>
+                    <span id="pageIndicator" class="page-indicator">1 / 1</span>
+                    <button id="nextPageBtn" class="page-btn">下一页</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- User Game Detail & Flowchart View -->
+    <div class="user-detail-container" id="userDetailContainer" style="display: none;">
+        <!-- Top Back Bar -->
+        <div class="detail-nav-bar">
+            <button id="backToListBtn" class="back-btn">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                </svg>
+                <span>返回学生列表</span>
+            </button>
+            <div class="detail-date-badge">
+                <span id="detailCurrentDate">-</span>
+            </div>
+        </div>
+
+        <!-- Student Profile Card -->
+        <div class="student-profile-card">
+            <div class="student-profile-left">
+                <div class="student-avatar" id="detailAvatar">学</div>
+                <div class="student-profile-info">
+                    <div class="name-row">
+                        <h2 id="detailStudentName">-</h2>
+                        <span class="account-tag" id="detailUsername">-</span>
+                    </div>
+                    <div class="meta-row">
+                        <span>🏫 学校: <strong id="detailSchoolName">-</strong></span>
+                        <span>👩‍🏫 老师: <strong id="detailTeacherName">-</strong></span>
+                    </div>
+                </div>
+            </div>
+            <div class="student-profile-stats">
+                <div class="profile-stat-box">
+                    <span class="num" id="detailTotalCount">0</span>
+                    <span class="label">今日总玩次数</span>
+                </div>
+                <div class="profile-stat-box fruit">
+                    <span class="num" id="detailFruitCount">0</span>
+                    <span class="label">水果商店/切水果</span>
+                </div>
+                <div class="profile-stat-box card">
+                    <span class="num" id="detailCardCount">0</span>
+                    <span class="label">卡册/抽卡</span>
+                </div>
+                <div class="profile-stat-box ebao">
+                    <span class="num" id="detailEbaoCount">0</span>
+                    <span class="label">E宝游戏</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Process Flowchart Card -->
+        <div class="flowchart-section card">
+            <div class="flowchart-header">
+                <div class="header-left">
+                    <div class="flowchart-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="#10b981">
+                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>学生玩游戏时序流程图</h3>
+                        <p class="flowchart-sub">按当天时间先后顺序完整还原进入游戏、切换主页与子集玩法的流转过程，点击任意步骤可查看数据详情</p>
+                    </div>
+                </div>
+                <div class="flowchart-legend">
+                    <span class="legend-item fruit"><span class="dot"></span>水果系统(主页/切水果)</span>
+                    <span class="legend-item card"><span class="dot"></span>卡册系统(主页/抽卡)</span>
+                    <span class="legend-item ebao"><span class="dot"></span>E宝游戏</span>
+                </div>
+            </div>
+
+            <!-- Interactive Flowchart Canvas / 3-Track Game Lines -->
+            <div class="flowchart-tracks" id="flowchartTracks">
+                <!-- Tracks dynamically injected by JS:
+                     线路一: 水果商店系统 (含切水果)
+                     线路二: 卡册系统 (含抽卡)
+                     线路三: E宝游戏
+                     有记录才显示，无记录则不显示
+                -->
+            </div>
+        </div>
+
+        <!-- Student Event Table -->
+        <div class="user-logs-section card">
+            <div class="user-logs-header">
+                <h3>该学生游戏行为明细列表</h3>
+                <span id="userLogsCountText" style="font-size: 13px; color: #9ca3af;">共 0 条记录</span>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px;">序号</th>
+                            <th style="width: 190px;">发生时间</th>
+                            <th>归属主系统</th>
+                            <th>具体游戏/页面</th>
+                            <th>子集归属说明</th>
+                            <th>设备型号</th>
+                            <th>系统版本</th>
+                            <th style="text-align: center; width: 110px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userLogsTableBody">
+                        <tr>
+                            <td colspan="8" class="loading-cell">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Behavior Log Detail Modal -->
+    <div id="detailModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <span class="modal-game-badge" id="modalGameBadge">切水果</span>
+                    <h3>游戏行为数据详情</h3>
+                </div>
+                <button id="modalCloseBtn" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-meta-grid" id="modalMetaGrid">
+                <!-- Meta items injected by JS -->
+            </div>
+            <div class="modal-body">
+                <div class="json-header">
+                    <span>原始上报数据 (gameDetail / studentInfo)</span>
+                    <button id="modalCopyBtn" class="copy-json-btn">复制 JSON</button>
+                </div>
+                <pre id="modalJsonPre" class="json-pre"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- External Libs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="studentBehavior.js"></script>
+</body>
+
+</html>

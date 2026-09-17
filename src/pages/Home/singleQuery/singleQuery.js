@@ -536,13 +536,8 @@ class UserListApp {
                         }
 
                         let errorTime = '-';
-                        if (reportTime && reportTime.includes('_')) {
-                            const timeSegments = reportTime.split('_');
-                            if (timeSegments.length >= 4 && timeSegments[3].length >= 6) {
-                                errorTime = `${timeSegments[3].substring(0, 2)}时${timeSegments[3].substring(2, 4)}分${timeSegments[3].substring(4, 6)}秒`;
-                            } else if (timeSegments.length >= 6) {
-                                errorTime = `${timeSegments[3]}时${timeSegments[4]}分${timeSegments[5]}秒`;
-                            }
+                        if (reportTime) {
+                            errorTime = this.formatReportTime(reportTime);
                         }
 
                         this.allData.push({
@@ -580,13 +575,18 @@ class UserListApp {
                     if (data && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
                         const items = Array.isArray(data) ? data : [data];
                         items.forEach(item => {
+                            let itemTime = item.errorTime || item.happenTime || item.time || '';
+                            if (!itemTime && item.reportTime) {
+                                itemTime = item.reportTime;
+                            }
+                            const formattedTime = this.formatReportTime(itemTime);
                             this.allData.push({
                                 ...item,
                                 sourceExceptionType: exceptionType,
                                 index: index,
                                 fileSize: fileSize || text.length,
                                 size: fileSize || text.length,
-                                errorTime: item.errorTime || item.happenTime || item.time || ''
+                                errorTime: formattedTime || itemTime || ''
                             });
                         });
                     }
@@ -652,13 +652,8 @@ class UserListApp {
                 }
 
                 let errorTime = '-';
-                if (reportTime && reportTime.includes('_')) {
-                    const timeSegments = reportTime.split('_');
-                    if (timeSegments.length >= 4 && timeSegments[3].length >= 6) {
-                        errorTime = `${timeSegments[3].substring(0, 2)}时${timeSegments[3].substring(2, 4)}分${timeSegments[3].substring(4, 6)}秒`;
-                    } else if (timeSegments.length >= 6) {
-                        errorTime = `${timeSegments[3]}时${timeSegments[4]}分${timeSegments[5]}秒`;
-                    }
+                if (reportTime) {
+                    errorTime = this.formatReportTime(reportTime);
                 }
 
                 this.allData.push({
@@ -692,13 +687,18 @@ class UserListApp {
                     if (data && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
                         const items = Array.isArray(data) ? data : [data];
                         items.forEach(item => {
+                            let itemTime = item.errorTime || item.happenTime || item.time || '';
+                            if (!itemTime && item.reportTime) {
+                                itemTime = item.reportTime;
+                            }
+                            const formattedTime = this.formatReportTime(itemTime);
                             this.allData.push({
                                 ...item,
                                 sourceExceptionType: exceptionType,
                                 index: index,
                                 fileSize: calcSize,
                                 size: calcSize,
-                                errorTime: item.errorTime || item.happenTime || item.time || ''
+                                errorTime: formattedTime || itemTime || ''
                             });
                         });
                     }
@@ -760,7 +760,7 @@ class UserListApp {
         const studentInfo = item.studentInfo || {};
         const userIdVal = item.userId || studentInfo.id || studentInfo.userId || item.loginName || '-';
         const nickNameVal = item.nickName || studentInfo.nickName || '-';
-        const timeVal = item.errorTime || item.reportTime || '-';
+        const timeVal = this.formatReportTime(item.errorTime || item.reportTime || '-');
         const sizeVal = this.formatFileSize(item.fileSize !== undefined ? item.fileSize : item.size);
 
         if (metaEl) {
@@ -976,7 +976,7 @@ class UserListApp {
                 <td>${index + 1}</td>
                 <td>${userIdVal}</td>
                 <td>${nickNameVal}</td>
-                <td>${item.errorTime || '-'}</td>
+                <td>${this.formatReportTime(item.errorTime || item.reportTime || '-')}</td>
                 <td><span class="file-size-badge">${fileSizeDisplay}</span></td>
                 <td><span style="background-color: ${color}; color: #fff; padding: 4px 8px; border-radius: 4px;">${exceptionTypeNames[exceptionType] || '-'}</span></td>
                 <td>
@@ -1066,17 +1066,39 @@ class UserListApp {
     }
 
     /**
-     * 格式化报告时间 (例如：2026_09_03_094226 -> 2026年9月3日 9时42分26秒)
+     * 格式化报告时间 (例如：2026_09_17_144933 -> 2026年09月17日 14时49分33秒)
      */
     formatReportTime(dateInput) {
         if (!dateInput && dateInput !== 0) return '-';
         const str = String(dateInput).trim();
         if (!str || str === '-') return '-';
 
-        const matchCompactTime = str.match(/^(\d{4})_(\d{2})_(\d{2})_(\d{2})(\d{2})(\d{2})(?:_\d+)?$/);
+        // 1. 紧凑型: 2026_09_17_144933 或 2026_09_17_144933_999
+        const matchCompactTime = str.match(/(\d{4})_(\d{2})_(\d{2})_(\d{2})(\d{2})(\d{2})/);
         if (matchCompactTime) {
-            return `${parseInt(matchCompactTime[1])}年${parseInt(matchCompactTime[2])}月${parseInt(matchCompactTime[3])}日 ${parseInt(matchCompactTime[4])}时${parseInt(matchCompactTime[5])}分${parseInt(matchCompactTime[6])}秒`;
+            return `${matchCompactTime[1]}年${matchCompactTime[2]}月${matchCompactTime[3]}日 ${matchCompactTime[4]}时${matchCompactTime[5]}分${matchCompactTime[6]}秒`;
         }
+
+        // 2. 下划线型: 2026_09_17_14_49_33
+        const matchUnderscore = str.match(/(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_(\d{2})/);
+        if (matchUnderscore) {
+            return `${matchUnderscore[1]}年${matchUnderscore[2]}月${matchUnderscore[3]}日 ${matchUnderscore[4]}时${matchUnderscore[5]}分${matchUnderscore[6]}秒`;
+        }
+
+        // 3. 标准日期格式
+        try {
+            const dt = new Date(str.includes('-') ? str.replace(/-/g, '/') : str);
+            if (!isNaN(dt.getTime())) {
+                const y = dt.getFullYear();
+                const m = String(dt.getMonth() + 1).padStart(2, '0');
+                const d = String(dt.getDate()).padStart(2, '0');
+                const hh = String(dt.getHours()).padStart(2, '0');
+                const mm = String(dt.getMinutes()).padStart(2, '0');
+                const ss = String(dt.getSeconds()).padStart(2, '0');
+                return `${y}年${m}月${d}日 ${hh}时${mm}分${ss}秒`;
+            }
+        } catch (e) {}
+
         return str;
     }
 
@@ -1129,7 +1151,7 @@ class UserListApp {
             const studentName = item.nickName || studentInfo.nickName || studentInfo.name || item.studentName || item.name || '-';
 
             // 2. 错误时间
-            const errorTime = item.errorTime || item.happenTime || item.reportTime || item.time || '-';
+            const errorTime = this.formatReportTime(item.errorTime || item.happenTime || item.reportTime || item.time || '-');
 
             // 3. 评测类型
             const type = item.exceptionType || reportTypeMapping[item.reportType] || item.sourceExceptionType || 'otherException';

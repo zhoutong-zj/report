@@ -160,26 +160,26 @@ class DetailApp {
         if (!str || str === '-') return '-';
 
         const toCnFormat = (yyyy, mm, dd, hh, mi, ss) => {
-            const y = parseInt(yyyy, 10);
-            const m = parseInt(mm, 10);
-            const d = parseInt(dd, 10);
+            const y = yyyy;
+            const m = String(mm).padStart(2, '0');
+            const d = String(dd).padStart(2, '0');
             if (hh !== undefined && mi !== undefined && ss !== undefined) {
-                const h = parseInt(hh, 10);
-                const min = parseInt(mi, 10);
-                const s = parseInt(ss, 10);
+                const h = String(hh).padStart(2, '0');
+                const min = String(mi).padStart(2, '0');
+                const s = String(ss).padStart(2, '0');
                 return `${y}年${m}月${d}日 ${h}时${min}分${s}秒`;
             }
             return `${y}年${m}月${d}日`;
         };
 
         // 1. 处理格式: 如 2026_09_03_094226_909 或 2026_09_03_094226 (YYYY_MM_DD_HHmmss 或 YYYY_MM_DD_HHmmss_SSS)
-        const matchCompactTime = str.match(/^(\d{4})_(\d{2})_(\d{2})_(\d{2})(\d{2})(\d{2})(?:_\d+)?$/);
+        const matchCompactTime = str.match(/(\d{4})_(\d{2})_(\d{2})_(\d{2})(\d{2})(\d{2})/);
         if (matchCompactTime) {
             return toCnFormat(matchCompactTime[1], matchCompactTime[2], matchCompactTime[3], matchCompactTime[4], matchCompactTime[5], matchCompactTime[6]);
         }
 
         // 2. 处理格式: 如 2026_09_03_09_42_26 或 2026_09_03_09_42_26_909 (YYYY_MM_DD_HH_mm_ss_...)
-        const matchFullUnderscore = str.match(/^(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_(\d{2})(?:_\d+)?$/);
+        const matchFullUnderscore = str.match(/(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_(\d{2})/);
         if (matchFullUnderscore) {
             return toCnFormat(matchFullUnderscore[1], matchFullUnderscore[2], matchFullUnderscore[3], matchFullUnderscore[4], matchFullUnderscore[5], matchFullUnderscore[6]);
         }
@@ -258,7 +258,7 @@ class DetailApp {
         document.getElementById('teacherName').textContent = studentInfo.teacherName || data.teacherName || '-';
         document.getElementById('serviceName').textContent = studentInfo.serviceName || data.serviceName || '-';
         document.getElementById('identity').innerHTML = `<span style="color: #f56c6c;">${data.identity || '-'}</span>`;
-        document.getElementById('errorTime').textContent = data.errorTime || '-';
+        document.getElementById('errorTime').textContent = this.formatDateTime(data.errorTime || data.reportTime || '-');
         document.getElementById('status').innerHTML = `<span style="background-color: ${color}; color: #fff; padding: 4px 8px; border-radius: 4px;">${typeName}</span>`;
         document.getElementById('appVersion').textContent = data.versionName || data.version || '-';
         document.getElementById('deviceName').textContent = data.deviceName || studentInfo.deviceName || '-';
