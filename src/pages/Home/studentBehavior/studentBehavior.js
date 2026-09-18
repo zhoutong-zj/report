@@ -930,6 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     label: '玩游戏总次数',
                     data: data,
                     backgroundColor: '#3b82f6',
+                    hoverBackgroundColor: '#2563eb',
                     borderRadius: 4,
                     barThickness: 16
                 }]
@@ -938,11 +939,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
+                onHover: (event, chartElement) => {
+                    if (event && event.native && event.native.target) {
+                        event.native.target.style.cursor = (chartElement && chartElement.length) ? 'pointer' : 'default';
+                    }
+                },
+                onClick: (evt, elements) => {
+                    let clickedIndex = -1;
+                    if (elements && elements.length > 0) {
+                        clickedIndex = elements[0].index;
+                    } else if (topStudentsChart) {
+                        const nearest = topStudentsChart.getElementsAtEventForMode(evt.native || evt, 'y', { intersect: false }, false);
+                        if (nearest && nearest.length > 0) {
+                            clickedIndex = nearest[0].index;
+                        }
+                    }
+                    if (clickedIndex >= 0 && clickedIndex < top8.length) {
+                        const student = top8[clickedIndex];
+                        if (student && student.username) {
+                            showUserGameDetail(student.username);
+                        }
+                    }
+                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            label: (ctx) => ` 游玩 ${ctx.raw} 次`
+                            label: (ctx) => ` 游玩 ${ctx.raw} 次 (点击查看详情)`
                         }
                     }
                 },
