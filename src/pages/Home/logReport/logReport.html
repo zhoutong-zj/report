@@ -5,8 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>日志报表</title>
-    <link rel="icon" type="image/x-icon" href="../favicon.ico">
-    <link rel="shortcut icon" href="../favicon.ico">
+    <link rel="icon" type="image/x-icon" href="../favicon.ico?v=4">
+    <link rel="icon" type="image/png" sizes="32x32" href="../../../src/assets/favicon-32x32.png?v=4">
+    <link rel="icon" type="image/png" sizes="16x16" href="../../../src/assets/favicon-16x16.png?v=4">
+    <link rel="shortcut icon" href="../favicon.ico?v=4">
+    <link rel="apple-touch-icon" href="../favicon.png?v=4">
     <link rel="stylesheet" href="logReport.css">
 </head>
 
@@ -24,6 +27,11 @@
                         style="font-size: 13px; font-weight: 500; color: #606266; white-space: nowrap;">选择报表日期：</label>
                     <input type="date" id="reportDate"
                         style="height: 32px; padding: 0 10px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; outline: none; cursor: pointer;">
+                </div>
+                <div class="quick-dates">
+                    <button class="quick-date-btn active" data-offset="0">今日</button>
+                    <button class="quick-date-btn" data-offset="-1">昨天</button>
+                    <button class="quick-date-btn" data-offset="-2">前天</button>
                 </div>
                 <div class="date-badge">
                     <span id="currentDate">-</span>

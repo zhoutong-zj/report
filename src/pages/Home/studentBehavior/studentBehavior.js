@@ -70,21 +70,90 @@ document.addEventListener('DOMContentLoaded', () => {
     const cardGachaCountEl = document.getElementById('cardGachaCount');
     const eBaoCountEl = document.getElementById('eBaoCount');
 
-    // Chart Canvas Elements
-    const distributionCanvas = document.getElementById('gameDistributionChart');
+    // Chart & Schedule Elements
+    const distributionCanvas = document.getElementById('timeSlotDistributionChart') || document.getElementById('gameDistributionChart');
     const hourlyTrendCanvas = document.getElementById('hourlyTrendChart');
     const topStudentsCanvas = document.getElementById('topStudentsChart');
+    const timeSlotTableContainer = document.getElementById('timeSlotTableContainer');
+    const timeSlotChartContainer = document.getElementById('timeSlotChartContainer');
+    const timeSlotMiniTableBody = document.getElementById('timeSlotMiniTableBody');
+    const slotTableViewBtn = document.getElementById('slotTableViewBtn');
+    const slotChartViewBtn = document.getElementById('slotChartViewBtn');
+    const peakSlotBadge = document.getElementById('peakSlotBadge');
 
     // Table & Filter Elements
     const tabBtns = document.querySelectorAll('.tab-btn');
     const summaryTableView = document.getElementById('summaryTableView');
     const logsTableView = document.getElementById('logsTableView');
+    const dauTimeSlotTableView = document.getElementById('dauTimeSlotTableView');
     const summaryTableBody = document.getElementById('summaryTableBody');
     const logsTableBody = document.getElementById('logsTableBody');
+    const dauTimeSlotTableBody = document.getElementById('dauTimeSlotTableBody');
     const searchInput = document.getElementById('searchInput');
     const gameFilter = document.getElementById('gameFilter');
+    const timeSlotFilter = document.getElementById('timeSlotFilter');
+    const dauSortBtn = document.getElementById('dauSortBtn');
+    const dauSortBtnText = document.getElementById('dauSortBtnText');
+    const sortDauTimeTh = document.getElementById('sortDauTimeTh');
+    const dauSortArrow = document.getElementById('dauSortArrow');
+    const timeSlotSummaryBar = document.getElementById('timeSlotSummaryBar');
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     const tableInfo = document.getElementById('tableInfo');
+
+    // Time Slot Classification Definitions
+    const TIME_SLOT_DEFS = [
+        { key: 'morning_early', name: '早晨时段', range: '06:00 - 09:00', icon: '🌅', color: '#1d4ed8', cssClass: 'slot-early', startHour: 6, endHour: 9 },
+        { key: 'morning', name: '上午时段', range: '09:00 - 12:00', icon: '☀️', color: '#15803d', cssClass: 'slot-morning', startHour: 9, endHour: 12 },
+        { key: 'noon', name: '中午时段', range: '12:00 - 14:00', icon: '🍱', color: '#a16207', cssClass: 'slot-noon', startHour: 12, endHour: 14 },
+        { key: 'afternoon', name: '下午时段', range: '14:00 - 18:00', icon: '☕', color: '#c2410c', cssClass: 'slot-afternoon', startHour: 14, endHour: 18 },
+        { key: 'evening', name: '晚间高峰', range: '18:00 - 22:00', icon: '🌙', color: '#7e22ce', cssClass: 'slot-evening', startHour: 18, endHour: 22 },
+        { key: 'night', name: '深夜时段', range: '22:00 - 06:00', icon: '🌌', color: '#475569', cssClass: 'slot-night', startHour: 22, endHour: 6 }
+    ];
+
+    function getTimeSlotInfo(dateInput) {
+        let h = 12;
+        if (dateInput instanceof Date && !isNaN(dateInput.getTime())) {
+            h = dateInput.getHours();
+        } else if (typeof dateInput === 'number') {
+            h = dateInput;
+        } else if (typeof dateInput === 'string') {
+            const d = new Date(dateInput);
+            if (!isNaN(d.getTime())) h = d.getHours();
+        }
+
+        if (h >= 6 && h < 9) return TIME_SLOT_DEFS[0];
+        if (h >= 9 && h < 12) return TIME_SLOT_DEFS[1];
+        if (h >= 12 && h < 14) return TIME_SLOT_DEFS[2];
+        if (h >= 14 && h < 18) return TIME_SLOT_DEFS[3];
+        if (h >= 18 && h < 22) return TIME_SLOT_DEFS[4];
+        return TIME_SLOT_DEFS[5];
+    }
+
+    function formatFullDateTime(d) {
+        if (!d) return '-';
+        const date = new Date(d);
+        if (isNaN(date.getTime())) return String(d);
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hh = String(date.getHours()).padStart(2, '0');
+        const mm = String(date.getMinutes()).padStart(2, '0');
+        const ss = String(date.getSeconds()).padStart(2, '0');
+        return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+    }
+
+    function getRelativeTimeDesc(d) {
+        if (!d) return { text: '-', isFresh: false };
+        const date = new Date(d);
+        const now = new Date();
+        const diffSec = Math.floor((now - date) / 1000);
+        if (diffSec < 0 || diffSec < 300) return { text: '刚刚活跃', isFresh: true };
+        if (diffSec < 3600) return { text: `${Math.floor(diffSec / 60)}分钟前`, isFresh: true };
+        if (diffSec < 86400 && date.getDate() === now.getDate()) {
+            return { text: `${Math.floor(diffSec / 3600)}小时前`, isFresh: false };
+        }
+        return { text: '当日使用', isFresh: false };
+    }
 
     // User Detail & Flowchart View Elements
     const dashboardContainer = document.getElementById('dashboardContainer');
@@ -116,7 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let ossClient = null;
     let rawObjectsList = []; // Parsed file items
     let studentSummaryList = []; // Aggregated by student
-    let currentView = 'summary'; // 'summary' | 'logs'
+    let dauUsersList = []; // Parsed DAU users with last active time & time slot
+    let selectedTimeSlot = 'all'; // 'all' | 'morning_early' | 'morning' | 'noon' | 'afternoon' | 'evening' | 'night'
+    let dauTimeSortOrder = 'desc'; // 'desc' = latest first, 'asc' = earliest first
+    let currentView = 'summary'; // 'summary' | 'logs' | 'dauTimeSlot'
     let currentModalItem = null;
     let userToInfoCache = {}; // username -> { studentName, schoolName, teacherName }
     let selectedSummaryUsername = null; // Currently selected student in summary table
@@ -198,9 +270,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 searchInput.value = '';
                 summaryTableView.style.display = 'block';
                 logsTableView.style.display = 'none';
-            } else {
+                if (dauTimeSlotTableView) dauTimeSlotTableView.style.display = 'none';
+                if (timeSlotSummaryBar) timeSlotSummaryBar.style.display = 'none';
+                gameFilter.style.display = 'inline-block';
+                if (timeSlotFilter) timeSlotFilter.style.display = 'none';
+                if (dauSortBtn) dauSortBtn.style.display = 'none';
+            } else if (currentView === 'logs') {
                 summaryTableView.style.display = 'none';
                 logsTableView.style.display = 'block';
+                if (dauTimeSlotTableView) dauTimeSlotTableView.style.display = 'none';
+                if (timeSlotSummaryBar) timeSlotSummaryBar.style.display = 'none';
+                gameFilter.style.display = 'inline-block';
+                if (timeSlotFilter) timeSlotFilter.style.display = 'none';
+                if (dauSortBtn) dauSortBtn.style.display = 'none';
+            } else if (currentView === 'dauTimeSlot') {
+                summaryTableView.style.display = 'none';
+                logsTableView.style.display = 'none';
+                if (dauTimeSlotTableView) dauTimeSlotTableView.style.display = 'block';
+                if (timeSlotSummaryBar) timeSlotSummaryBar.style.display = 'grid';
+                gameFilter.style.display = 'none';
+                if (timeSlotFilter) timeSlotFilter.style.display = 'inline-block';
+                if (dauSortBtn) dauSortBtn.style.display = 'inline-flex';
+                renderTimeSlotSummaryBar();
             }
             applyFiltersAndRender();
         });
@@ -209,6 +300,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Filter listeners
     searchInput.addEventListener('input', () => applyFiltersAndRender());
     gameFilter.addEventListener('change', () => applyFiltersAndRender());
+
+    if (timeSlotFilter) {
+        timeSlotFilter.addEventListener('change', (e) => {
+            selectedTimeSlot = e.target.value;
+            renderTimeSlotSummaryBar();
+            applyFiltersAndRender();
+        });
+    }
+
+    function toggleDauSort() {
+        dauTimeSortOrder = (dauTimeSortOrder === 'desc') ? 'asc' : 'desc';
+        if (dauSortBtnText) dauSortBtnText.textContent = `最后使用时间 ${dauTimeSortOrder === 'desc' ? '↓' : '↑'}`;
+        if (dauSortArrow) dauSortArrow.textContent = dauTimeSortOrder === 'desc' ? '↓' : '↑';
+        applyFiltersAndRender();
+    }
+
+    if (dauSortBtn) dauSortBtn.addEventListener('click', toggleDauSort);
+    if (sortDauTimeTh) sortDauTimeTh.addEventListener('click', toggleDauSort);
 
     // 3. Initialize OSS Client
     function initOssClient() {
@@ -288,6 +397,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Parse raw objects list
             parseAndAnalyzeObjects(objects, dateStr);
+
+            // Fetch DAU users and last activity time slots concurrently
+            fetchDauActivityForDate(dateStr);
         } catch (e) {
             console.error('Failed to list game files from OSS:', e);
             // On network error or empty, fallback
@@ -506,29 +618,183 @@ document.addEventListener('DOMContentLoaded', () => {
         eBaoCountEl.textContent = eBao.toLocaleString();
     }
 
-    // 8. Render Visual Charts
+    // 8. Render Visual Charts & Time Slot Schedule
     function renderCharts() {
+        renderTimeSlotReportTable();
         renderDistributionDonut();
         renderHourlyTrendChart();
         renderTopStudentsBar();
     }
 
-    // Donut Chart: Game Distribution
+    // Bind Time Slot Card View Switcher (Schedule Table vs Donut Chart)
+    if (slotTableViewBtn && slotChartViewBtn) {
+        slotTableViewBtn.addEventListener('click', () => {
+            slotTableViewBtn.classList.add('active');
+            slotChartViewBtn.classList.remove('active');
+            if (timeSlotTableContainer) timeSlotTableContainer.style.display = 'block';
+            if (timeSlotChartContainer) timeSlotChartContainer.style.display = 'none';
+        });
+
+        slotChartViewBtn.addEventListener('click', () => {
+            slotChartViewBtn.classList.add('active');
+            slotTableViewBtn.classList.remove('active');
+            if (timeSlotTableContainer) timeSlotTableContainer.style.display = 'none';
+            if (timeSlotChartContainer) timeSlotChartContainer.style.display = 'block';
+            renderDistributionDonut();
+        });
+    }
+
+    // Render Time Slot Schedule Mini Table (With explicit time ranges)
+    function renderTimeSlotReportTable() {
+        if (!timeSlotMiniTableBody) return;
+
+        // Calculate count for each time slot
+        const slotCounts = {
+            morning_early: 0,
+            morning: 0,
+            noon: 0,
+            afternoon: 0,
+            evening: 0,
+            night: 0
+        };
+
+        let totalUsers = 0;
+        if (dauUsersList && dauUsersList.length > 0) {
+            totalUsers = dauUsersList.length;
+            dauUsersList.forEach(u => {
+                if (u.timeSlot && slotCounts[u.timeSlot.key] !== undefined) {
+                    slotCounts[u.timeSlot.key]++;
+                }
+            });
+        } else if (rawObjectsList && rawObjectsList.length > 0) {
+            totalUsers = rawObjectsList.length;
+            rawObjectsList.forEach(it => {
+                const slot = getTimeSlotInfo(it.hour);
+                if (slot && slotCounts[slot.key] !== undefined) {
+                    slotCounts[slot.key]++;
+                }
+            });
+        }
+
+        const safeTotal = totalUsers > 0 ? totalUsers : 1;
+
+        // Find peak slot
+        let peakSlot = TIME_SLOT_DEFS[0];
+        let maxCount = -1;
+        TIME_SLOT_DEFS.forEach(s => {
+            const c = slotCounts[s.key] || 0;
+            if (c > maxCount) {
+                maxCount = c;
+                peakSlot = s;
+            }
+        });
+
+        if (peakSlotBadge) {
+            if (maxCount > 0) {
+                peakSlotBadge.style.display = 'inline-flex';
+                peakSlotBadge.innerHTML = `🔥 峰值时段: ${peakSlot.icon} ${peakSlot.name} (${peakSlot.range})`;
+            } else {
+                peakSlotBadge.style.display = 'none';
+            }
+        }
+
+        timeSlotMiniTableBody.innerHTML = TIME_SLOT_DEFS.map(slot => {
+            const count = slotCounts[slot.key] || 0;
+            const pct = Math.round((count / safeTotal) * 100);
+            const isPeak = (count === maxCount && maxCount > 0);
+            const isActive = (selectedTimeSlot === slot.key);
+
+            return `
+                <tr data-slot="${slot.key}" class="${isActive ? 'active-slot-row' : ''}">
+                    <td>
+                        <span class="slot-range-mono">${slot.range}</span>
+                    </td>
+                    <td>
+                        <span class="slot-badge ${slot.cssClass}">
+                            ${slot.icon} ${slot.name}
+                        </span>
+                        ${isPeak ? '<span style="color:#ef4444; font-size:10.5px; font-weight:700; margin-left:2px;">TOP</span>' : ''}
+                    </td>
+                    <td>
+                        <div class="slot-bar-cell">
+                            <div class="slot-bar-text">
+                                <span class="slot-row-count-val">${count}<span class="slot-unit-text">人</span></span>
+                                <span class="slot-row-pct">${pct}%</span>
+                            </div>
+                            <div class="time-slot-bar-wrap">
+                                <div class="time-slot-bar-fill" style="width: ${count > 0 ? Math.max(pct, 6) : 0}%; background: ${slot.color};"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="text-align: center;">
+                        <button type="button" class="slot-mini-action-btn" data-slot="${slot.key}" title="筛选查看该时间段学生">
+                            查看
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        // Bind click events on table rows & action buttons
+        timeSlotMiniTableBody.querySelectorAll('tr[data-slot]').forEach(tr => {
+            tr.addEventListener('click', () => {
+                const slotKey = tr.dataset.slot;
+                activateTimeSlotFilter(slotKey);
+            });
+        });
+    }
+
+    // Activate specific time slot filter and navigate to DAU table
+    function activateTimeSlotFilter(slotKey) {
+        const dauTabBtn = document.querySelector('.tab-btn[data-view="dauTimeSlot"]');
+        if (dauTabBtn) dauTabBtn.click();
+
+        selectedTimeSlot = slotKey;
+        if (timeSlotFilter) timeSlotFilter.value = slotKey;
+        renderTimeSlotSummaryBar();
+        renderTimeSlotReportTable();
+        applyFiltersAndRender();
+
+        const tableSec = document.querySelector('.table-section');
+        if (tableSec) {
+            tableSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    // Donut Chart: Time Slot Distribution Report
     function renderDistributionDonut() {
         if (!distributionCanvas) return;
 
-        let fruitCutting = 0, fruitStore = 0, cardGacha = 0, cardAlbum = 0, eBao = 0;
-        rawObjectsList.forEach(it => {
-            if (it.gameCode === 'fruit_cutting') fruitCutting++;
-            else if (it.gameCode === 'fruit_store') fruitStore++;
-            else if (it.gameCode === 'card_gacha') cardGacha++;
-            else if (it.gameCode === 'card_album') cardAlbum++;
-            else if (it.gameCode === 'e_bao') eBao++;
-        });
+        // Calculate count for each time slot
+        const slotCounts = {
+            morning_early: 0,
+            morning: 0,
+            noon: 0,
+            afternoon: 0,
+            evening: 0,
+            night: 0
+        };
 
-        const data = [fruitCutting, fruitStore, cardGacha, cardAlbum, eBao];
-        const labels = ['🍉 切水果 (子玩法)', '🍎 水果商店 (主页)', '🎴 抽卡 (子玩法)', '📖 卡册 (主页)', '🤖 E宝游戏'];
-        const bgColors = ['#f97316', '#ea580c', '#ec4899', '#8b5cf6', '#06b6d4'];
+        // Prefer DAU user activity list
+        if (dauUsersList && dauUsersList.length > 0) {
+            dauUsersList.forEach(u => {
+                if (u.timeSlot && slotCounts[u.timeSlot.key] !== undefined) {
+                    slotCounts[u.timeSlot.key]++;
+                }
+            });
+        } else if (rawObjectsList && rawObjectsList.length > 0) {
+            // Fallback to game objects hourly slots if DAU is loading
+            rawObjectsList.forEach(it => {
+                const slot = getTimeSlotInfo(it.hour);
+                if (slot && slotCounts[slot.key] !== undefined) {
+                    slotCounts[slot.key]++;
+                }
+            });
+        }
+
+        const labels = TIME_SLOT_DEFS.map(s => `${s.icon} ${s.name} (${s.range})`);
+        const data = TIME_SLOT_DEFS.map(s => slotCounts[s.key] || 0);
+        const bgColors = TIME_SLOT_DEFS.map(s => s.color);
 
         if (distributionChart) distributionChart.destroy();
 
@@ -552,7 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         position: 'bottom',
                         labels: {
                             boxWidth: 12,
-                            padding: 10,
+                            padding: 8,
                             font: { size: 11 }
                         }
                     },
@@ -562,12 +828,23 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const val = ctx.raw || 0;
                                 const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
                                 const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                                return ` ${ctx.label}: ${val} 次 (${pct}%)`;
+                                const slotDef = TIME_SLOT_DEFS[ctx.dataIndex];
+                                const rangeText = slotDef ? ` [${slotDef.range}]` : '';
+                                return ` ${slotDef ? slotDef.icon + ' ' + slotDef.name : ctx.label}${rangeText}: ${val} 人 (${pct}%)`;
                             }
                         }
                     }
                 },
-                cutout: '62%'
+                cutout: '62%',
+                onClick: (evt, elements) => {
+                    if (elements && elements.length > 0) {
+                        const index = elements[0].index;
+                        const slotDef = TIME_SLOT_DEFS[index];
+                        if (slotDef) {
+                            activateTimeSlotFilter(slotDef.key);
+                        }
+                    }
+                }
             }
         });
     }
@@ -688,6 +965,30 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyFiltersAndRender() {
         const query = (searchInput.value || '').trim().toLowerCase();
         const selectedGame = gameFilter.value;
+
+        if (currentView === 'dauTimeSlot') {
+            // Filter DAU Time Slot Report
+            const filteredDau = dauUsersList.filter(u => {
+                const matchQuery = !query ||
+                    u.username.toLowerCase().includes(query) ||
+                    (u.studentName && u.studentName.toLowerCase().includes(query)) ||
+                    (u.schoolName && u.schoolName.toLowerCase().includes(query));
+
+                const matchSlot = (selectedTimeSlot === 'all') || (u.timeSlot && u.timeSlot.key === selectedTimeSlot);
+                return matchQuery && matchSlot;
+            });
+
+            // Sort by last active time
+            filteredDau.sort((a, b) => {
+                const tA = a.lastTimeDate ? a.lastTimeDate.getTime() : 0;
+                const tB = b.lastTimeDate ? b.lastTimeDate.getTime() : 0;
+                return (dauTimeSortOrder === 'desc') ? (tB - tA) : (tA - tB);
+            });
+
+            renderDauTimeSlotTable(filteredDau);
+            tableInfo.textContent = `共 ${filteredDau.length} 位日活用户最后使用记录`;
+            return;
+        }
 
         if (currentView === 'summary') {
             // Filter student summary
@@ -862,6 +1163,144 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Render Time Slot Summary Capsules Bar
+    function renderTimeSlotSummaryBar() {
+        if (!timeSlotSummaryBar) return;
+
+        // Calculate count for each time slot
+        const slotCounts = {
+            all: dauUsersList.length,
+            morning_early: 0,
+            morning: 0,
+            noon: 0,
+            afternoon: 0,
+            evening: 0,
+            night: 0
+        };
+
+        dauUsersList.forEach(u => {
+            if (u.timeSlot && slotCounts[u.timeSlot.key] !== undefined) {
+                slotCounts[u.timeSlot.key]++;
+            }
+        });
+
+        const total = dauUsersList.length || 1;
+
+        let cardsHtml = `
+            <div class="slot-summary-card ${selectedTimeSlot === 'all' ? 'active' : ''}" data-slot="all">
+                <div class="slot-card-header">
+                    <span class="slot-card-name">👥 全部日活用户</span>
+                    <span class="slot-card-range">全天汇总</span>
+                </div>
+                <div class="slot-card-body">
+                    <span class="slot-card-count">${slotCounts.all} <small style="font-size: 11px; font-weight: normal; color: #64748b;">人</small></span>
+                    <span class="slot-card-percent">100%</span>
+                </div>
+            </div>
+        `;
+
+        TIME_SLOT_DEFS.forEach(slot => {
+            const count = slotCounts[slot.key] || 0;
+            const pct = Math.round((count / total) * 100);
+            const isActive = selectedTimeSlot === slot.key;
+
+            cardsHtml += `
+                <div class="slot-summary-card ${isActive ? 'active' : ''}" data-slot="${slot.key}">
+                    <div class="slot-card-header">
+                        <span class="slot-card-name">${slot.icon} ${slot.name}</span>
+                        <span class="slot-card-range">${slot.range}</span>
+                    </div>
+                    <div class="slot-card-body">
+                        <span class="slot-card-count">${count} <small style="font-size: 11px; font-weight: normal; color: #64748b;">人</small></span>
+                        <span class="slot-card-percent">${pct}%</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        timeSlotSummaryBar.innerHTML = cardsHtml;
+
+        // Bind click on cards
+        timeSlotSummaryBar.querySelectorAll('.slot-summary-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const slot = card.dataset.slot;
+                selectedTimeSlot = slot;
+                if (timeSlotFilter) timeSlotFilter.value = slot;
+                renderTimeSlotSummaryBar();
+                applyFiltersAndRender();
+            });
+        });
+    }
+
+    // Render DAU Time Slot Table
+    function renderDauTimeSlotTable(list) {
+        if (!dauTimeSlotTableBody) return;
+
+        if (list.length === 0) {
+            dauTimeSlotTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">所选时段暂无活跃用户记录</td></tr>`;
+            return;
+        }
+
+        dauTimeSlotTableBody.innerHTML = list.map((item, idx) => {
+            const isSelected = (selectedSummaryUsername && item.username === selectedSummaryUsername);
+            const gameBadge = (item.gameSummary && item.gameSummary.totalCount > 0)
+                ? `<span class="game-participate-pill played" title="点击查看该学生游戏详情" data-username="${item.username}">🎮 玩过 ${item.gameSummary.totalCount} 次</span>`
+                : `<span class="game-participate-pill none">仅日活未玩游戏</span>`;
+
+            const deviceText = (item.deviceName && item.deviceName !== '-')
+                ? `${item.deviceName} · ${item.platformVersion || ''}`
+                : (item.platformVersion && item.platformVersion !== '-' ? item.platformVersion : '-');
+
+            return `
+                <tr data-username="${item.username}" class="${isSelected ? 'selected-row' : ''}">
+                    <td style="color: #9ca3af; font-weight: 500;">${idx + 1}</td>
+                    <td><strong>${item.username}</strong></td>
+                    <td class="student-name-val">${item.studentName || '-'}</td>
+                    <td class="school-name-val">${item.schoolName || '-'}</td>
+                    <td>
+                        <div class="slot-badge-group">
+                            <span class="slot-badge ${item.timeSlot ? item.timeSlot.cssClass : 'slot-afternoon'}">
+                                ${item.timeSlot ? item.timeSlot.icon : '⏰'} ${item.timeSlot ? item.timeSlot.name : '时段'}
+                            </span>
+                            <span class="slot-range-label">${item.timeSlot ? item.timeSlot.range : ''}</span>
+                        </div>
+                    </td>
+                    <td style="font-family: monospace; font-weight: 600; color: #1e293b;">
+                        ${item.lastTimeStr || '-'}
+                    </td>
+                    <td>
+                        <span class="activity-status-pill ${item.relativeTime && item.relativeTime.isFresh ? 'fresh' : 'normal'}">
+                            ${item.relativeTime ? item.relativeTime.text : '-'}
+                        </span>
+                    </td>
+                    <td>${gameBadge}</td>
+                    <td style="color: #64748b; font-size: 12px;">${deviceText}</td>
+                    <td style="text-align: center;">
+                        <button class="action-link view-student-detail-btn" data-username="${item.username}">查看详情</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        // Bind row click for selection highlighting
+        dauTimeSlotTableBody.querySelectorAll('tr[data-username]').forEach(tr => {
+            tr.addEventListener('click', () => {
+                dauTimeSlotTableBody.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
+                tr.classList.add('selected-row');
+                selectedSummaryUsername = tr.dataset.username;
+            });
+        });
+
+        // Bind view detail
+        dauTimeSlotTableBody.querySelectorAll('.view-student-detail-btn, .game-participate-pill.played').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const u = btn.dataset.username || btn.closest('tr')?.dataset?.username;
+                if (u) showUserGameDetail(u);
+            });
+        });
+    }
+
     // 10. Async Student Details Resolution from OSS File Content
     async function resolveStudentDetailsAsync() {
         if (!ossClient || rawObjectsList.length === 0) return;
@@ -953,6 +1392,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Update dauUsersList
+        dauUsersList.forEach(u => {
+            if (u.username === username) {
+                u.studentName = info.studentName;
+                u.schoolName = info.schoolName;
+            }
+        });
+
         // Live update DOM cells
         const summaryRows = summaryTableBody.querySelectorAll(`tr[data-username="${username}"]`);
         summaryRows.forEach(row => {
@@ -974,6 +1421,176 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (schoolCell && info.schoolName) schoolCell.textContent = info.schoolName;
             }
         });
+
+        if (dauTimeSlotTableBody) {
+            const dauRows = dauTimeSlotTableBody.querySelectorAll(`tr[data-username="${username}"]`);
+            dauRows.forEach(row => {
+                const nameCell = row.querySelector('.student-name-val');
+                const schoolCell = row.querySelector('.school-name-val');
+                if (nameCell && info.studentName) nameCell.textContent = info.studentName;
+                if (schoolCell && info.schoolName) schoolCell.textContent = info.schoolName;
+            });
+        }
+    }
+
+    // 10.2 Fetch DAU User Activity and Last Active Time Slots from OSS
+    async function fetchDauActivityForDate(dateStr) {
+        if (!ossClient) return;
+
+        const formattedDate = (dateStr || '').replace(/-/g, '_');
+        const dauPrefix = `usertemp/xuelianxitong/${formattedDate}/user_activity/`;
+
+        try {
+            let objs = [];
+            let marker = null;
+            do {
+                const listParams = { prefix: dauPrefix, 'max-keys': 1000 };
+                if (marker) listParams.marker = marker;
+                const res = await ossClient.list(listParams);
+                objs = objs.concat(res.objects || []);
+                marker = res.isTruncated ? res.nextMarker : null;
+            } while (marker);
+
+            objs = objs.filter(o => o.name && !o.name.endsWith('/'));
+
+            // Fallback scan if subfolder structure is used
+            if (objs.length === 0) {
+                const fullRes = await ossClient.list({
+                    prefix: `usertemp/xuelianxitong/${formattedDate}/`,
+                    'max-keys': 1000
+                });
+                const fullObjs = fullRes.objects || [];
+                objs = fullObjs.filter(obj => obj.name && obj.name.includes('/user_activity/') && !obj.name.endsWith('/'));
+            }
+
+            if (objs.length === 0) {
+                dauUsersList = [];
+                if (currentView === 'dauTimeSlot') {
+                    renderTimeSlotSummaryBar();
+                    applyFiltersAndRender();
+                }
+                return;
+            }
+
+            dauUsersList = objs.map(obj => {
+                const key = obj.name;
+                const parts = key.split('/');
+                let fallbackUsername = '未知账号';
+
+                for (let i = 0; i < parts.length; i++) {
+                    if (parts[i] === 'user_activity') {
+                        if (i > 0 && parts[i - 1] !== formattedDate && parts[i - 1] !== 'xuelianxitong') {
+                            fallbackUsername = parts[i - 1];
+                        } else if (i < parts.length - 1) {
+                            fallbackUsername = parts[i + 1].replace(/\.(json|txt)$/, '');
+                        }
+                        break;
+                    }
+                }
+                if (fallbackUsername === '未知账号' && parts.length >= 4) {
+                    fallbackUsername = parts[parts.length - 1].replace(/\.(json|txt)$/, '');
+                }
+
+                const lastDate = obj.lastModified ? new Date(obj.lastModified) : new Date();
+                const slotInfo = getTimeSlotInfo(lastDate);
+                const fullStr = formatFullDateTime(lastDate);
+                const relInfo = getRelativeTimeDesc(lastDate);
+
+                // Cross-reference with game behavior records
+                const gameSummary = studentSummaryList.find(s => s.username === fallbackUsername);
+
+                return {
+                    key: key,
+                    username: fallbackUsername,
+                    studentName: userToInfoCache[fallbackUsername]?.studentName || '-',
+                    schoolName: userToInfoCache[fallbackUsername]?.schoolName || '-',
+                    deviceName: '-',
+                    platformVersion: '-',
+                    lastModified: obj.lastModified,
+                    lastTimeDate: lastDate,
+                    lastTimeStr: fullStr,
+                    hour: lastDate.getHours(),
+                    sortKey: fullStr,
+                    timeSlot: slotInfo,
+                    relativeTime: relInfo,
+                    gameSummary: gameSummary || null
+                };
+            });
+
+            // Initial sort: latest first
+            dauUsersList.sort((a, b) => {
+                const tA = a.lastTimeDate ? a.lastTimeDate.getTime() : 0;
+                const tB = b.lastTimeDate ? b.lastTimeDate.getTime() : 0;
+                return tB - tA;
+            });
+
+            renderTimeSlotSummaryBar();
+            renderTimeSlotReportTable();
+            renderDistributionDonut();
+            if (currentView === 'dauTimeSlot') {
+                applyFiltersAndRender();
+            }
+
+            // Async read DAU file content for user details
+            resolveDauUserDetailsAsync();
+        } catch (e) {
+            console.warn('Failed to fetch DAU activity from OSS:', e);
+        }
+    }
+
+    // Async resolve student info from DAU file contents
+    async function resolveDauUserDetailsAsync() {
+        if (!ossClient || dauUsersList.length === 0) return;
+
+        const usersToFetch = dauUsersList.filter(u => !userToInfoCache[u.username] || u.deviceName === '-');
+        if (usersToFetch.length === 0) return;
+
+        const concurrency = 12;
+        let index = 0;
+
+        async function worker() {
+            while (index < usersToFetch.length) {
+                const item = usersToFetch[index++];
+                try {
+                    const res = await ossClient.get(item.key);
+                    const contentStr = res.content ? res.content.toString() : '';
+                    if (contentStr) {
+                        const parsed = JSON.parse(contentStr);
+                        const fileData = Array.isArray(parsed) ? (parsed[0] || {}) : parsed;
+                        const studentInfo = fileData.studentInfo || {};
+
+                        const name = fileData.nickName || studentInfo.nickName || fileData.userName || studentInfo.userName || '';
+                        const school = studentInfo.shopName || fileData.shopName || studentInfo.schoolName || fileData.schoolName || '';
+                        const device = fileData.deviceName || studentInfo.deviceName || '-';
+                        const platform = fileData.phonePlatformVersion || studentInfo.phonePlatformVersion || fileData.appVersion || '-';
+
+                        item.deviceName = device;
+                        item.platformVersion = platform;
+
+                        if (name || school) {
+                            userToInfoCache[item.username] = {
+                                studentName: name || userToInfoCache[item.username]?.studentName || '-',
+                                schoolName: school || userToInfoCache[item.username]?.schoolName || '-',
+                                teacherName: userToInfoCache[item.username]?.teacherName || '-'
+                            };
+                            updateUserCells(item.username, userToInfoCache[item.username]);
+                        }
+                    }
+                } catch (e) {
+                    // Ignore individual read error
+                }
+            }
+        }
+
+        const workers = [];
+        for (let i = 0; i < Math.min(concurrency, usersToFetch.length); i++) {
+            workers.push(worker());
+        }
+        await Promise.all(workers);
+
+        if (currentView === 'dauTimeSlot') {
+            applyFiltersAndRender();
+        }
     }
 
     // 11. Student Game Detail & Flowchart View Logic
@@ -1351,6 +1968,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const dateStr = reportDateInput.value;
 
+        if (currentView === 'dauTimeSlot') {
+            const dataToExport = dauUsersList.map((u, idx) => ({
+                '序号': idx + 1,
+                '学生账号': u.username,
+                '学生姓名': u.studentName,
+                '所属学校': u.schoolName,
+                '最后使用时段': `${u.timeSlot ? u.timeSlot.name : ''} (${u.timeSlot ? u.timeSlot.range : ''})`,
+                '最后使用时间': u.lastTimeStr,
+                '今日游戏参与': u.gameSummary ? `已玩游戏 (${u.gameSummary.totalCount}次)` : '未玩游戏 (仅日活)',
+                '设备型号': u.deviceName || '-',
+                '系统版本': u.platformVersion || '-'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '日活用户最后使用时段报表');
+            XLSX.writeFile(wb, `用户使用时段报表_${dateStr}.xlsx`);
+            return;
+        }
+
         if (currentView === 'summary') {
             const dataToExport = studentSummaryList.map((s, idx) => ({
                 '序号': idx + 1,
@@ -1447,6 +2084,87 @@ document.addEventListener('DOMContentLoaded', () => {
         mockObjects.sort((a, b) => b.name.localeCompare(a.name));
 
         parseAndAnalyzeObjects(mockObjects, dateStr);
+
+        // Generate comprehensive Mock DAU records covering all 6 time slots
+        const allMockDauUsers = [
+            ...mockUsers,
+            { username: '13866554433', name: '黄子涵', school: '光明实验外国语小学', teacher: '王老师' },
+            { username: '13799881122', name: '林浩宇', school: '育才实验示范学校', teacher: '刘老师' },
+            { username: '13677889900', name: '徐佳欣', school: '南开实验学校本部', teacher: '赵老师' },
+            { username: '13566778899', name: '刘梓萱', school: '朝阳外国语小学分校', teacher: '王老师' },
+            { username: '13411223344', name: '郭雨泽', school: '光明实验外国语小学', teacher: '孙老师' },
+            { username: '13388990011', name: '马博文', school: '汇文第一寄宿学校', teacher: '李老师' },
+            { username: '13244556677', name: '宋嘉怡', school: '育才实验示范学校', teacher: '周老师' },
+            { username: '13199001122', name: '郑宇航', school: '南开实验学校本部', teacher: '刘老师' },
+            { username: '13022334455', name: '谢依晨', school: '朝阳外国语小学分校', teacher: '张老师' },
+            { username: '13911335577', name: '潘梓航', school: '光明实验外国语小学', teacher: '王老师' },
+            { username: '13822446688', name: '蔡欣怡', school: '汇文第一寄宿学校', teacher: '李老师' },
+            { username: '13733557799', name: '金博睿', school: '育才实验示范学校', teacher: '赵老师' }
+        ];
+
+        allMockDauUsers.forEach(u => {
+            if (!userToInfoCache[u.username]) {
+                userToInfoCache[u.username] = {
+                    studentName: u.name,
+                    schoolName: u.school,
+                    teacherName: u.teacher
+                };
+            }
+        });
+
+        // Specific hours across slots: early (7, 8), morning (9, 10, 11), noon (12, 13), afternoon (14, 15, 16, 17), evening (18, 19, 20, 21), night (22, 23)
+        const mockHours = [
+            7, 8,
+            9, 9, 10, 10, 11, 11,
+            12, 12, 13,
+            14, 14, 15, 15, 16, 16, 17,
+            18, 19, 20, 20, 21,
+            22, 23
+        ];
+
+        const mockDevices = [
+            { dev: 'iPad (第9代)', ver: 'iPadOS 16.6' },
+            { dev: '华为 MatePad 11', ver: 'HarmonyOS 3.1' },
+            { dev: '小米平板 6 Pro', ver: 'Android 13' },
+            { dev: 'iPad Air 5', ver: 'iPadOS 17.2' },
+            { dev: '联想小新 Pad Pro', ver: 'Android 12' },
+            { dev: '荣耀平板 V8', ver: 'MagicOS 7.0' }
+        ];
+
+        dauUsersList = allMockDauUsers.map((u, i) => {
+            const h = mockHours[i % mockHours.length];
+            const m = Math.floor(Math.random() * 60);
+            const s = Math.floor(Math.random() * 60);
+            const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            const fullDateStr = `${dateStr} ${timeStr}`;
+            const mockDate = new Date(`${dateStr}T${timeStr}`);
+            const slotInfo = getTimeSlotInfo(mockDate);
+            const relInfo = getRelativeTimeDesc(mockDate);
+            const devInfo = mockDevices[i % mockDevices.length];
+            const gameSummary = studentSummaryList.find(s => s.username === u.username);
+
+            return {
+                key: `usertemp/xuelianxitong/${formattedDate}/user_activity/${u.username}.json`,
+                username: u.username,
+                studentName: u.name,
+                schoolName: u.school,
+                deviceName: devInfo.dev,
+                platformVersion: devInfo.ver,
+                lastModified: mockDate.toISOString(),
+                lastTimeDate: mockDate,
+                lastTimeStr: fullDateStr,
+                hour: h,
+                sortKey: fullDateStr,
+                timeSlot: slotInfo,
+                relativeTime: relInfo,
+                gameSummary: gameSummary || null
+            };
+        });
+
+        dauUsersList.sort((a, b) => b.lastTimeDate.getTime() - a.lastTimeDate.getTime());
+        renderTimeSlotSummaryBar();
+        renderTimeSlotReportTable();
+        renderDistributionDonut();
     }
 
     function renderLoadingState() {
@@ -1455,6 +2173,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (logsTableBody) {
             logsTableBody.innerHTML = `<tr><td colspan="9" class="loading-cell">⏳ 正在从 OSS 检索游戏流水记录...</td></tr>`;
+        }
+        if (dauTimeSlotTableBody) {
+            dauTimeSlotTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">⏳ 正在从 OSS 检索日活数据并生成时间段报表...</td></tr>`;
         }
     }
 
@@ -1474,6 +2195,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (logsTableBody) {
             logsTableBody.innerHTML = `<tr><td colspan="9" class="loading-cell">所选日期暂无任何学生游戏行为记录</td></tr>`;
+        }
+        if (dauTimeSlotTableBody) {
+            dauTimeSlotTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">所选日期暂无日活活跃记录</td></tr>`;
         }
 
         renderCharts();

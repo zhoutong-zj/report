@@ -5,8 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>学生行为分析</title>
-    <link rel="icon" type="image/x-icon" href="../favicon.ico">
-    <link rel="shortcut icon" href="../favicon.ico">
+    <link rel="icon" type="image/x-icon" href="../favicon.ico?v=4">
+    <link rel="icon" type="image/png" sizes="32x32" href="../../../src/assets/favicon-32x32.png?v=4">
+    <link rel="icon" type="image/png" sizes="16x16" href="../../../src/assets/favicon-16x16.png?v=4">
+    <link rel="shortcut icon" href="../favicon.ico?v=4">
+    <link rel="apple-touch-icon" href="../favicon.png?v=4">
     <link rel="stylesheet" href="studentBehavior.css">
 </head>
 
@@ -138,16 +141,55 @@
 
         <!-- Visual Charts Section -->
         <section class="charts-grid">
-            <!-- Chart 1: Game Distribution Donut -->
-            <div class="chart-card">
+            <!-- Chart 1: User Time Slot Schedule & Report Card -->
+            <div class="chart-card time-slot-report-card">
                 <div class="chart-header">
                     <div>
-                        <h3>游戏与子玩法占比分布</h3>
-                        <span class="chart-sub">各大类游戏系统及子集页面调用频次</span>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h3>用户使用时间段报表</h3>
+                            <span id="peakSlotBadge" class="peak-slot-tag" style="display: none;">🔥 峰值时段: -</span>
+                        </div>
+                        <span class="chart-sub">全天 6 大时间段日活用户分布与热度</span>
+                    </div>
+                    <!-- View switcher: Table Schedule vs Donut Chart -->
+                    <div class="slot-view-switcher">
+                        <button type="button" class="slot-switcher-btn active" id="slotTableViewBtn" title="切换为时间段报表">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                                <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+                            </svg>
+                            <span>时间表</span>
+                        </button>
+                        <button type="button" class="slot-switcher-btn" id="slotChartViewBtn" title="切换为分布图">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                                <path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2 0v8.99H22c-.47-4.74-4.24-8.52-9-8.99zm0 11.01V22c4.76-.47 8.53-4.25 9-8.99H13z"/>
+                            </svg>
+                            <span>分布图</span>
+                        </button>
                     </div>
                 </div>
-                <div class="chart-container donut-wrap">
-                    <canvas id="gameDistributionChart"></canvas>
+
+                <!-- Schedule Table View (Default) -->
+                <div class="time-slot-table-container" id="timeSlotTableContainer">
+                    <table class="time-slot-mini-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 22%;">时间段</th>
+                                <th style="width: 18%;">分类</th>
+                                <th style="width: 48%;">活跃人数及占比</th>
+                                <th style="width: 12%; text-align: center;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timeSlotMiniTableBody">
+                            <tr>
+                                <td colspan="4" class="loading-cell" style="padding: 24px 0;">正在生成时间段报表...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Donut Chart View (Togglable) -->
+                <div class="chart-container donut-wrap" id="timeSlotChartContainer" style="display: none;">
+                    <canvas id="timeSlotDistributionChart"></canvas>
                 </div>
             </div>
 
@@ -195,6 +237,12 @@
                         </svg>
                         <span>行为流水明细 (按次)</span>
                     </button>
+                    <button class="tab-btn" data-view="dauTimeSlot">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                        </svg>
+                        <span>用户使用时段报表 (日活最后使用时间)</span>
+                    </button>
                 </div>
 
                 <!-- Filters -->
@@ -223,6 +271,25 @@
                         </optgroup>
                     </select>
 
+                    <!-- Time Slot Filter (active in dauTimeSlot view) -->
+                    <select id="timeSlotFilter" class="filter-select" style="display: none;">
+                        <option value="all">⏰ 全部时间段</option>
+                        <option value="morning_early">🌅 早晨时段 (06:00 - 09:00)</option>
+                        <option value="morning">☀️ 上午时段 (09:00 - 12:00)</option>
+                        <option value="noon">🍱 中午时段 (12:00 - 14:00)</option>
+                        <option value="afternoon">☕ 下午时段 (14:00 - 18:00)</option>
+                        <option value="evening">🌙 晚间高峰 (18:00 - 22:00)</option>
+                        <option value="night">🌌 深夜时段 (22:00 - 次日06:00)</option>
+                    </select>
+
+                    <!-- Sort by Last Active Time Button -->
+                    <button id="dauSortBtn" class="dau-sort-btn" style="display: none;" title="点击切换按最后使用时间升序/降序">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                            <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>
+                        </svg>
+                        <span id="dauSortBtnText">最后使用时间 ↓</span>
+                    </button>
+
                     <button id="exportExcelBtn" class="export-btn" title="导出表格数据到 Excel">
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
                             <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
@@ -230,6 +297,11 @@
                         <span>导出 Excel</span>
                     </button>
                 </div>
+            </div>
+
+            <!-- Time Slot Quick Filter & Stat Capsules Bar -->
+            <div id="timeSlotSummaryBar" class="time-slot-summary-bar" style="display: none;">
+                <!-- Dynamically generated time slot cards -->
             </div>
 
             <!-- Table 1: Student Summary View -->
@@ -275,6 +347,33 @@
                     <tbody id="logsTableBody">
                         <tr>
                             <td colspan="9" class="loading-cell">正在加载行为流水数据...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table 3: User Activity Time Slot Report View (DAU Last Active Time) -->
+            <div id="dauTimeSlotTableView" class="table-wrapper" style="display: none;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">序号</th>
+                            <th>学生账号</th>
+                            <th>学生姓名</th>
+                            <th>所属学校</th>
+                            <th>最后使用时段 (时间段范围)</th>
+                            <th style="cursor: pointer;" id="sortDauTimeTh" title="点击切换按最后使用时间升序/降序">
+                                最后使用时间 <span id="dauSortArrow">↓</span>
+                            </th>
+                            <th>活跃状态</th>
+                            <th>今日游戏参与</th>
+                            <th>设备及系统</th>
+                            <th style="text-align: center; width: 110px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dauTimeSlotTableBody">
+                        <tr>
+                            <td colspan="10" class="loading-cell">正在检索并生成日活用户使用时段报表...</td>
                         </tr>
                     </tbody>
                 </table>

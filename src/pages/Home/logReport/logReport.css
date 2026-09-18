@@ -52,6 +52,44 @@ body {
     font-weight: 500;
 }
 
+/* Quick Date Selector */
+.quick-dates {
+    display: inline-flex;
+    align-items: center;
+    background: #f4f4f5;
+    padding: 3px;
+    border-radius: 6px;
+    gap: 2px;
+    height: 32px;
+    box-sizing: border-box;
+}
+
+.quick-date-btn {
+    border: none;
+    background: transparent;
+    padding: 0 10px;
+    height: 26px;
+    line-height: 26px;
+    font-size: 12px;
+    color: #606266;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.quick-date-btn:hover {
+    color: #409eff;
+}
+
+.quick-date-btn.active {
+    background: #fff;
+    color: #409eff;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 /* Stats Grid */
 .stats-grid {
     display: grid;

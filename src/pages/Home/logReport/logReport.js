@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 1. DOM Elements
     const reportDateInput = document.getElementById('reportDate');
+    const quickDateBtns = document.querySelectorAll('.quick-date-btn');
     const currentDateEl = document.getElementById('currentDate');
     const noConfigAlert = document.getElementById('noConfigAlert');
 
@@ -16,12 +17,47 @@ document.addEventListener('DOMContentLoaded', () => {
     // Analysis list
     const suggestionList = document.getElementById('suggestionList');
 
+    function formatDate(d) {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function updateQuickDateActive(dateStr) {
+        if (!dateStr) {
+            quickDateBtns.forEach(btn => btn.classList.remove('active'));
+            return;
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) {
+            quickDateBtns.forEach(btn => btn.classList.remove('active'));
+            return;
+        }
+        const curr = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        curr.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((curr - today) / (1000 * 60 * 60 * 24));
+
+        quickDateBtns.forEach(btn => {
+            const offset = parseInt(btn.dataset.offset, 10);
+            if (offset === diffDays) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
     // 2. Initialize Date Picker (using sessionStorage to preserve chosen date)
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = formatDate(today);
     const savedDate = sessionStorage.getItem('reportDate') || todayStr;
     reportDateInput.value = savedDate;
     updateDateDisplay(savedDate);
+    updateQuickDateActive(savedDate);
 
     function updateDateDisplay(dateStr) {
         const d = new Date(dateStr);
@@ -652,11 +688,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedDate = e.target.value;
         sessionStorage.setItem('reportDate', selectedDate);
         updateDateDisplay(selectedDate);
+        updateQuickDateActive(selectedDate);
         if (ossClient) {
             loadDynamicReport(selectedDate);
         } else {
             useStaticMockData();
         }
+    });
+
+    // Quick date button clicks (今日, 昨天, 前天)
+    quickDateBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const offset = parseInt(btn.dataset.offset, 10);
+            const target = new Date();
+            target.setDate(target.getDate() + offset);
+            const dateStr = formatDate(target);
+            reportDateInput.value = dateStr;
+            sessionStorage.setItem('reportDate', dateStr);
+            quickDateBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateDateDisplay(dateStr);
+            if (ossClient) {
+                loadDynamicReport(dateStr);
+            } else {
+                useStaticMockData();
+            }
+        });
     });
 
     // 5. Fetch and analyze OSS directory files
