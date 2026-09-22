@@ -59,9 +59,9 @@
                         <label>卡类型</label>
                         <span id="serviceName">-</span>
                     </div>
-                    <div class="info-item">
+                    <div class="info-item identity-item">
                         <label>评测内容</label>
-                        <span id="identity">-</span>
+                        <span id="identity" class="identity-clamp" title="点击直接复制完整评测内容">-</span>
                     </div>
                     <div class="info-item">
                         <label>错误时间</label>
@@ -188,6 +188,8 @@
             </div>
         </div>
     </div>
+    <!-- 轻量级浮动 Toast 提示 -->
+    <div id="detailToast" class="detail-toast" style="display: none;">已复制到剪贴板</div>
     <script src="homeDetail.js"></script>
 </body>
 

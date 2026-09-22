@@ -50,8 +50,8 @@
                     <input type="date" id="exceptionDateInput">
                 </div>
                 <div class="filter-item search-item">
-                    <label for="exceptionSearchInput">账号搜索：</label>
-                    <input type="text" id="exceptionSearchInput" placeholder="请输入账号ID或用户名进行搜索..." />
+                    <label for="exceptionSearchInput">综合搜索：</label>
+                    <input type="text" id="exceptionSearchInput" placeholder="按账号 / 姓名 / 学校 / 老师 / 版本搜索..." />
                 </div>
                 <div class="filter-item">
                     <button id="exceptionRefreshBtn" class="exception-refresh-btn" title="点击重新从 OSS 获取最新异常数据">
@@ -98,13 +98,15 @@
                 <table class="exception-table">
                     <thead>
                         <tr>
-                            <th style="width: 5%; text-align: center;">#</th>
-                            <th style="width: 20%;">账号 ID</th>
-                            <th style="width: 20%;">学生姓名</th>
-                            <th style="width: 15%;">异常类型</th>
-                            <th style="width: 15%;">日志发生时间</th>
-                            <th style="width: 10%;">文件大小</th>
-                            <th style="width: 15%; text-align: center;">操作</th>
+                            <th style="width: 4%; text-align: center;">#</th>
+                            <th style="width: 13%;">账号 ID</th>
+                            <th style="width: 10%;">学生姓名</th>
+                            <th style="width: 16%;">学校</th>
+                            <th style="width: 10%;">老师</th>
+                            <th style="width: 9%; text-align: center;">版本</th>
+                            <th style="width: 11%; text-align: center;">异常类型</th>
+                            <th style="width: 14%; text-align: center;">日志发生时间</th>
+                            <th style="width: 13%; text-align: center;">操作</th>
                         </tr>
                     </thead>
                     <tbody id="exceptionTableBody">

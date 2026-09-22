@@ -292,14 +292,16 @@ body.modal-open {
 .exception-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     text-align: left;
     font-size: 14px;
 }
 
 .exception-table th,
 .exception-table td {
-    padding: 14px 16px;
+    padding: 12px 10px;
     border-bottom: 1px solid #ebeef5;
+    vertical-align: middle;
 }
 
 .exception-table th {
@@ -331,6 +333,27 @@ body.modal-open {
 .type-badge.platform { background-color: #fdf6ec; color: #f7971e; border: 1px solid #f5dab1; }
 .type-badge.av { background-color: #f9f0ff; color: #8e44ad; border: 1px solid #efdbff; }
 .type-badge.other { background-color: #f4f4f5; color: #6a85b6; border: 1px solid #e9e9eb; }
+
+.version-badge {
+    color: #52c41a;
+    background-color: #f6ffed;
+    border: 1px solid #b7eb8f;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.account-cell,
+.student-name-cell,
+.school-name-cell,
+.teacher-name-cell,
+.time-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 .action-btn {
     background-color: #f2f6fc;

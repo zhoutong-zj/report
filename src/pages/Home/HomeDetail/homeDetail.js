@@ -26,6 +26,17 @@ const reportTypeMapping = {
     6: 'audioVideoTest'
 };
 
+// HTML 转义工具函数
+function escapeHtml(str) {
+    if (!str && str !== 0) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 class DetailApp {
     constructor() {
         this.init();
@@ -90,12 +101,53 @@ class DetailApp {
                 }
             });
         });
+
+        // 绑定评测内容点击直接复制事件
+        const identityEl = document.getElementById('identity');
+        if (identityEl) {
+            identityEl.addEventListener('click', (e) => {
+                if (e) e.stopPropagation();
+                const textToCopy = this.currentIdentity || identityEl.textContent.trim();
+                if (!textToCopy || textToCopy === '-') {
+                    this.showToast('暂无评测内容可复制');
+                    return;
+                }
+                this.copyToClipboard(textToCopy);
+                this.showToast('评测内容已复制到剪贴板');
+                identityEl.classList.add('copied-pulse');
+                setTimeout(() => identityEl.classList.remove('copied-pulse'), 800);
+            });
+        }
+    }
+
+    showToast(message = '已复制到剪贴板') {
+        let toast = document.getElementById('detailToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'detailToast';
+            toast.className = 'detail-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        toast.style.display = 'block';
+        void toast.offsetWidth;
+        toast.classList.add('show');
+
+        if (this.toastTimeout) {
+            clearTimeout(this.toastTimeout);
+        }
+        this.toastTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 250);
+        }, 1800);
     }
 
     copyToClipboard(text, btn) {
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(text).then(() => {
-                this.showCopySuccess(btn);
+                if (btn) this.showCopySuccess(btn);
             }).catch(err => {
                 this.fallbackCopy(text, btn);
             });
@@ -114,7 +166,7 @@ class DetailApp {
         textArea.select();
         try {
             document.execCommand('copy');
-            this.showCopySuccess(btn);
+            if (btn) this.showCopySuccess(btn);
         } catch (err) {
             console.error('复制失败:', err);
         }
@@ -122,6 +174,7 @@ class DetailApp {
     }
 
     showCopySuccess(btn) {
+        if (!btn) return;
         const originalText = btn.textContent;
         btn.textContent = '已复制';
         btn.style.color = '#67c23a';
@@ -257,7 +310,19 @@ class DetailApp {
         document.getElementById('schoolId').textContent = studentInfo.shopId || data.shopId || studentInfo.schoolId || data.schoolId || '-';
         document.getElementById('teacherName').textContent = studentInfo.teacherName || data.teacherName || '-';
         document.getElementById('serviceName').textContent = studentInfo.serviceName || data.serviceName || '-';
-        document.getElementById('identity').innerHTML = `<span style="color: #f56c6c;">${data.identity || '-'}</span>`;
+        
+        const identityEl = document.getElementById('identity');
+        const rawIdentity = data.identity || '-';
+        this.currentIdentity = rawIdentity;
+        if (identityEl) {
+            identityEl.innerHTML = `<span class="identity-inner-text" style="color: #f56c6c;">${escapeHtml(rawIdentity)}</span>`;
+            if (rawIdentity && rawIdentity !== '-') {
+                identityEl.title = `点击直接复制完整评测内容：\n${rawIdentity}`;
+            } else {
+                identityEl.title = '暂无评测内容';
+            }
+        }
+
         document.getElementById('errorTime').textContent = this.formatDateTime(data.errorTime || data.reportTime || '-');
         document.getElementById('status').innerHTML = `<span style="background-color: ${color}; color: #fff; padding: 4px 8px; border-radius: 4px;">${typeName}</span>`;
         document.getElementById('appVersion').textContent = data.versionName || data.version || '-';

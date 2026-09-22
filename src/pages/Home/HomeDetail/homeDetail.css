@@ -294,3 +294,67 @@ body {
 .info-section.collapsed > *:not(.section-header) {
     display: none !important;
 }
+
+/* 评测内容两行截断与点击复制交互样式 */
+.identity-clamp {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    word-break: break-all !important;
+    line-height: 1.5 !important;
+    max-height: calc(1.5em * 2 + 18px) !important;
+    cursor: pointer !important;
+    position: relative !important;
+    border: 1px solid transparent !important;
+    transition: all 0.2s ease !important;
+    user-select: none;
+}
+
+.identity-clamp:hover {
+    background-color: #f0f7ff !important;
+    border-color: #a0cfff !important;
+    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1) !important;
+}
+
+.identity-clamp:active {
+    background-color: #e1efff !important;
+}
+
+.identity-clamp.copied-pulse {
+    border-color: #67c23a !important;
+    background-color: #f0f9eb !important;
+    animation: copyPulse 0.4s ease-in-out;
+}
+
+@keyframes copyPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.98); }
+    100% { transform: scale(1); }
+}
+
+/* 轻量级浮动 Toast 提示 */
+.detail-toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(0, 0, 0, 0.82);
+    color: #fff;
+    padding: 10px 22px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+    z-index: 99999;
+    pointer-events: none;
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.detail-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}

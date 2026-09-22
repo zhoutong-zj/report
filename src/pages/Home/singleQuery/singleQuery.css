@@ -232,13 +232,14 @@ body {
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    overflow: hidden;
+    overflow-x: auto;
     width: 100%;
 }
 
 .user-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .user-table thead {
@@ -246,18 +247,20 @@ body {
 }
 
 .user-table th {
-    padding: 16px 20px;
+    padding: 14px 10px;
     text-align: left;
     font-weight: 600;
     color: #333;
     font-size: 14px;
+    vertical-align: middle;
 }
 
 .user-table td {
-    padding: 16px 20px;
+    padding: 14px 10px;
     border-top: 1px solid #ebeef5;
     color: #606266;
     font-size: 14px;
+    vertical-align: middle;
 }
 
 .user-table tbody tr {
@@ -321,6 +324,38 @@ body {
     font-size: 13px;
     font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
     font-weight: 500;
+}
+
+/* 版本与年级徽章样式 */
+.version-badge {
+    color: #52c41a;
+    background-color: #f6ffed;
+    border: 1px solid #b7eb8f;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.grade-badge {
+    color: #1890ff;
+    background-color: #e6f7ff;
+    border: 1px solid #91d5ff;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.student-cell,
+.school-cell,
+.teacher-cell,
+.time-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 查看详情操作按钮 */

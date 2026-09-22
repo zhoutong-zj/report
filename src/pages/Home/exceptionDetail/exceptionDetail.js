@@ -170,6 +170,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ossClient = initOssClient();
 
+    // HTML转义工具方法，避免XSS与特殊字符渲染异常
+    function escapeHtml(str) {
+        if (!str && str !== 0) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     // Format file sizes
     function formatSize(bytes) {
         if (bytes === 0 || bytes === undefined || bytes === null) return '0 B';
@@ -259,6 +270,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     key: key,
                     username: username,
                     studentName: '-',
+                    schoolName: '-',
+                    teacherName: '-',
+                    version: '-',
                     category: folder,
                     fileName: fileName,
                     timeStr: errorTime || '-',
@@ -272,8 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // 按日志时间倒序排列（最新优先）
             parsedLogs.sort((a, b) => b.lastModified.localeCompare(a.lastModified));
 
-            // 2. 异步后台安全并发解析学生姓名（同账号缓存+限制并发数，杜绝并发风暴与丢包）
-            enrichStudentNames(parsedLogs);
+            // 2. 异步后台安全并发解析学生姓名、学校、老师、版本（同账号缓存+限制并发数，杜绝并发风暴与丢包）
+            enrichLogDetails(parsedLogs);
 
             return parsedLogs;
         } catch (e) {
@@ -283,12 +297,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * 异步后台并发解析日志中的学生姓名，并实时局部刷新到表格中
+     * 异步后台并发解析日志中的学生姓名、学校、老师、版本，并实时局部刷新到表格中
      */
-    async function enrichStudentNames(logsList) {
+    async function enrichLogDetails(logsList) {
         if (!ossClient || !logsList || logsList.length === 0) return;
 
-        const userToNameCache = {};
+        const userToInfoCache = {};
         const concurrency = 6;
         let index = 0;
 
@@ -298,10 +312,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const item = logsList[currentIndex];
                 if (!item || !item.key) continue;
 
-                // 同一账号直接复用已解析的学生姓名，极大减少请求量
-                if (userToNameCache[item.username]) {
-                    item.studentName = userToNameCache[item.username];
-                    updateTableRowStudentName(item.key, item.studentName);
+                // 同一账号直接复用已解析的学生基础信息，极大减少请求量
+                if (userToInfoCache[item.username]) {
+                    const cached = userToInfoCache[item.username];
+                    if (cached.studentName && item.studentName === '-') item.studentName = cached.studentName;
+                    if (cached.schoolName && item.schoolName === '-') item.schoolName = cached.schoolName;
+                    if (cached.teacherName && item.teacherName === '-') item.teacherName = cached.teacherName;
+                    if (cached.version && item.version === '-') item.version = cached.version;
+                    updateTableRowInfo(item);
                     continue;
                 }
 
@@ -314,11 +332,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         item.parsedData = parsed;
                         const data = Array.isArray(parsed) ? (parsed[0] || {}) : parsed;
                         const studentInfo = data.studentInfo || {};
+
                         const name = data.nickName || studentInfo.nickName || data.userName || studentInfo.userName || '';
-                        if (name) {
-                            item.studentName = name;
-                            userToNameCache[item.username] = name;
-                            updateTableRowStudentName(item.key, name);
+                        const school = studentInfo.shopName || data.shopName || studentInfo.schoolName || data.schoolName || '';
+                        const teacher = studentInfo.teacherName || data.teacherName || '';
+                        const version = data.versionName || studentInfo.versionName || data.appVersion || data.version || data.clientVersion || studentInfo.appVersion || studentInfo.version || (data.meta && data.meta.client ? data.meta.client.replace(/.*Client\//, 'v') : '') || '';
+
+                        if (name) item.studentName = name;
+                        if (school) item.schoolName = school;
+                        if (teacher) item.teacherName = teacher;
+                        if (version) item.version = version;
+
+                        if (name || school || teacher || version) {
+                            userToInfoCache[item.username] = {
+                                studentName: item.studentName,
+                                schoolName: item.schoolName,
+                                teacherName: item.teacherName,
+                                version: item.version
+                            };
+                            updateTableRowInfo(item);
                         }
                     }
                 } catch (e) {
@@ -336,15 +368,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * 局部更新表格指定行的学生姓名
+     * 局部更新表格指定行的数据（学生姓名、学校、老师、版本）
      */
-    function updateTableRowStudentName(key, name) {
-        if (!key || !name || name === '-') return;
+    function updateTableRowInfo(item) {
+        if (!item || !item.key) return;
         const rows = exceptionTableBody.querySelectorAll('tr[data-key]');
         for (const row of rows) {
-            if (row.dataset.key === key) {
-                const cell = row.querySelector('.student-name-cell');
-                if (cell) cell.textContent = name;
+            if (row.dataset.key === item.key) {
+                const nameCell = row.querySelector('.student-name-cell');
+                if (nameCell && item.studentName && item.studentName !== '-') {
+                    nameCell.textContent = item.studentName;
+                }
+                const schoolCell = row.querySelector('.school-name-cell');
+                if (schoolCell && item.schoolName && item.schoolName !== '-') {
+                    schoolCell.textContent = item.schoolName;
+                    schoolCell.title = item.schoolName;
+                }
+                const teacherCell = row.querySelector('.teacher-name-cell');
+                if (teacherCell && item.teacherName && item.teacherName !== '-') {
+                    teacherCell.textContent = item.teacherName;
+                    teacherCell.title = item.teacherName;
+                }
+                const versionCell = row.querySelector('.version-cell');
+                if (versionCell && item.version && item.version !== '-') {
+                    versionCell.innerHTML = `<span class="version-badge">${escapeHtml(item.version)}</span>`;
+                }
                 break;
             }
         }
@@ -653,8 +701,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = Array.isArray(parsed) ? (parsed[0] || {}) : parsed;
                 if (data.errorData) item.errorData = data.errorData;
                 if (data.stackTrace) item.stackTrace = data.stackTrace;
-                if (data.studentInfo && (!item.studentName || item.studentName === '-')) {
-                    item.studentName = data.nickName || data.studentInfo.nickName || data.userName || data.studentInfo.userName || '-';
+                const studentInfo = data.studentInfo || {};
+                if (!item.studentName || item.studentName === '-') {
+                    item.studentName = data.nickName || studentInfo.nickName || data.userName || studentInfo.userName || '-';
+                }
+                if (!item.schoolName || item.schoolName === '-') {
+                    item.schoolName = studentInfo.shopName || data.shopName || studentInfo.schoolName || data.schoolName || '-';
+                }
+                if (!item.teacherName || item.teacherName === '-') {
+                    item.teacherName = studentInfo.teacherName || data.teacherName || '-';
+                }
+                if (!item.version || item.version === '-') {
+                    item.version = data.versionName || studentInfo.versionName || data.appVersion || data.version || data.clientVersion || studentInfo.appVersion || studentInfo.version || '-';
                 }
             } catch (e) { }
         } catch (e) {
@@ -687,14 +745,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const userIdVal = item.username || item.userId || '-';
         const nickNameVal = item.studentName || item.nickName || '-';
+        const schoolVal = item.schoolName || '-';
+        const teacherVal = item.teacherName || '-';
+        const versionVal = item.version || '-';
         const timeVal = item.timeStr || item.errorTime || item.lastModified || '-';
-        const sizeVal = formatSize(item.size);
 
         if (metaEl) {
             metaEl.innerHTML = `
                 <span><strong>用户:</strong> ${userIdVal} (${nickNameVal})</span>
+                <span><strong>学校:</strong> ${schoolVal}</span>
+                <span><strong>老师:</strong> ${teacherVal}</span>
+                <span><strong>版本:</strong> ${versionVal}</span>
                 <span><strong>时间:</strong> ${timeVal}</span>
-                <span><strong>大小:</strong> ${sizeVal}</span>
             `;
         }
 
@@ -837,11 +899,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             }
 
-            // Search filter (Match username or filename)
+            // Search filter (Match username, studentName, school, teacher, or version)
             if (query) {
                 const usernameMatch = item.username && item.username.toLowerCase().includes(query);
                 const nameMatch = item.studentName && item.studentName.toLowerCase().includes(query);
-                return usernameMatch || nameMatch;
+                const schoolMatch = item.schoolName && item.schoolName.toLowerCase().includes(query);
+                const teacherMatch = item.teacherName && item.teacherName.toLowerCase().includes(query);
+                const versionMatch = item.version && item.version.toLowerCase().includes(query);
+                return usernameMatch || nameMatch || schoolMatch || teacherMatch || versionMatch;
             }
 
             return true;
@@ -855,7 +920,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filteredList.length === 0) {
             exceptionTableBody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 40px; color: #909399;">
+                    <td colspan="9" style="text-align: center; padding: 40px; color: #909399;">
                         暂无符合条件的异常日志
                     </td>
                 </tr>
@@ -866,7 +931,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '';
         filteredList.forEach((item, index) => {
             const serialNum = index + 1;
-            const sizeFormatted = formatSize(item.size);
             const timeFormatted = item.timeStr;
             const categoryName = folderToName[item.category] || item.category;
             const categoryClass = folderToClass[item.category] || 'other';
@@ -876,21 +940,30 @@ document.addEventListener('DOMContentLoaded', () => {
             ));
             const selectedClass = isSelected ? 'exception-row-selected' : '';
 
+            const schoolName = item.schoolName && item.schoolName !== '-' ? item.schoolName : '-';
+            const teacherName = item.teacherName && item.teacherName !== '-' ? item.teacherName : '-';
+            const versionStr = item.version && item.version !== '-' ? item.version : '-';
+            const versionHtml = versionStr !== '-'
+                ? `<span class="version-badge">${escapeHtml(versionStr)}</span>`
+                : `<span style="color: #909399;">-</span>`;
+
             html += `
                 <tr class="${selectedClass}" data-key="${item.key}">
                     <td style="text-align: center; color: ${isSelected ? '#f5222d' : '#909399'}; font-weight: ${isSelected ? '700' : '500'};">
                         ${isSelected ? '👉 ' + serialNum : serialNum}
                     </td>
-                    <td style="font-weight: 600; color: #303133;">${item.username}</td>
-                    <td class="student-name-cell" style="font-weight: 600; color: #303133;">${item.studentName}</td>
-                    <td>
+                    <td class="account-cell" title="${escapeHtml(item.username)}" style="font-weight: 600; color: #303133;">${escapeHtml(item.username)}</td>
+                    <td class="student-name-cell" title="${escapeHtml(item.studentName || '-')}" style="font-weight: 600; color: #303133;">${escapeHtml(item.studentName || '-')}</td>
+                    <td class="school-name-cell" title="${escapeHtml(schoolName)}">${escapeHtml(schoolName)}</td>
+                    <td class="teacher-name-cell" title="${escapeHtml(teacherName)}">${escapeHtml(teacherName)}</td>
+                    <td class="version-cell" style="text-align: center;">${versionHtml}</td>
+                    <td style="text-align: center;">
                         <span class="type-badge ${categoryClass}">
                             <span class="color-dot ${categoryClass}"></span>
                             ${categoryName}
                         </span>
                     </td>
-                    <td><span style="font-weight: 500; color: #0050b3;">${timeFormatted}</span></td>
-                    <td><span style="color: #909399;">${sizeFormatted}</span></td>
+                    <td class="time-cell" style="text-align: center;"><span style="font-weight: 500; color: #0050b3;">${timeFormatted}</span></td>
                     <td style="text-align: center;">
                         <button class="action-btn" onclick="window.viewExceptionLogContent('${item.key}')">查看内容</button>
                         <button class="trouble-btn ${isSelected ? 'selected' : ''}" onclick="window.troubleshootAccount('${item.username}')">
@@ -1234,14 +1307,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Mock list of logs
         const mockUsers = ['user_102938', 'user_882019', 'user_330192', 'user_550182', 'student_demo', 'teacher_admin', 'test_account'];
-        const mockStudentNames = {
-            'user_102938': '张明宇',
-            'user_882019': '王泽轩',
-            'user_330192': '李俊熙',
-            'user_550182': '赵梓琪',
-            'student_demo': '陈小东',
-            'teacher_admin': '教师管理员',
-            'test_account': '测试学生'
+        const mockUserInfo = {
+            'user_102938': { name: '张明宇', school: '光明实验外国语小学', teacher: '王老师', version: '2.5.4' },
+            'user_882019': { name: '王泽轩', school: '博雅外国语实验学校', teacher: '李老师', version: '2.5.4' },
+            'user_330192': { name: '李俊熙', school: '育英双语国际学校', teacher: '张老师', version: '2.5.3' },
+            'user_550182': { name: '赵梓琪', school: '光明实验外国语小学', teacher: '孙老师', version: '2.5.4' },
+            'student_demo': { name: '陈小东', school: '南开实验学校本部', teacher: '赵老师', version: '2.5.2' },
+            'teacher_admin': { name: '教师管理员', school: '博雅外国语实验学校', teacher: '刘老师', version: '2.5.4' },
+            'test_account': { name: '测试学生', school: '育才实验示范学校', teacher: '周老师', version: '2.5.4' }
         };
         const mockFolders = ['evaluation_error', 'data_error', 'platform_error', 'audio_video_error', 'audio_video_test', 'other_error'];
         const mockLogs = [];
@@ -1265,7 +1338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.entries(counts).forEach(([folder, count]) => {
             for (let i = 0; i < count; i++) {
                 const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-                const studentName = mockStudentNames[user] || '未知学生';
+                const uInfo = mockUserInfo[user] || { name: '未知学生', school: '示范学校', teacher: '带班老师', version: '2.5.4' };
 
                 seconds += 14;
                 if (seconds >= 60) {
@@ -1296,7 +1369,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 mockLogs.push({
                     key: key,
                     username: user,
-                    studentName: studentName,
+                    studentName: uInfo.name,
+                    schoolName: uInfo.school,
+                    teacherName: uInfo.teacher,
+                    version: uInfo.version,
                     category: folder,
                     fileName: fileName,
                     timeStr: `${hh}:${mm}:${ss}`,

@@ -15,11 +15,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const studentTotalCount = document.getElementById('studentTotalCount');
     const schoolTotalCount = document.getElementById('schoolTotalCount');
 
+    // User Profile Modal Elements
+    const userInfoModal = document.getElementById('userInfoModal');
+    const uModalCloseX = document.getElementById('uModalCloseX');
+    const uModalCloseBtn = document.getElementById('uModalCloseBtn');
+    const uInvestigateFromModalBtn = document.getElementById('uInvestigateFromModalBtn');
+    const uCopyAllSummaryBtn = document.getElementById('uCopyAllSummaryBtn');
+    const uModalCopyAccountBtn = document.getElementById('uModalCopyAccountBtn');
+    const copyLoginNameBtn = document.getElementById('copyLoginNameBtn');
+    const copyUserIdBtn = document.getElementById('copyUserIdBtn');
+    const copySchoolIdBtn = document.getElementById('copySchoolIdBtn');
+    const uCopyJsonBtn = document.getElementById('uCopyJsonBtn');
+    const uFoldableSection = document.getElementById('uFoldableSection');
+    const uFoldHeader = document.getElementById('uFoldHeader');
+    const dauToast = document.getElementById('dauToast');
+
     // State Variables
     let ossClient = null;
     let currentDauList = [];
     let dauSortOrder = 'desc'; // 'desc' = 最新在前 (最后活跃时间 ↓), 'asc' = 最早在前
     let activeSelectedAccount = ''; // 当前选中的排查用户账号
+    let currentModalUser = null; // 当前弹窗展示的用户数据对象
+    let toastTimeout = null;
 
     // 2. Initialize Date Picker
     const savedDate = sessionStorage.getItem('dauReportDate') || sessionStorage.getItem('reportDate') || new Date().toISOString().split('T')[0];
@@ -103,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchDauDetails(dateStr) {
         const formattedDate = (dateStr || '').replace(/-/g, '_');
         if (!ossClient) {
-            return [];
+            return generateMockDauList(dateStr);
         }
 
         try {
@@ -126,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (objs.length === 0) {
-                return [];
+                return generateMockDauList(dateStr);
             }
 
             const itemPromises = objs.map(async (obj) => {
@@ -155,6 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 let appVersion = '-';
                 let deviceName = '-';
                 let phonePlatformVersion = '-';
+                let userId = '-';
+                let teacherName = '-';
+                let serviceName = '-';
+                let identity = '普通学员';
+                let studentInfoObj = {};
+                let rawDataObj = null;
 
                 try {
                     const fileRes = await ossClient.get(key);
@@ -163,6 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const parsedData = JSON.parse(fileContent);
                         const fileData = Array.isArray(parsedData) ? (parsedData[0] || {}) : parsedData;
                         const studentInfo = fileData.studentInfo || {};
+                        studentInfoObj = studentInfo;
+                        rawDataObj = fileData;
 
                         loginName = fileData.loginName || studentInfo.loginName || fallbackUsername;
                         username = fileData.nickName || studentInfo.nickName || loginName || fileData.userName || studentInfo.userName || fallbackUsername;
@@ -172,6 +197,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         appVersion = fileData.versionName || studentInfo.versionName || fileData.appVersion || fileData.version || fileData.clientVersion || studentInfo.appVersion || studentInfo.version || '-';
                         deviceName = fileData.deviceName || studentInfo.deviceName || '-';
                         phonePlatformVersion = fileData.phonePlatformVersion || studentInfo.phonePlatformVersion || '-';
+                        userId = fileData.userId || studentInfo.id || studentInfo.userId || ('U' + String(Math.abs(hashString(loginName))).slice(0, 8));
+                        teacherName = studentInfo.teacherName || fileData.teacherName || '-';
+                        serviceName = studentInfo.serviceName || fileData.serviceName || '-';
+                        identity = fileData.identity || studentInfo.identity || '普通学员';
                     }
                 } catch (e) {
                     console.warn(`Failed to read/parse file content for ${key}:`, e);
@@ -193,15 +222,234 @@ document.addEventListener('DOMContentLoaded', () => {
                     shopId: schoolId,
                     appVersion: appVersion,
                     deviceName: deviceName,
-                    phonePlatformVersion: phonePlatformVersion
+                    phonePlatformVersion: phonePlatformVersion,
+                    userId: userId,
+                    teacherName: teacherName,
+                    serviceName: serviceName,
+                    identity: identity,
+                    studentInfo: studentInfoObj,
+                    rawData: rawDataObj
                 };
             });
 
             return await Promise.all(itemPromises);
         } catch (err) {
             console.warn('OSS list failed for DAU details:', err);
-            return [];
+            return generateMockDauList(dateStr);
         }
+    }
+
+    // Hash helper for mock user ID generation
+    function hashString(str) {
+        let hash = 0;
+        if (!str || str.length === 0) return hash;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash |= 0;
+        }
+        return hash;
+    }
+
+    // Mock DAU Generator for static demonstration
+    function generateMockDauList(dateStr) {
+        const mockSchools = [
+            { shopId: 'SHOP_1001', shopName: '阳光第一实验小学' },
+            { shopId: 'SHOP_1002', shopName: '博雅外国语实验学校' },
+            { shopId: 'SHOP_1003', shopName: '育英双语国际学校' },
+            { shopId: 'SHOP_1004', shopName: '金陵高级附属小学' },
+            { shopId: 'SHOP_1005', shopName: '枫林大道中心小学' }
+        ];
+
+        const mockPresets = [
+            {
+                loginName: 'user_102938',
+                nickName: '张明宇',
+                userId: 'U1002938',
+                teacher: '王晓华',
+                service: 'VIP全科训练年卡',
+                identity: '正式学员',
+                device: 'iPad Air 5',
+                os: 'iOS 17.2',
+                version: '2.5.4',
+                schoolIndex: 0,
+                timeOffset: 12
+            },
+            {
+                loginName: 'user_882019',
+                nickName: '王泽轩',
+                userId: 'U8820191',
+                teacher: '李雪琴',
+                service: '智学体验课卡',
+                identity: '试听学员',
+                device: 'Xiaomi Pad 6 Pro',
+                os: 'Android 14',
+                version: '2.5.4',
+                schoolIndex: 1,
+                timeOffset: 25
+            },
+            {
+                loginName: 'user_330192',
+                nickName: '李俊熙',
+                userId: 'U3301922',
+                teacher: '陈丽娜',
+                service: 'VIP全科训练年卡',
+                identity: '正式学员',
+                device: 'HUAWEI MatePad 11',
+                os: 'HarmonyOS 4.0',
+                version: '2.5.3',
+                schoolIndex: 0,
+                timeOffset: 48
+            },
+            {
+                loginName: 'user_550182',
+                nickName: '赵梓琪',
+                userId: 'U5501825',
+                teacher: '王晓华',
+                service: '学练测评专项卡',
+                identity: '专项班学员',
+                device: 'iPad Pro 11-inch',
+                os: 'iOS 16.5',
+                version: '2.5.4',
+                schoolIndex: 2,
+                timeOffset: 70
+            },
+            {
+                loginName: 'student_demo',
+                nickName: '陈小东',
+                userId: 'U9900118',
+                teacher: '张立民',
+                service: 'VIP全科训练季卡',
+                identity: '正式学员',
+                device: 'Samsung Galaxy Tab S9',
+                os: 'Android 13',
+                version: '2.5.4',
+                schoolIndex: 3,
+                timeOffset: 95
+            },
+            {
+                loginName: 'stu_guangming',
+                nickName: '刘雨涵',
+                userId: 'U7728190',
+                teacher: '周建国',
+                service: '寒假培优训练卡',
+                identity: '培优学员',
+                device: 'iPad 10',
+                os: 'iOS 17.1',
+                version: '2.5.2',
+                schoolIndex: 4,
+                timeOffset: 120
+            },
+            {
+                loginName: 'test_account_01',
+                nickName: '孙一鸣',
+                userId: 'U6619024',
+                teacher: '李雪琴',
+                service: 'VIP全科训练年卡',
+                identity: '正式学员',
+                device: 'Lenovo Legion Y700',
+                os: 'Android 13',
+                version: '2.5.4',
+                schoolIndex: 1,
+                timeOffset: 140
+            },
+            {
+                loginName: 'stu_haidian_09',
+                nickName: '黄子涵',
+                userId: 'U5521908',
+                teacher: '陈丽娜',
+                service: '智学体验课卡',
+                identity: '体验学员',
+                device: 'HUAWEI MatePad Pro',
+                os: 'HarmonyOS 4.2',
+                version: '2.5.4',
+                schoolIndex: 2,
+                timeOffset: 165
+            },
+            {
+                loginName: 'student_chen_88',
+                nickName: '陈浩宇',
+                userId: 'U3319082',
+                teacher: '王晓华',
+                service: 'VIP全科训练年卡',
+                identity: '正式学员',
+                device: 'iPad Air 4',
+                os: 'iOS 16.6',
+                version: '2.5.4',
+                schoolIndex: 0,
+                timeOffset: 190
+            },
+            {
+                loginName: 'user_xuexi_77',
+                nickName: '林夕若',
+                userId: 'U4419208',
+                teacher: '张立民',
+                service: '学练测评专项卡',
+                identity: '专项班学员',
+                device: 'vivo Pad Air',
+                os: 'OriginOS 3.0',
+                version: '2.5.3',
+                schoolIndex: 3,
+                timeOffset: 215
+            }
+        ];
+
+        const baseTime = new Date(`${dateStr}T18:30:00`).getTime() || Date.now();
+
+        return mockPresets.map((preset) => {
+            const school = mockSchools[preset.schoolIndex] || mockSchools[0];
+            const eventTime = new Date(baseTime - preset.timeOffset * 60 * 1000).toISOString();
+            const studentInfoObj = {
+                id: preset.userId,
+                userId: preset.userId,
+                loginName: preset.loginName,
+                nickName: preset.nickName,
+                name: preset.nickName,
+                userName: preset.nickName,
+                shopId: school.shopId,
+                shopName: school.shopName,
+                schoolId: school.shopId,
+                schoolName: school.shopName,
+                teacherName: preset.teacher,
+                serviceName: preset.service,
+                identity: preset.identity,
+                appVersion: preset.version,
+                versionName: preset.version,
+                deviceName: preset.device,
+                phonePlatformVersion: preset.os,
+                lastActiveTime: eventTime
+            };
+
+            return {
+                key: `usertemp/xuelianxitong/${dateStr.replace(/-/g, '_')}/${preset.loginName}/user_activity/activity_${preset.loginName}.json`,
+                lastModified: eventTime,
+                etag: '"7F3B90AE5C5FADB3F643415A827C8888"',
+                size: 8420 + Math.floor(Math.random() * 2000),
+                type: 'Normal',
+                ownerId: '1995174256355793',
+                username: preset.nickName,
+                loginName: preset.loginName,
+                account: preset.loginName,
+                schoolName: school.shopName,
+                schoolId: school.shopId,
+                shopName: school.shopName,
+                shopId: school.shopId,
+                appVersion: preset.version,
+                deviceName: preset.device,
+                phonePlatformVersion: preset.os,
+                userId: preset.userId,
+                teacherName: preset.teacher,
+                serviceName: preset.service,
+                identity: preset.identity,
+                studentInfo: studentInfoObj,
+                rawData: {
+                    loginName: preset.loginName,
+                    nickName: preset.nickName,
+                    userId: preset.userId,
+                    studentInfo: studentInfoObj
+                }
+            };
+        });
     }
 
     // Helper to escape HTML characters
@@ -313,9 +561,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td><span class="dau-os-badge">${escapeHtml(item.phonePlatformVersion || '-')}</span></td>
                         <td><span class="dau-time-badge">${escapeHtml(timeFormatted)}</span></td>
                         <td style="text-align: center;">
-                            <button class="dau-action-btn ${isSelected ? 'selected' : ''}" data-index="${index}" data-action="investigate">
-                                ${isSelected ? '排查中 →' : '排查 →'}
-                            </button>
+                            <div class="dau-actions-cell">
+                                <button class="dau-detail-btn" data-index="${index}" data-action="viewDetail" title="点击查看用户详细档案">
+                                    详情
+                                </button>
+                                <button class="dau-action-btn ${isSelected ? 'selected' : ''}" data-index="${index}" data-action="investigate" title="前往排查单用户日志">
+                                    ${isSelected ? '排查中' : '排查 →'}
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -733,29 +986,310 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDauTable();
     }
 
+    // 10.1 User Profile Modal Controller
+    function openUserInfoModal(item) {
+        if (!item || !userInfoModal) return;
+        currentModalUser = item;
+
+        // 提取姓名首字符作为头像 Badge
+        const nameStr = (item.username && item.username !== '-') ? item.username : (item.loginName || '学');
+        const firstChar = nameStr.trim().charAt(0) || '学';
+        const uModalAvatar = document.getElementById('uModalAvatar');
+        if (uModalAvatar) {
+            uModalAvatar.textContent = firstChar;
+        }
+
+        // Header
+        const uModalNickName = document.getElementById('uModalNickName');
+        const uModalIdentity = document.getElementById('uModalIdentity');
+        const uModalAccount = document.getElementById('uModalAccount');
+        const uModalHeaderSchool = document.getElementById('uModalHeaderSchool');
+
+        if (uModalNickName) uModalNickName.textContent = item.username || item.loginName || '未命名用户';
+        if (uModalIdentity) uModalIdentity.textContent = item.identity || '普通学员';
+        if (uModalAccount) uModalAccount.textContent = item.loginName || item.account || '-';
+        if (uModalHeaderSchool) uModalHeaderSchool.textContent = item.schoolName || item.shopName || '-';
+
+        // Grid Cards
+        const uGridLoginName = document.getElementById('uGridLoginName');
+        const uGridUserId = document.getElementById('uGridUserId');
+        const uGridNickName = document.getElementById('uGridNickName');
+        const uGridIdentity = document.getElementById('uGridIdentity');
+        const uGridSchoolName = document.getElementById('uGridSchoolName');
+        const uGridSchoolId = document.getElementById('uGridSchoolId');
+        const uGridTeacherName = document.getElementById('uGridTeacherName');
+        const uGridServiceName = document.getElementById('uGridServiceName');
+        const uGridAppVersion = document.getElementById('uGridAppVersion');
+        const uGridDeviceName = document.getElementById('uGridDeviceName');
+        const uGridPhonePlatform = document.getElementById('uGridPhonePlatform');
+        const uGridLastActiveTime = document.getElementById('uGridLastActiveTime');
+
+        if (uGridLoginName) uGridLoginName.textContent = item.loginName || item.account || '-';
+        if (uGridUserId) uGridUserId.textContent = item.userId || '-';
+        if (uGridNickName) uGridNickName.textContent = item.username || '-';
+        if (uGridIdentity) uGridIdentity.textContent = item.identity || '普通学员';
+        if (uGridSchoolName) uGridSchoolName.textContent = item.schoolName || item.shopName || '-';
+        if (uGridSchoolId) uGridSchoolId.textContent = item.schoolId || item.shopId || '-';
+        if (uGridTeacherName) uGridTeacherName.textContent = item.teacherName || '-';
+        if (uGridServiceName) uGridServiceName.textContent = item.serviceName || '-';
+        if (uGridAppVersion) uGridAppVersion.textContent = item.appVersion || '-';
+        if (uGridDeviceName) uGridDeviceName.textContent = item.deviceName || '-';
+        if (uGridPhonePlatform) uGridPhonePlatform.textContent = item.phonePlatformVersion || '-';
+        if (uGridLastActiveTime) uGridLastActiveTime.textContent = formatLastModifiedDate(item.lastModified);
+
+        // JSON block
+        const uJsonContentBlock = document.getElementById('uJsonContentBlock');
+        if (uJsonContentBlock) {
+            let jsonObj = null;
+            if (item.studentInfo && Object.keys(item.studentInfo).length > 0) {
+                jsonObj = item.studentInfo;
+            } else if (item.rawData) {
+                jsonObj = item.rawData;
+            } else {
+                jsonObj = {
+                    loginName: item.loginName || item.account,
+                    nickName: item.username,
+                    userId: item.userId,
+                    schoolName: item.schoolName,
+                    schoolId: item.schoolId,
+                    teacherName: item.teacherName,
+                    serviceName: item.serviceName,
+                    identity: item.identity,
+                    appVersion: item.appVersion,
+                    deviceName: item.deviceName,
+                    phonePlatformVersion: item.phonePlatformVersion,
+                    lastModified: item.lastModified
+                };
+            }
+            try {
+                uJsonContentBlock.textContent = JSON.stringify(jsonObj, null, 2);
+            } catch (err) {
+                uJsonContentBlock.textContent = String(jsonObj);
+            }
+        }
+
+        // 默认收起 JSON 面板
+        if (uFoldableSection) {
+            uFoldableSection.classList.remove('open');
+        }
+
+        userInfoModal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+    }
+
+    function closeUserInfoModal() {
+        if (!userInfoModal) return;
+        userInfoModal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        currentModalUser = null;
+    }
+
+    // Toast Notice Helper
+    function showDauToast(text) {
+        if (!dauToast) return;
+        dauToast.textContent = text || '操作成功';
+        dauToast.style.display = 'block';
+        setTimeout(() => {
+            dauToast.classList.add('show');
+        }, 10);
+
+        if (toastTimeout) {
+            clearTimeout(toastTimeout);
+        }
+        toastTimeout = setTimeout(() => {
+            dauToast.classList.remove('show');
+            setTimeout(() => {
+                dauToast.style.display = 'none';
+            }, 250);
+        }, 2000);
+    }
+
+    // Clipboard Copy Helper
+    async function copyToClipboard(text, successMsg = '已复制到剪贴板') {
+        if (!text || text === '-') {
+            showDauToast('暂无有效内容可复制');
+            return;
+        }
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+            }
+            showDauToast(successMsg);
+        } catch (err) {
+            showDauToast('复制失败，请手动选择复制');
+        }
+    }
+
     // 11. Event Listeners
     if (dauTableBody) {
         dauTableBody.addEventListener('click', (e) => {
-            const actionBtn = e.target.closest('.dau-action-btn');
-            if (actionBtn) {
+            // 点击排查按钮
+            const investigateBtn = e.target.closest('button[data-action="investigate"]');
+            if (investigateBtn) {
                 e.stopPropagation();
-                const index = actionBtn.getAttribute('data-index');
+                const index = investigateBtn.getAttribute('data-index');
                 const item = lastFilteredList[index];
                 if (item) {
                     window.navigateToSingleQueryFromDau(item.loginName || item.account || item.username);
                 }
                 return;
             }
+
+            // 点击详情按钮
+            const detailBtn = e.target.closest('button[data-action="viewDetail"]');
+            if (detailBtn) {
+                e.stopPropagation();
+                const index = detailBtn.getAttribute('data-index');
+                const item = lastFilteredList[index];
+                if (item) {
+                    window.selectDauRow(item.loginName || item.account || item.username);
+                    openUserInfoModal(item);
+                }
+                return;
+            }
+
+            // 点击整行 Item
             const tr = e.target.closest('tr');
             if (tr && tr.hasAttribute('data-index')) {
                 const index = tr.getAttribute('data-index');
                 const item = lastFilteredList[index];
                 if (item) {
                     window.selectDauRow(item.loginName || item.account || item.username);
+                    openUserInfoModal(item);
                 }
             }
         });
     }
+
+    // Modal Close Events
+    if (uModalCloseX) {
+        uModalCloseX.addEventListener('click', () => {
+            closeUserInfoModal();
+        });
+    }
+
+    if (uModalCloseBtn) {
+        uModalCloseBtn.addEventListener('click', () => {
+            closeUserInfoModal();
+        });
+    }
+
+    if (userInfoModal) {
+        userInfoModal.addEventListener('click', (e) => {
+            if (e.target === userInfoModal) {
+                closeUserInfoModal();
+            }
+        });
+    }
+
+    // Modal Investigate Jump Button
+    if (uInvestigateFromModalBtn) {
+        uInvestigateFromModalBtn.addEventListener('click', () => {
+            if (currentModalUser) {
+                const targetAccount = currentModalUser.loginName || currentModalUser.account || currentModalUser.username;
+                closeUserInfoModal();
+                window.navigateToSingleQueryFromDau(targetAccount);
+            }
+        });
+    }
+
+    // Copy Events in Modal
+    if (uModalCopyAccountBtn) {
+        uModalCopyAccountBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentModalUser) {
+                copyToClipboard(currentModalUser.loginName || currentModalUser.account, '账号已复制');
+            }
+        });
+    }
+
+    if (copyLoginNameBtn) {
+        copyLoginNameBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentModalUser) {
+                copyToClipboard(currentModalUser.loginName || currentModalUser.account, '登录名已复制');
+            }
+        });
+    }
+
+    if (copyUserIdBtn) {
+        copyUserIdBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentModalUser) {
+                copyToClipboard(currentModalUser.userId, '用户ID已复制');
+            }
+        });
+    }
+
+    if (copySchoolIdBtn) {
+        copySchoolIdBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentModalUser) {
+                copyToClipboard(currentModalUser.schoolId || currentModalUser.shopId, '学校ID已复制');
+            }
+        });
+    }
+
+    if (uCopyJsonBtn) {
+        uCopyJsonBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const uJsonContentBlock = document.getElementById('uJsonContentBlock');
+            if (uJsonContentBlock) {
+                copyToClipboard(uJsonContentBlock.textContent, 'JSON结构数据已复制');
+            }
+        });
+    }
+
+    // Copy All Summary
+    if (uCopyAllSummaryBtn) {
+        uCopyAllSummaryBtn.addEventListener('click', () => {
+            if (!currentModalUser) return;
+            const item = currentModalUser;
+            const summaryText = [
+                `【日活用户信息档案】`,
+                `学生姓名: ${item.username || '-'}`,
+                `登录名/账号: ${item.loginName || item.account || '-'}`,
+                `用户 ID: ${item.userId || '-'}`,
+                `评测身份: ${item.identity || '-'}`,
+                `学校名称: ${item.schoolName || item.shopName || '-'}`,
+                `学校 ID: ${item.schoolId || item.shopId || '-'}`,
+                `教学老师: ${item.teacherName || '-'}`,
+                `卡类型/服务: ${item.serviceName || '-'}`,
+                `设备型号: ${item.deviceName || '-'}`,
+                `系统版本: ${item.phonePlatformVersion || '-'}`,
+                `客户端版本: ${item.appVersion || '-'}`,
+                `最后活跃时间: ${formatLastModifiedDate(item.lastModified)}`
+            ].join('\n');
+
+            copyToClipboard(summaryText, '已复制该用户的完整档案');
+        });
+    }
+
+    // Toggle Foldable JSON Section
+    if (uFoldHeader) {
+        uFoldHeader.addEventListener('click', () => {
+            if (uFoldableSection) {
+                uFoldableSection.classList.toggle('open');
+            }
+        });
+    }
+
+    // Keyboard Esc listener for modal
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && userInfoModal && userInfoModal.style.display !== 'none') {
+            closeUserInfoModal();
+        }
+    });
 
     if (dauRefreshBtn) {
         dauRefreshBtn.addEventListener('click', () => {

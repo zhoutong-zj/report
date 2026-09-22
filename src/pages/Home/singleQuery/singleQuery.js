@@ -52,6 +52,17 @@ const reportTypeMapping = {
  */
 const allExceptionTypes = ['dataException', 'platformException', 'otherException', 'evaluationException', 'audioVideoException', 'audioVideoTest'];
 
+// HTML 转义工具方法
+function escapeHtml(str) {
+    if (!str && str !== 0) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 /**
  * 用户列表应用主类，负责页面交互、数据请求、过滤及渲染
  */
@@ -714,11 +725,50 @@ class UserListApp {
     }
 
     /**
+     * 格式化年级展示（兼容 oneGrade、grade1 或直接中文）
+     */
+    formatGrade(gradeInput) {
+        if (!gradeInput && gradeInput !== 0) return '-';
+        const str = String(gradeInput).trim();
+        if (!str || str === '-') return '-';
+        const gradeMap = {
+            'onegrade': '一年级',
+            'twograde': '二年级',
+            'threegrade': '三年级',
+            'fourgrade': '四年级',
+            'fivegrade': '五年级',
+            'sixgrade': '六年级',
+            'sevengrade': '七年级',
+            'eightgrade': '八年级',
+            'ninegrade': '九年级',
+            'grade1': '一年级',
+            'grade2': '二年级',
+            'grade3': '三年级',
+            'grade4': '四年级',
+            'grade5': '五年级',
+            'grade6': '六年级',
+            'grade7': '七年级',
+            'grade8': '八年级',
+            'grade9': '九年级',
+            '1': '一年级',
+            '2': '二年级',
+            '3': '三年级',
+            '4': '四年级',
+            '5': '五年级',
+            '6': '六年级',
+            '7': '七年级',
+            '8': '八年级',
+            '9': '九年级'
+        };
+        return gradeMap[str.toLowerCase()] || str;
+    }
+
+    /**
      * 渲染列表的“加载中...”提示
      */
     renderLoading() {
         const tbody = document.getElementById('userList');
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #409eff; padding: 24px;">加载中...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #409eff; padding: 24px;">加载中...</td></tr>';
     }
 
     /**
@@ -727,7 +777,7 @@ class UserListApp {
      */
     renderError(message) {
         const tbody = document.getElementById('userList');
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #f56c6c; padding: 24px;">加载失败: ${message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #f56c6c; padding: 24px;">加载失败: ${message}</td></tr>`;
     }
 
     /**
@@ -758,16 +808,22 @@ class UserListApp {
         }
 
         const studentInfo = item.studentInfo || {};
-        const userIdVal = item.userId || studentInfo.id || studentInfo.userId || item.loginName || '-';
-        const nickNameVal = item.nickName || studentInfo.nickName || '-';
+        const nickNameVal = item.nickName || studentInfo.nickName || studentInfo.name || item.studentName || item.name || '-';
+        const schoolVal = studentInfo.shopName || item.shopName || studentInfo.schoolName || item.schoolName || '-';
+        const teacherVal = studentInfo.teacherName || item.teacherName || studentInfo.teacher || item.teacher || '-';
+        const rawGrade = studentInfo.gradeName || item.gradeName || studentInfo.grade || item.grade || studentInfo.className || item.className || '';
+        const gradeVal = this.formatGrade(rawGrade);
+        const versionVal = item.versionName || studentInfo.versionName || item.appVersion || item.version || studentInfo.appVersion || studentInfo.version || item.clientVersion || '-';
         const timeVal = this.formatReportTime(item.errorTime || item.reportTime || '-');
-        const sizeVal = this.formatFileSize(item.fileSize !== undefined ? item.fileSize : item.size);
 
         if (metaEl) {
             metaEl.innerHTML = `
-                <span><strong>用户:</strong> ${userIdVal} (${nickNameVal})</span>
+                <span><strong>学生:</strong> ${escapeHtml(nickNameVal)}</span>
+                <span><strong>学校:</strong> ${escapeHtml(schoolVal)}</span>
+                <span><strong>老师:</strong> ${escapeHtml(teacherVal)}</span>
+                <span><strong>年级:</strong> ${escapeHtml(gradeVal)}</span>
+                <span><strong>版本:</strong> ${escapeHtml(versionVal)}</span>
                 <span><strong>时间:</strong> ${timeVal}</span>
-                <span><strong>大小:</strong> ${sizeVal}</span>
             `;
         }
 
@@ -869,7 +925,7 @@ class UserListApp {
 
         // 无数据时的缺省页渲染
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #909399; padding: 24px;">暂无数据</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #909399; padding: 24px;">暂无数据</td></tr>';
             return;
         }
 
@@ -968,18 +1024,32 @@ class UserListApp {
             const color = exceptionTypeColors[exceptionType] || '#909399';
 
             const studentInfo = item.studentInfo || {};
-            const userIdVal = item.userId || studentInfo.id || studentInfo.userId || '-';
-            const nickNameVal = item.nickName || studentInfo.nickName || '-';
-            const fileSizeDisplay = this.formatFileSize(item.fileSize !== undefined ? item.fileSize : item.size);
+            const studentName = item.nickName || studentInfo.nickName || studentInfo.name || item.studentName || item.name || item.userName || studentInfo.userName || '-';
+            const schoolName = studentInfo.shopName || item.shopName || studentInfo.schoolName || item.schoolName || studentInfo.shop || item.shop || '-';
+            const teacherName = studentInfo.teacherName || item.teacherName || studentInfo.teacher || item.teacher || '-';
+
+            const rawGrade = studentInfo.gradeName || item.gradeName || studentInfo.grade || item.grade || studentInfo.className || item.className || '';
+            const gradeDisplay = this.formatGrade(rawGrade);
+
+            const appVersion = item.versionName || studentInfo.versionName || item.appVersion || item.version || studentInfo.appVersion || studentInfo.version || item.clientVersion || '-';
+            const versionHtml = appVersion !== '-' 
+                ? `<span class="version-badge">${escapeHtml(appVersion)}</span>` 
+                : `<span style="color: #909399;">-</span>`;
+
+            const gradeHtml = gradeDisplay !== '-'
+                ? `<span class="grade-badge">${escapeHtml(gradeDisplay)}</span>`
+                : `<span style="color: #909399;">-</span>`;
 
             tr.innerHTML = `
-                <td>${index + 1}</td>
-                <td>${userIdVal}</td>
-                <td>${nickNameVal}</td>
-                <td>${this.formatReportTime(item.errorTime || item.reportTime || '-')}</td>
-                <td><span class="file-size-badge">${fileSizeDisplay}</span></td>
-                <td><span style="background-color: ${color}; color: #fff; padding: 4px 8px; border-radius: 4px;">${exceptionTypeNames[exceptionType] || '-'}</span></td>
-                <td>
+                <td style="text-align: center;">${index + 1}</td>
+                <td class="student-cell" title="${escapeHtml(studentName)}" style="font-weight: 600; color: #303133;">${escapeHtml(studentName)}</td>
+                <td class="school-cell" title="${escapeHtml(schoolName)}">${escapeHtml(schoolName)}</td>
+                <td class="teacher-cell" title="${escapeHtml(teacherName)}">${escapeHtml(teacherName)}</td>
+                <td style="text-align: center;">${gradeHtml}</td>
+                <td style="text-align: center;">${versionHtml}</td>
+                <td class="time-cell" style="text-align: center;"><span style="color: #0050b3; font-weight: 500;">${this.formatReportTime(item.errorTime || item.reportTime || '-')}</span></td>
+                <td style="text-align: center;"><span style="background-color: ${color}; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${exceptionTypeNames[exceptionType] || '-'}</span></td>
+                <td style="text-align: center;">
                     <button class="view-detail-btn ${isSelected ? 'selected' : ''}" title="查看完整详情">
                         <span>查看详情</span>
                         <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
@@ -1135,6 +1205,7 @@ class UserListApp {
             '学校',
             '学校ID',
             '教学老师',
+            '年级',
             '卡类型',
             '评测内容',
             '报告时间',
@@ -1182,26 +1253,30 @@ class UserListApp {
             // 10. 教学老师
             const teacherName = studentInfo.teacherName || item.teacherName || '-';
 
-            // 11. 卡类型
+            // 11. 年级
+            const rawGrade = studentInfo.gradeName || item.gradeName || studentInfo.grade || item.grade || studentInfo.className || item.className || '';
+            const gradeName = this.formatGrade(rawGrade);
+
+            // 12. 卡类型
             const serviceName = studentInfo.serviceName || item.serviceName || '-';
 
-            // 12. 评测内容
+            // 13. 评测内容
             const identity = item.identity || studentInfo.identity || '-';
 
-            // 13. 报告时间
+            // 14. 报告时间
             const rawReportTime = item.reportTime || item.report_time || '-';
             const reportTime = this.formatReportTime(rawReportTime);
 
-            // 14. 版本
+            // 15. 版本
             const appVersion = item.versionName || item.version || item.appVersion || '-';
 
-            // 15. 设备型号
+            // 16. 设备型号
             const deviceName = item.deviceName || studentInfo.deviceName || '-';
 
-            // 16. 系统版本
+            // 17. 系统版本
             const phonePlatformVersion = item.phonePlatformVersion || studentInfo.phonePlatformVersion || '-';
 
-            // 17. 错误数据
+            // 18. 错误数据
             let errorDataVal = item.errorData !== undefined && item.errorData !== null ? item.errorData : '-';
             let errorDataStr = '-';
             if (errorDataVal !== undefined && errorDataVal !== null && errorDataVal !== '') {
@@ -1219,6 +1294,7 @@ class UserListApp {
                 schoolName,
                 schoolId,
                 teacherName,
+                gradeName,
                 serviceName,
                 identity,
                 reportTime,
@@ -1248,15 +1324,16 @@ class UserListApp {
                 { wch: 18 }, // 登录名
                 { wch: 16 }, // 用户ID
                 { wch: 20 }, // 学校
-                { wch: 14 }, // 学校ID
+                { wch: 16 }, // 学校ID
                 { wch: 16 }, // 教学老师
-                { wch: 16 }, // 卡类型
+                { wch: 14 }, // 年级
+                { wch: 18 }, // 卡类型
                 { wch: 30 }, // 评测内容
-                { wch: 26 }, // 报告时间
+                { wch: 22 }, // 报告时间
                 { wch: 14 }, // 版本
-                { wch: 20 }, // 设备型号
+                { wch: 18 }, // 设备型号
                 { wch: 16 }, // 系统版本
-                { wch: 60 }  // 错误数据
+                { wch: 45 }  // 错误数据
             ];
 
             const wb = XLSX.utils.book_new();
