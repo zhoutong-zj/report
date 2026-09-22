@@ -169,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let username = fallbackUsername;
                 let schoolName = '-';
                 let schoolId = '-';
+                let grade = '-';
                 let appVersion = '-';
                 let deviceName = '-';
                 let phonePlatformVersion = '-';
@@ -194,6 +195,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         // 优先使用 shopName/shopId，同时兼容历史 schoolName/schoolId
                         schoolName = studentInfo.shopName || fileData.shopName || studentInfo.schoolName || fileData.schoolName || '-';
                         schoolId = studentInfo.shopId || fileData.shopId || studentInfo.schoolId || fileData.schoolId || '-';
+                        const rawGrade = studentInfo.gradeName || fileData.gradeName || studentInfo.grade || fileData.grade || studentInfo.className || fileData.className || '';
+                        grade = formatGrade(rawGrade);
                         appVersion = fileData.versionName || studentInfo.versionName || fileData.appVersion || fileData.version || fileData.clientVersion || studentInfo.appVersion || studentInfo.version || '-';
                         deviceName = fileData.deviceName || studentInfo.deviceName || '-';
                         phonePlatformVersion = fileData.phonePlatformVersion || studentInfo.phonePlatformVersion || '-';
@@ -220,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     schoolId: schoolId,
                     shopName: schoolName,
                     shopId: schoolId,
+                    grade: grade,
                     appVersion: appVersion,
                     deviceName: deviceName,
                     phonePlatformVersion: phonePlatformVersion,
@@ -266,6 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginName: 'user_102938',
                 nickName: '张明宇',
                 userId: 'U1002938',
+                grade: '四年级',
                 teacher: '王晓华',
                 service: 'VIP全科训练年卡',
                 identity: '正式学员',
@@ -279,6 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginName: 'user_882019',
                 nickName: '王泽轩',
                 userId: 'U8820191',
+                grade: '五年级',
                 teacher: '李雪琴',
                 service: '智学体验课卡',
                 identity: '试听学员',
@@ -292,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginName: 'user_330192',
                 nickName: '李俊熙',
                 userId: 'U3301922',
+                grade: '三年级',
                 teacher: '陈丽娜',
                 service: 'VIP全科训练年卡',
                 identity: '正式学员',
@@ -305,6 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginName: 'user_550182',
                 nickName: '赵梓琪',
                 userId: 'U5501825',
+                grade: '四年级',
                 teacher: '王晓华',
                 service: '学练测评专项卡',
                 identity: '专项班学员',
@@ -318,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginName: 'student_demo',
                 nickName: '陈小东',
                 userId: 'U9900118',
+                grade: '二年级',
                 teacher: '张立民',
                 service: 'VIP全科训练季卡',
                 identity: '正式学员',
@@ -331,6 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginName: 'stu_guangming',
                 nickName: '刘雨涵',
                 userId: 'U7728190',
+                grade: '六年级',
                 teacher: '周建国',
                 service: '寒假培优训练卡',
                 identity: '培优学员',
@@ -344,6 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginName: 'test_account_01',
                 nickName: '孙一鸣',
                 userId: 'U6619024',
+                grade: '五年级',
                 teacher: '李雪琴',
                 service: 'VIP全科训练年卡',
                 identity: '正式学员',
@@ -357,6 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginName: 'stu_haidian_09',
                 nickName: '黄子涵',
                 userId: 'U5521908',
+                grade: '三年级',
                 teacher: '陈丽娜',
                 service: '智学体验课卡',
                 identity: '体验学员',
@@ -370,6 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginName: 'student_chen_88',
                 nickName: '陈浩宇',
                 userId: 'U3319082',
+                grade: '四年级',
                 teacher: '王晓华',
                 service: 'VIP全科训练年卡',
                 identity: '正式学员',
@@ -383,6 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginName: 'user_xuexi_77',
                 nickName: '林夕若',
                 userId: 'U4419208',
+                grade: '五年级',
                 teacher: '张立民',
                 service: '学练测评专项卡',
                 identity: '专项班学员',
@@ -406,6 +420,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 nickName: preset.nickName,
                 name: preset.nickName,
                 userName: preset.nickName,
+                grade: preset.grade,
+                gradeName: preset.grade,
                 shopId: school.shopId,
                 shopName: school.shopName,
                 schoolId: school.shopId,
@@ -434,6 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 schoolId: school.shopId,
                 shopName: school.shopName,
                 shopId: school.shopId,
+                grade: preset.grade,
                 appVersion: preset.version,
                 deviceName: preset.device,
                 phonePlatformVersion: preset.os,
@@ -446,10 +463,48 @@ document.addEventListener('DOMContentLoaded', () => {
                     loginName: preset.loginName,
                     nickName: preset.nickName,
                     userId: preset.userId,
+                    grade: preset.grade,
                     studentInfo: studentInfoObj
                 }
             };
         });
+    }
+
+    // Helper to format student grade
+    function formatGrade(gradeInput) {
+        if (!gradeInput && gradeInput !== 0) return '-';
+        const str = String(gradeInput).trim();
+        if (!str || str === '-') return '-';
+        const gradeMap = {
+            'onegrade': '一年级',
+            'twograde': '二年级',
+            'threegrade': '三年级',
+            'fourgrade': '四年级',
+            'fivegrade': '五年级',
+            'sixgrade': '六年级',
+            'sevengrade': '七年级',
+            'eightgrade': '八年级',
+            'ninegrade': '九年级',
+            'grade1': '一年级',
+            'grade2': '二年级',
+            'grade3': '三年级',
+            'grade4': '四年级',
+            'grade5': '五年级',
+            'grade6': '六年级',
+            'grade7': '七年级',
+            'grade8': '八年级',
+            'grade9': '九年级',
+            '1': '一年级',
+            '2': '二年级',
+            '3': '三年级',
+            '4': '四年级',
+            '5': '五年级',
+            '6': '六年级',
+            '7': '七年级',
+            '8': '八年级',
+            '9': '九年级'
+        };
+        return gradeMap[str.toLowerCase()] || str;
     }
 
     // Helper to escape HTML characters
@@ -482,6 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return (item.username && item.username.toLowerCase().includes(query)) ||
                 (item.loginName && item.loginName.toLowerCase().includes(query)) ||
                 (item.account && item.account.toLowerCase().includes(query)) ||
+                (item.grade && item.grade.toLowerCase().includes(query)) ||
                 (item.shopName && item.shopName.toLowerCase().includes(query)) ||
                 (item.shopId && item.shopId.toLowerCase().includes(query)) ||
                 (item.schoolName && item.schoolName.toLowerCase().includes(query)) ||
@@ -555,11 +611,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td style="font-weight: 600; color: #409eff;">${escapeHtml(item.loginName || item.account || '-')}</td>
                         <td style="font-weight: 600; color: #303133;">${escapeHtml(item.username || '-')}</td>
                         <td style="color: #606266;" title="${escapeHtml(item.schoolName || '')}">${escapeHtml(item.schoolName || '-')}</td>
-                        <td><span class="dau-school-id">${escapeHtml(item.schoolId || '-')}</span></td>
-                        <td><span class="dau-version-badge">${escapeHtml(item.appVersion || '-')}</span></td>
+                        <td style="text-align: center;">
+                            ${item.grade && item.grade !== '-' ? `<span class="dau-grade-badge">${escapeHtml(item.grade)}</span>` : '<span style="color: #909399;">-</span>'}
+                        </td>
+                        <td style="text-align: center;"><span class="dau-version-badge">${escapeHtml(item.appVersion || '-')}</span></td>
                         <td style="color: #303133;" title="${escapeHtml(item.deviceName || '')}">${escapeHtml(item.deviceName || '-')}</td>
-                        <td><span class="dau-os-badge">${escapeHtml(item.phonePlatformVersion || '-')}</span></td>
-                        <td><span class="dau-time-badge">${escapeHtml(timeFormatted)}</span></td>
+                        <td style="text-align: center;"><span class="dau-os-badge">${escapeHtml(item.phonePlatformVersion || '-')}</span></td>
+                        <td style="text-align: center;"><span class="dau-time-badge">${escapeHtml(timeFormatted)}</span></td>
                         <td style="text-align: center;">
                             <div class="dau-actions-cell">
                                 <button class="dau-detail-btn" data-index="${index}" data-action="viewDetail" title="点击查看用户详细档案">
@@ -1017,6 +1075,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const uGridIdentity = document.getElementById('uGridIdentity');
         const uGridSchoolName = document.getElementById('uGridSchoolName');
         const uGridSchoolId = document.getElementById('uGridSchoolId');
+        const uGridGradeName = document.getElementById('uGridGradeName');
         const uGridTeacherName = document.getElementById('uGridTeacherName');
         const uGridServiceName = document.getElementById('uGridServiceName');
         const uGridAppVersion = document.getElementById('uGridAppVersion');
@@ -1030,6 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (uGridIdentity) uGridIdentity.textContent = item.identity || '普通学员';
         if (uGridSchoolName) uGridSchoolName.textContent = item.schoolName || item.shopName || '-';
         if (uGridSchoolId) uGridSchoolId.textContent = item.schoolId || item.shopId || '-';
+        if (uGridGradeName) uGridGradeName.textContent = item.grade || '-';
         if (uGridTeacherName) uGridTeacherName.textContent = item.teacherName || '-';
         if (uGridServiceName) uGridServiceName.textContent = item.serviceName || '-';
         if (uGridAppVersion) uGridAppVersion.textContent = item.appVersion || '-';
@@ -1258,6 +1318,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const summaryText = [
                 `【日活用户信息档案】`,
                 `学生姓名: ${item.username || '-'}`,
+                `学生年级: ${item.grade || '-'}`,
                 `登录名/账号: ${item.loginName || item.account || '-'}`,
                 `用户 ID: ${item.userId || '-'}`,
                 `评测身份: ${item.identity || '-'}`,
