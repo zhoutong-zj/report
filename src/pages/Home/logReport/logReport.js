@@ -91,9 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (window.self !== window.parent) {
             window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html' }, '*');
-            setTimeout(() => {
-                window.location.href = '../singleQuery/singleQuery.html';
-            }, 150);
         } else {
             window.location.href = '../singleQuery/singleQuery.html';
         }
@@ -169,331 +166,164 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Helper to render Chart.js line chart of user error distribution
+    // Cache last chart parameters for theme re-rendering
+    let lastLineChartParams = null;
+    let lastPieChartParams = null;
+    let lastDauChartParams = null;
+
+    // Helper to render ECharts line chart of user error distribution
     function renderLineChart(labels, data) {
-        const ctx = document.getElementById('userErrorLineChart').getContext('2d');
+        lastLineChartParams = { labels, data };
+        const dom = document.getElementById('userErrorLineChart');
+        if (!dom || typeof echarts === 'undefined') return;
 
-        if (errorLineChart) {
-            errorLineChart.destroy();
+        const theme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light';
+        const colors = window.ThemeManager ? window.ThemeManager.getChartTheme(theme) : {};
+
+        if (errorLineChart && !errorLineChart.isDisposed()) {
+            errorLineChart.dispose();
         }
+        errorLineChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
 
-        errorLineChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '报错日志总数',
-                    data: data,
-                    borderColor: '#409eff',
-                    backgroundColor: 'rgba(64, 158, 255, 0.08)',
-                    borderWidth: 2,
-                    pointBackgroundColor: '#409eff',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: '#409eff',
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    tension: 0.3,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        enabled: false,
-                        external: function (context) {
-                            let tooltipEl = document.getElementById('chartjs-tooltip');
-
-                            if (!tooltipEl) {
-                                tooltipEl = document.createElement('div');
-                                tooltipEl.id = 'chartjs-tooltip';
-                                tooltipEl.style.background = '#ffffff';
-                                tooltipEl.style.border = '1px solid #e4e7ed';
-                                tooltipEl.style.borderRadius = '6px';
-                                tooltipEl.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                                tooltipEl.style.color = '#303133';
-                                tooltipEl.style.fontSize = '13px';
-                                tooltipEl.style.padding = '10px 14px';
-                                tooltipEl.style.position = 'absolute';
-                                tooltipEl.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
-                                tooltipEl.style.zIndex = '10000';
-                                tooltipEl.style.pointerEvents = 'auto';
-
-                                tooltipEl.addEventListener('mouseleave', () => {
-                                    tooltipEl.style.opacity = 0;
-                                });
-
-                                document.body.appendChild(tooltipEl);
-                            }
-
-                            const tooltipModel = context.tooltip;
-                            if (tooltipModel.opacity === 0) {
-                                if (tooltipEl.dataset.timeoutId) {
-                                    clearTimeout(parseInt(tooltipEl.dataset.timeoutId));
-                                }
-                                const timeoutId = setTimeout(() => {
-                                    if (!tooltipEl.matches(':hover')) {
-                                        tooltipEl.style.opacity = 0;
-                                    }
-                                }, 300);
-                                tooltipEl.dataset.timeoutId = timeoutId.toString();
-                                return;
-                            }
-
-                            if (tooltipEl.dataset.timeoutId) {
-                                clearTimeout(parseInt(tooltipEl.dataset.timeoutId));
-                                tooltipEl.dataset.timeoutId = '';
-                            }
-
-                            if (tooltipModel.body) {
-                                const title = tooltipModel.title[0] || '';
-                                const body = tooltipModel.body[0].lines[0] || '';
-                                const match = body.match(/\d+/);
-                                const count = match ? match[0] : '0';
-
-                                tooltipEl.innerHTML = `
-                                    <div style="font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                                        <span class="tooltip-username">${title}</span>
-                                        <button class="tooltip-copy-btn" style="
-                                            background: #ecf5ff;
-                                            border: 1px solid #b3d8ff;
-                                            color: #409eff;
-                                            padding: 2px 6px;
-                                            font-size: 11px;
-                                            border-radius: 4px;
-                                            cursor: pointer;
-                                            font-weight: 500;
-                                            transition: all 0.2s;
-                                            outline: none;
-                                        ">复制</button>
-                                    </div>
-                                    <div style="color: #606266; font-size: 12px; white-space: nowrap;">
-                                        报错日志总数: <span style="font-weight: 600; color: #f56c6c;">${count}</span> 个
-                                    </div>
-                                `;
-
-                                const copyBtn = tooltipEl.querySelector('.tooltip-copy-btn');
-                                copyBtn.addEventListener('click', (e) => {
-                                    e.stopPropagation();
-                                    navigator.clipboard.writeText(title).then(() => {
-                                        copyBtn.innerText = '已复制';
-                                        copyBtn.style.background = '#f0f9eb';
-                                        copyBtn.style.borderColor = '#c2e7b0';
-                                        copyBtn.style.color = '#67c23a';
-                                        setTimeout(() => {
-                                            copyBtn.innerText = '复制';
-                                            copyBtn.style.background = '#ecf5ff';
-                                            copyBtn.style.borderColor = '#b3d8ff';
-                                            copyBtn.style.color = '#409eff';
-                                        }, 1500);
-                                    }).catch(err => {
-                                        console.error('Failed to copy text: ', err);
-                                    });
-                                });
-                            }
-
-                            const position = context.chart.canvas.getBoundingClientRect();
-                            tooltipEl.style.opacity = 1;
-                            tooltipEl.style.left = position.left + window.scrollX + tooltipModel.caretX + 'px';
-                            tooltipEl.style.top = position.top + window.scrollY + tooltipModel.caretY - 10 + 'px';
-                            tooltipEl.style.transform = 'translate(-50%, -100%)';
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: '#909399',
-                            font: {
-                                size: 11
-                            }
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: '#f0f2f5'
-                        },
-                        ticks: {
-                            precision: 0,
-                            color: '#909399',
-                            font: {
-                                size: 11
-                            }
-                        }
-                    }
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                formatter: function (params) {
+                    const p = params[0];
+                    return `<div style="font-weight: 600; margin-bottom: 4px;">${p.name}</div>
+                            <div>报错日志总数: <span style="font-weight: bold; color: #f56c6c;">${p.value}</span> 个</div>`;
                 }
-            }
-        });
+            },
+            grid: {
+                top: 25,
+                left: 55,
+                right: 35,
+                bottom: labels && labels.length > 8 ? 45 : 28
+            },
+            xAxis: {
+                type: 'category',
+                data: labels,
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
+                axisLabel: {
+                    color: colors.textColor || '#909399',
+                    interval: 0,
+                    rotate: labels && labels.length > 8 ? 25 : 0,
+                    fontSize: 11
+                }
+            },
+            yAxis: {
+                type: 'value',
+                minInterval: 1,
+                splitLine: { lineStyle: { color: colors.gridColor || '#f0f2f5' } },
+                axisLabel: { color: colors.textColor || '#909399', fontSize: 11 }
+            },
+            series: [{
+                name: '报错日志总数',
+                type: 'line',
+                smooth: 0.3,
+                symbol: 'circle',
+                symbolSize: 6,
+                itemStyle: { color: '#409eff' },
+                lineStyle: { width: 2.5, color: '#409eff' },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(64, 158, 255, 0.35)' },
+                        { offset: 1, color: 'rgba(64, 158, 255, 0.02)' }
+                    ])
+                },
+                data: data
+            }]
+        };
+        errorLineChart.setOption(option);
     }
 
-    // Render horizontal bar chart for exception type distribution
+    // Render horizontal bar chart for exception type distribution with ECharts
     let errorBarChart = null;
     function renderPieChart(evalCount, dataCount, platformCount, otherCount, audioVideoCount = 0, audioVideoTestCount = 0) {
-        const ctx = document.getElementById('errorTypePieChart').getContext('2d');
+        lastPieChartParams = { evalCount, dataCount, platformCount, otherCount, audioVideoCount, audioVideoTestCount };
+        const dom = document.getElementById('errorTypePieChart');
+        if (!dom || typeof echarts === 'undefined') return;
 
-        if (errorBarChart) {
-            errorBarChart.destroy();
+        const theme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light';
+        const colors = window.ThemeManager ? window.ThemeManager.getChartTheme(theme) : {};
+
+        if (errorBarChart && !errorBarChart.isDisposed()) {
+            errorBarChart.dispose();
         }
+        errorBarChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
 
         const total = evalCount + dataCount + platformCount + otherCount + audioVideoCount + audioVideoTestCount;
-        const getPercent = (count) => total === 0 ? 0 : ((count / total) * 100).toFixed(1);
+        const categories = ['其他异常', '音视频测试', '音视频异常', '平台异常', '数据异常', '评测异常'];
+        const values = [otherCount, audioVideoTestCount, audioVideoCount, platformCount, dataCount, evalCount];
 
-        errorBarChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['评测异常', '数据异常', '平台异常', '音视频异常', '音视频测试', '其他异常'],
-                datasets: [{
-                    label: '异常数量',
-                    data: [evalCount, dataCount, platformCount, audioVideoCount, audioVideoTestCount, otherCount],
-                    backgroundColor: function (context) {
-                        const chart = context.chart;
-                        const { ctx, chartArea } = chart;
-                        const dataIndex = context.dataIndex;
-                        const datasetIndex = context.datasetIndex;
+        const colorGradients = [
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#6a85b6' }, { offset: 1, color: '#bac8e0' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#1976d2' }, { offset: 1, color: '#42a5f5' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#8e44ad' }, { offset: 1, color: '#bb86fc' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#f7971e' }, { offset: 1, color: '#ffd200' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#ff6b6b' }, { offset: 1, color: '#ff8e53' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#11998e' }, { offset: 1, color: '#38ef7d' }])
+        ];
 
-                        const meta = chart.getDatasetMeta(datasetIndex);
-                        const bar = meta && meta.data ? meta.data[dataIndex] : null;
-
-                        const startX = bar && bar.base ? bar.base : (chartArea ? chartArea.left : 0);
-                        const endX = bar && bar.x && bar.x > startX ? bar.x : (chartArea ? chartArea.right : 400);
-
-                        if (dataIndex === 0) { // 评测异常：翡翠翠绿 (Emerald Teal -> Luminous Green)
-                            const evalGradient = ctx.createLinearGradient(startX, 0, endX, 0);
-                            evalGradient.addColorStop(0, '#11998e');
-                            evalGradient.addColorStop(1, '#38ef7d');
-                            return evalGradient;
-                        }
-
-                        if (dataIndex === 1) { // 数据异常：珊瑚晚霞 (Soft Coral -> Warm Sunset Orange)
-                            const dataGradient = ctx.createLinearGradient(startX, 0, endX, 0);
-                            dataGradient.addColorStop(0, '#ff6b6b');
-                            dataGradient.addColorStop(1, '#ff8e53');
-                            return dataGradient;
-                        }
-
-                        if (dataIndex === 2) { // 平台异常：璀璨金琥珀 (Rich Golden Amber -> Sunshine Gold)
-                            const platformGradient = ctx.createLinearGradient(startX, 0, endX, 0);
-                            platformGradient.addColorStop(0, '#f7971e');
-                            platformGradient.addColorStop(1, '#ffd200');
-                            return platformGradient;
-                        }
-
-                        if (dataIndex === 3) { // 音视频异常：魅惑紫罗兰 (Royal Purple -> Soft Lavender)
-                            const avGradient = ctx.createLinearGradient(startX, 0, endX, 0);
-                            avGradient.addColorStop(0, '#8e44ad');
-                            avGradient.addColorStop(1, '#bb86fc');
-                            return avGradient;
-                        }
-
-                        if (dataIndex === 4) { // 音视频测试：明亮天蓝 (Ocean Blue -> Vibrant Sky Blue)
-                            const testGradient = ctx.createLinearGradient(startX, 0, endX, 0);
-                            testGradient.addColorStop(0, '#1976d2');
-                            testGradient.addColorStop(1, '#42a5f5');
-                            return testGradient;
-                        }
-
-                        if (dataIndex === 5) { // 其他异常：风尚蓝灰 (Soft Slate Steel -> Light Ice Platinum)
-                            const otherGradient = ctx.createLinearGradient(startX, 0, endX, 0);
-                            otherGradient.addColorStop(0, '#6a85b6');
-                            otherGradient.addColorStop(1, '#bac8e0');
-                            return otherGradient;
-                        }
-
-                        return '#909090';
-                    },
-                    borderColor: [
-                        '#0e837a',
-                        '#e05656',
-                        '#d98214',
-                        '#732d91',
-                        '#1565c0',
-                        '#5872a0'
-                    ],
-                    borderWidth: 1,
-                    borderRadius: 4
-                }]
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: function (params) {
+                    const p = params[0];
+                    const val = p.value;
+                    const pct = total === 0 ? '0.0' : ((val / total) * 100).toFixed(1);
+                    return `<div style="font-weight: 600; margin-bottom: 4px;">${p.name}</div>
+                            <div>异常频次: <span style="font-weight: bold;">${val}</span> 次 (${pct}%)</div>`;
+                }
             },
-            plugins: [{
-                id: 'datalabels',
-                afterDatasetsDraw: function (chart) {
-                    const ctx = chart.ctx;
-                    chart.data.datasets.forEach(function (dataset, i) {
-                        const meta = chart.getDatasetMeta(i);
-                        meta.data.forEach(function (bar, index) {
-                            const data = dataset.data[index];
-                            if (data > 0) {
-                                ctx.fillStyle = '#303133';
-                                ctx.font = 'bold 12px Arial';
-                                ctx.textAlign = 'left';
-                                ctx.textBaseline = 'middle';
-                                ctx.fillText(data + ' 次', bar.x + 8, bar.y);
-                            }
-                        });
-                    });
+            grid: {
+                top: 15,
+                left: 85,
+                right: 55,
+                bottom: 25
+            },
+            xAxis: {
+                type: 'value',
+                minInterval: 1,
+                splitLine: { lineStyle: { color: colors.gridColor || '#f0f2f5' } },
+                axisLabel: { color: colors.textColor || '#909399', fontSize: 11 }
+            },
+            yAxis: {
+                type: 'category',
+                data: categories,
+                axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
+                axisLabel: {
+                    color: colors.textColor || '#303133',
+                    fontWeight: 500,
+                    fontSize: 12
                 }
-            }],
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        right: 50
+            },
+            series: [{
+                name: '异常数量',
+                type: 'bar',
+                barWidth: 16,
+                itemStyle: {
+                    borderRadius: [0, 4, 4, 0],
+                    color: function (params) {
+                        return colorGradients[params.dataIndex] || '#409eff';
                     }
                 },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                const count = context.raw;
-                                const percent = getPercent(count);
-                                return `${count} 次 (${percent}%)`;
-                            }
-                        }
-                    }
+                label: {
+                    show: true,
+                    position: 'right',
+                    formatter: '{c} 次',
+                    color: colors.textColor || '#303133',
+                    fontWeight: 600,
+                    fontSize: 11
                 },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        grace: '10%',
-                        grid: {
-                            color: '#f0f2f5'
-                        },
-                        ticks: {
-                            precision: 0,
-                            color: '#909399',
-                            font: {
-                                size: 11
-                            }
-                        }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: '#303133',
-                            font: {
-                                size: 13,
-                                weight: 500
-                            }
-                        }
-                    }
-                }
-            }
-        });
+                data: values
+            }]
+        };
+        errorBarChart.setOption(option);
     }
 
     // Helper to calculate 10 dates ending on selectedDateStr (inclusive)
@@ -521,116 +351,81 @@ document.addEventListener('DOMContentLoaded', () => {
         return list;
     }
 
-    // Render 10-day Daily Active Users (DAU) line chart
+    // Render 10-day Daily Active Users (DAU) line chart with ECharts
     let dauLineChart = null;
     function renderDauChart(labels, data) {
-        const canvasEl = document.getElementById('dauLineChart');
-        if (!canvasEl) return;
+        lastDauChartParams = { labels, data };
+        const dom = document.getElementById('dauLineChart');
+        if (!dom || typeof echarts === 'undefined') return;
 
-        // Update today's DAU count text element above the chart
         const todayDauEl = document.getElementById('todayDauCount');
         if (todayDauEl && data && data.length > 0) {
             todayDauEl.textContent = data[data.length - 1];
         }
 
-        if (dauLineChart) {
-            dauLineChart.destroy();
+        const theme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light';
+        const colors = window.ThemeManager ? window.ThemeManager.getChartTheme(theme) : {};
+
+        if (dauLineChart && !dauLineChart.isDisposed()) {
+            dauLineChart.dispose();
         }
+        dauLineChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
 
-        const ctx = canvasEl.getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, 250);
-        gradient.addColorStop(0, 'rgba(64, 158, 255, 0.35)');
-        gradient.addColorStop(1, 'rgba(64, 158, 255, 0.02)');
-
-        dauLineChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '日活数量',
-                    data: data,
-                    borderColor: '#409eff',
-                    backgroundColor: gradient,
-                    borderWidth: 2.5,
-                    pointBackgroundColor: '#fff',
-                    pointBorderColor: '#409eff',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    pointHoverBackgroundColor: '#409eff',
-                    pointHoverBorderColor: '#fff',
-                    tension: 0.3,
-                    fill: true
-                }]
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                formatter: function (params) {
+                    const p = params[0];
+                    return `<div style="font-weight: 600; margin-bottom: 4px;">${p.name}</div>
+                            <div>日活数量: <span style="font-weight: bold; color: #409eff;">${p.value}</span> 个</div>`;
+                }
             },
-            plugins: [{
-                id: 'dauDatalabels',
-                afterDraw: function (chart) {
-                    const chartCtx = chart.ctx;
-                    chart.data.datasets.forEach(function (dataset, i) {
-                        const meta = chart.getDatasetMeta(i);
-                        meta.data.forEach(function (point, index) {
-                            const val = dataset.data[index];
-                            if (val !== undefined && val !== null) {
-                                chartCtx.fillStyle = '#409eff';
-                                chartCtx.font = 'bold 11px Arial';
-                                chartCtx.textAlign = 'center';
-                                chartCtx.textBaseline = 'bottom';
-                                chartCtx.fillText(val + ' 个', point.x, point.y - 6);
-                            }
-                        });
-                    });
-                }
-            }],
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        top: 25
-                    }
+            grid: {
+                top: 25,
+                left: 45,
+                right: 30,
+                bottom: 25
+            },
+            xAxis: {
+                type: 'category',
+                data: labels,
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
+                axisLabel: { color: colors.textColor || '#909399', fontSize: 11 }
+            },
+            yAxis: {
+                type: 'value',
+                minInterval: 1,
+                splitLine: { lineStyle: { color: colors.gridColor || '#f0f2f5' } },
+                axisLabel: { color: colors.textColor || '#909399', fontSize: 11 }
+            },
+            series: [{
+                name: '日活数量',
+                type: 'line',
+                smooth: 0.35,
+                symbol: 'circle',
+                symbolSize: 6,
+                itemStyle: { color: '#409eff' },
+                lineStyle: { width: 2.5, color: '#409eff' },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(64, 158, 255, 0.35)' },
+                        { offset: 1, color: 'rgba(64, 158, 255, 0.02)' }
+                    ])
                 },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return ` 日活数量: ${context.raw} 个`;
-                            }
-                        }
-                    }
+                label: {
+                    show: true,
+                    position: 'top',
+                    formatter: '{c} 个',
+                    color: '#409eff',
+                    fontWeight: 'bold',
+                    fontSize: 11
                 },
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: '#909399',
-                            font: {
-                                size: 11
-                            }
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grace: '15%',
-                        grid: {
-                            color: '#f0f2f5'
-                        },
-                        ticks: {
-                            precision: 0,
-                            color: '#909399',
-                            font: {
-                                size: 11
-                            }
-                        }
-                    }
-                }
-            }
-        });
+                data: data
+            }]
+        };
+        dauLineChart.setOption(option);
     }
 
     function initAndLoadReport() {
@@ -1037,8 +832,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <span class="history-name">${username}</span>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="font-size: 11px; color: #a8071a; font-weight: 600; background-color: #fff1f0; border: 1px solid #ffa39e; padding: 2px 6px; border-radius: 4px;">${count} 次报错</span>
-                                <span style="font-size: 12px; color: #0050b3; font-weight: 700; background-color: #e6f7ff; border: 1px solid #91d5ff; padding: 2px 6px; border-radius: 4px;">最后: ${lastTime}</span>
+                                <span class="account-error-badge">${count} 次报错</span>
+                                <span class="account-time-badge">最后: ${lastTime}</span>
                             </div>
                         </div>
                     </div>
@@ -1075,11 +870,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 解决本地文件协议/跨域导致的 window.parent 权限拒绝问题：使用 postMessage 通信
                 if (window.self !== window.parent) {
                     window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html' }, '*');
-
-                    // 防御性退级方案：若父窗口未响应（例如父页面尚未刷新加载最新JS），150ms后当前 iframe 直接重定向
-                    setTimeout(() => {
-                        window.location.href = '../singleQuery/singleQuery.html';
-                    }, 150);
                 } else {
                     window.location.href = '../singleQuery/singleQuery.html';
                 }
@@ -1129,4 +919,23 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = '../exceptionDetail/exceptionDetail.html';
         });
     }
+
+    // 10. Theme Change Adaptations for Charts
+    function syncAllChartsTheme(theme) {
+        if (lastLineChartParams) renderLineChart(lastLineChartParams.labels, lastLineChartParams.data);
+        if (lastPieChartParams) renderPieChart(lastPieChartParams.evalCount, lastPieChartParams.dataCount, lastPieChartParams.platformCount, lastPieChartParams.otherCount, lastPieChartParams.audioVideoCount, lastPieChartParams.audioVideoTestCount);
+        if (lastDauChartParams) renderDauChart(lastDauChartParams.labels, lastDauChartParams.data);
+    }
+
+    window.addEventListener('themeChanged', (e) => {
+        syncAllChartsTheme(e.detail ? e.detail.theme : null);
+    });
+
+    window.addEventListener('resize', () => {
+        if (errorLineChart && !errorLineChart.isDisposed()) errorLineChart.resize();
+        if (errorBarChart && !errorBarChart.isDisposed()) errorBarChart.resize();
+        if (dauLineChart && !dauLineChart.isDisposed()) dauLineChart.resize();
+    });
 });
+
+

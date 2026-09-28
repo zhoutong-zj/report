@@ -363,9 +363,6 @@ class UserListApp {
                 page: 'dauDetail/dauDetail.html',
                 activeMenu: 'logReport/logReport.html'
             }, '*');
-            setTimeout(() => {
-                window.location.href = '../dauDetail/dauDetail.html';
-            }, 150);
         } else {
             window.location.href = '../dauDetail/dauDetail.html';
         }
@@ -383,9 +380,6 @@ class UserListApp {
                 page: 'exceptionDetail/exceptionDetail.html',
                 activeMenu: 'logReport/logReport.html'
             }, '*');
-            setTimeout(() => {
-                window.location.href = '../exceptionDetail/exceptionDetail.html';
-            }, 150);
         } else {
             window.location.href = '../exceptionDetail/exceptionDetail.html';
         }
@@ -768,7 +762,7 @@ class UserListApp {
      */
     renderLoading() {
         const tbody = document.getElementById('userList');
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #409eff; padding: 24px;">加载中...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="table-feedback-cell loading" style="text-align: center; padding: 28px;">加载中...</td></tr>';
     }
 
     /**
@@ -777,7 +771,7 @@ class UserListApp {
      */
     renderError(message) {
         const tbody = document.getElementById('userList');
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #f56c6c; padding: 24px;">加载失败: ${message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="table-feedback-cell error" style="text-align: center; padding: 28px;">加载失败: ${message}</td></tr>`;
     }
 
     /**
@@ -925,7 +919,7 @@ class UserListApp {
 
         // 无数据时的缺省页渲染
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #909399; padding: 24px;">暂无数据</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="table-feedback-cell empty" style="text-align: center; padding: 28px;">暂无数据</td></tr>';
             return;
         }
 
@@ -1040,15 +1034,22 @@ class UserListApp {
                 ? `<span class="grade-badge">${escapeHtml(gradeDisplay)}</span>`
                 : `<span style="color: #909399;">-</span>`;
 
+            const exceptionName = exceptionTypeNames[exceptionType] || '-';
             tr.innerHTML = `
-                <td style="text-align: center;">${index + 1}</td>
-                <td class="student-cell" title="${escapeHtml(studentName)}" style="font-weight: 600; color: #303133;">${escapeHtml(studentName)}</td>
+                <td class="index-cell" style="text-align: center;">${index + 1}</td>
+                <td class="student-cell" title="${escapeHtml(studentName)}">
+                    <span class="student-name-text">${escapeHtml(studentName)}</span>
+                </td>
                 <td class="school-cell" title="${escapeHtml(schoolName)}">${escapeHtml(schoolName)}</td>
                 <td class="teacher-cell" title="${escapeHtml(teacherName)}">${escapeHtml(teacherName)}</td>
                 <td style="text-align: center;">${gradeHtml}</td>
                 <td style="text-align: center;">${versionHtml}</td>
-                <td class="time-cell" style="text-align: center;"><span style="color: #0050b3; font-weight: 500;">${this.formatReportTime(item.errorTime || item.reportTime || '-')}</span></td>
-                <td style="text-align: center;"><span style="background-color: ${color}; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${exceptionTypeNames[exceptionType] || '-'}</span></td>
+                <td class="time-cell" style="text-align: center;">
+                    <span class="error-time-badge">${this.formatReportTime(item.errorTime || item.reportTime || '-')}</span>
+                </td>
+                <td style="text-align: center;">
+                    <span class="exception-status-badge exception-tag-${exceptionType}" style="--badge-color: ${color};">${exceptionName}</span>
+                </td>
                 <td style="text-align: center;">
                     <button class="view-detail-btn ${isSelected ? 'selected' : ''}" title="查看完整详情">
                         <span>查看详情</span>

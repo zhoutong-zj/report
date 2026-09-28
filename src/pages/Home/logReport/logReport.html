@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
@@ -9,8 +9,9 @@
     <link rel="icon" type="image/png" sizes="32x32" href="../../../src/assets/favicon-32x32.png?v=4">
     <link rel="icon" type="image/png" sizes="16x16" href="../../../src/assets/favicon-16x16.png?v=4">
     <link rel="shortcut icon" href="../favicon.ico?v=4">
-    <link rel="apple-touch-icon" href="../favicon.png?v=4">
-    <link rel="stylesheet" href="logReport.css">
+    <link rel="stylesheet" href="../theme.css?v=1722249000006">
+    <link rel="stylesheet" href="logReport.css?v=1722249000006">
+    <script src="../theme.js"></script>
 </head>
 
 <body>
@@ -23,10 +24,8 @@
             </div>
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <label for="reportDate"
-                        style="font-size: 13px; font-weight: 500; color: #606266; white-space: nowrap;">选择报表日期：</label>
-                    <input type="date" id="reportDate"
-                        style="height: 32px; padding: 0 10px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; outline: none; cursor: pointer;">
+                    <label for="reportDate" class="report-date-label">选择报表日期：</label>
+                    <input type="date" id="reportDate" class="report-date-input">
                 </div>
                 <div class="quick-dates">
                     <button class="quick-date-btn active" data-offset="0">今日</button>
@@ -121,14 +120,14 @@
                         <h2>近10日日活统计折线图</h2>
                         <button id="viewDauBtn" class="view-dau-btn" title="点击查看单日日活详细数据">查看日活详细数据 →</button>
                     </div>
-                    <div style="margin-top: 8px; display: flex; align-items: baseline; gap: 6px;">
-                        <span style="font-size: 13px; color: #606266; font-weight: 500;">本日日活：</span>
-                        <span id="todayDauCount" style="font-size: 24px; font-weight: 700; color: #409eff; line-height: 1;">-</span>
-                        <span style="font-size: 13px; color: #909399; font-weight: 500;">个账号</span>
+                    <div class="dau-stat-box">
+                        <span class="dau-stat-label">本日日活：</span>
+                        <span id="todayDauCount" class="dau-stat-val">-</span>
+                        <span class="dau-stat-unit">个账号</span>
                     </div>
                     <div class="chart-container"
                         style="position: relative; height: 240px; width: 100%; display: flex; justify-content: center; align-items: center; padding: 10px 0;">
-                        <canvas id="dauLineChart"></canvas>
+                        <div id="dauLineChart" style="width: 100%; height: 100%;"></div>
                     </div>
                 </div>
 
@@ -141,7 +140,7 @@
                     </div>
                     <div class="chart-container"
                         style="position: relative; height: 280px; width: 100%; display: flex; justify-content: center; align-items: center; padding: 10px 0;">
-                        <canvas id="errorTypePieChart"></canvas>
+                        <div id="errorTypePieChart" style="width: 100%; height: 100%;"></div>
                     </div>
                 </div>
             </div>
@@ -153,8 +152,7 @@
                         <h2>今日报错账号</h2>
                         <span class="badge-count" id="historyBadge">0</span>
                     </div>
-                    <select id="sortSelector"
-                        style="padding: 4px 8px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 12px; color: #606266; outline: none; cursor: pointer; background: #fff;">
+                    <select id="sortSelector" class="sort-selector">
                         <option value="count">按报错数量排序</option>
                         <option value="time">按最后时间排序</option>
                     </select>
@@ -176,22 +174,21 @@
 
         <!-- Bottom: User Exception Distribution Line Chart -->
         <section class="bottom-panel card" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
-            <div class="panel-header"
-                style="border-bottom: 1px solid #ebeef5; padding-bottom: 10px; margin-bottom: 5px;">
-                <h2 style="font-size: 16px; font-weight: 600; color: #303133; margin: 0;">用户报错分布统计折线图</h2>
-                <span style="font-size: 12px; color: #909399;">横向显示异常用户，纵向显示报错日志数量</span>
+            <div class="panel-header bottom-chart-header">
+                <h2 class="panel-title">用户报错分布统计折线图</h2>
+                <span class="panel-subtitle">横向显示异常用户，纵向显示报错日志数量</span>
             </div>
             <div class="chart-wrapper" style="position: relative; height: 280px; width: 100%;">
-                <canvas id="userErrorLineChart"></canvas>
+                <div id="userErrorLineChart" style="width: 100%; height: 100%;"></div>
             </div>
         </section>
     </div>
 
-    <!-- Chart.js for rendering the line chart -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Apache ECharts for rendering data visualization charts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <!-- Aliyun OSS JS SDK for loading dynamic report data -->
     <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
-    <script src="logReport.js?v=1722247990000"></script>
+    <script src="logReport.js?v=1722249000009"></script>
 </body>
 
 </html>

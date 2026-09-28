@@ -316,7 +316,7 @@ body.modal-open {
 }
 
 .exception-table tbody tr:hover {
-    background-color: #fafafa;
+    background-color: #f1f5f9;
 }
 
 .type-badge {
@@ -401,12 +401,22 @@ body.modal-open {
     box-shadow: 0 2px 6px rgba(245, 108, 108, 0.4);
 }
 
-.exception-table tbody tr.exception-row-selected {
-    background-color: #fff7e6 !important;
+.exception-table tbody tr.exception-row-selected,
+.exception-table tbody tr.exception-row-selected td {
+    background-color: #e6f4ff !important;
+    color: #1f2329;
+    font-weight: 500;
 }
 
-.exception-table tbody tr.exception-row-selected:hover {
-    background-color: #ffe7ba !important;
+.exception-table tbody tr.exception-row-selected td:first-child {
+    border-left: 4px solid #1677ff !important;
+    font-weight: 700;
+    color: #1677ff !important;
+}
+
+.exception-table tbody tr.exception-row-selected:hover,
+.exception-table tbody tr.exception-row-selected:hover td {
+    background-color: #d4ecff !important;
 }
 
 /* Modal Dialog */
@@ -675,4 +685,264 @@ body.modal-open {
     border-top: 1px solid #ebeef5;
     font-size: 12px;
     color: #8c8c8c;
+}
+
+/* ==========================================================================
+   exceptionDetail Dark Mode Overrides
+   ========================================================================== */
+[data-theme="dark"] body {
+    background-color: #0a0f16 !important;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .page-header {
+    background: #111a22 !important;
+    border: 1px solid #1e2c38 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .page-header h1 {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .page-header .subtitle {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .back-btn {
+    background-color: rgba(56, 189, 248, 0.12) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+[data-theme="dark"] .back-btn:hover {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+    border-color: #0284c7 !important;
+}
+
+[data-theme="dark"] .card {
+    background: #111a22 !important;
+    border: 1px solid #1e2c38 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+[data-theme="dark"] .panel-header {
+    border-bottom: 1px solid #1e2c38 !important;
+}
+
+[data-theme="dark"] .panel-header h2 {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .panel-header .subtitle {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .filter-item label {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .filter-item input {
+    background-color: #172430 !important;
+    border: 1px solid #233646 !important;
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .filter-item input:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+}
+
+[data-theme="dark"] .exception-refresh-btn {
+    background-color: #172430 !important;
+    border: 1px solid #233646 !important;
+    color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .exception-refresh-btn:hover {
+    background-color: #0284c7 !important;
+    border-color: #38bdf8 !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .tab-btn {
+    background-color: #172430 !important;
+    border: 1px solid #233646 !important;
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .tab-btn:hover {
+    background-color: #1e2f3e !important;
+    color: #38bdf8 !important;
+    border-color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .tab-btn.active {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    border-color: #38bdf8 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(56, 189, 248, 0.25) !important;
+}
+
+[data-theme="dark"] .tab-btn .badge {
+    background-color: #1e2c38 !important;
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .tab-btn.active .badge {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .exception-table thead {
+    background-color: #15222c !important;
+}
+
+[data-theme="dark"] .exception-table th {
+    background-color: #15222c !important;
+    color: #94a3b8 !important;
+    border-bottom: 1px solid #203140 !important;
+}
+
+[data-theme="dark"] .exception-table td {
+    border-top: 1px solid #1a2734 !important;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .exception-table tbody tr {
+    background-color: transparent !important;
+}
+
+/* 消除普通行 hover 时的雪白底色，采用深邃沉稳微蓝灰 */
+[data-theme="dark"] .exception-table tbody tr:hover,
+[data-theme="dark"] .exception-table tbody tr:hover td {
+    background-color: #16222f !important;
+    color: #f1f5f9 !important;
+}
+
+/* 选中行高亮样式：与学生查询统一 */
+[data-theme="dark"] .exception-table tbody tr.exception-row-selected,
+[data-theme="dark"] .exception-table tbody tr.exception-row-selected td {
+    background-color: rgba(14, 165, 233, 0.15) !important;
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .exception-table tbody tr.exception-row-selected td:first-child {
+    border-left: 4px solid #38bdf8 !important;
+    color: #38bdf8 !important;
+    font-weight: 700 !important;
+}
+
+/* 选中行悬停状态：与学生查询统一 */
+[data-theme="dark"] .exception-table tbody tr.exception-row-selected:hover,
+[data-theme="dark"] .exception-table tbody tr.exception-row-selected:hover td {
+    background-color: rgba(14, 165, 233, 0.22) !important;
+}
+
+/* 表格内文字暗黑模式优化 */
+[data-theme="dark"] .exception-table .account-cell,
+[data-theme="dark"] .exception-table .student-name-cell {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .exception-table .time-cell span {
+    color: #60a5fa !important;
+}
+
+/* 操作列按钮暗黑模式适配，杜绝默认亮白底色 */
+[data-theme="dark"] .action-btn {
+    background-color: #1a2734 !important;
+    color: #cbd5e1 !important;
+    border-color: #2a3c4f !important;
+}
+
+[data-theme="dark"] .action-btn:hover {
+    background-color: #22374b !important;
+    color: #38bdf8 !important;
+    border-color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .trouble-btn {
+    background-color: rgba(239, 68, 68, 0.12) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+[data-theme="dark"] .trouble-btn:hover {
+    background-color: rgba(239, 68, 68, 0.28) !important;
+    color: #fca5a5 !important;
+    border-color: rgba(239, 68, 68, 0.6) !important;
+}
+
+/* 排查按钮选中态适配柔和暗夜红 */
+[data-theme="dark"] .trouble-btn.selected {
+    background: rgba(239, 68, 68, 0.25) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.6) !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.3) !important;
+}
+
+[data-theme="dark"] .view-detail-btn {
+    background-color: rgba(56, 189, 248, 0.12) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.28) !important;
+}
+
+[data-theme="dark"] .view-detail-btn:hover {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+}
+
+/* Error Popover in Dark Mode */
+[data-theme="dark"] .error-popover {
+    background: #111a22 !important;
+    border: 1px solid #233646 !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65) !important;
+}
+
+[data-theme="dark"] .popover-header {
+    background-color: #15222c !important;
+    border-bottom: 1px solid #203140 !important;
+}
+
+[data-theme="dark"] .popover-title {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .popover-meta {
+    background-color: #131d27 !important;
+    border-bottom: 1px dashed #233646 !important;
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .popover-meta span strong {
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .popover-footer {
+    background-color: #15222c !important;
+    border-top: 1px solid #203140 !important;
+    color: #64748b !important;
+}
+
+[data-theme="dark"] .popover-copy-btn {
+    background-color: #1a2734 !important;
+    color: #94a3b8 !important;
+    border-color: #2a3c4f !important;
+}
+
+[data-theme="dark"] .popover-copy-btn:hover {
+    background-color: #22374b !important;
+    color: #38bdf8 !important;
+    border-color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .popover-close-btn {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .popover-close-btn:hover {
+    background-color: #1e2c3a !important;
+    color: #f1f5f9 !important;
 }

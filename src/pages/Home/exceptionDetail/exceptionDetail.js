@@ -84,10 +84,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 3. Back Button
-    backBtn.addEventListener('click', () => {
-        sessionStorage.removeItem('exception_state_cache');
-        window.location.href = '../logReport/logReport.html';
-    });
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            const selectedDate = exceptionDateInput ? exceptionDateInput.value : '';
+            if (selectedDate) {
+                sessionStorage.setItem('reportDate', selectedDate);
+            }
+            sessionStorage.removeItem('exception_state_cache');
+            window.location.href = '../logReport/logReport.html';
+        });
+    }
 
     // 缓存管理方法
     function getGlobalCache() {
@@ -398,174 +404,108 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Render Statistics Chart
-    function renderExceptionChart(evalCount, dataCount, platformCount, avCount, avTestCount = 0, otherCount = 0) {
-        const ctx = document.getElementById('errorTypePieChart').getContext('2d');
+    // Render Statistics Chart with ECharts
+    let lastExceptionChartParams = null;
 
-        if (errorBarChart) {
-            errorBarChart.destroy();
+    function renderExceptionChart(evalCount, dataCount, platformCount, avCount, avTestCount = 0, otherCount = 0) {
+        lastExceptionChartParams = { evalCount, dataCount, platformCount, avCount, avTestCount, otherCount };
+        const dom = document.getElementById('errorTypePieChart');
+        if (!dom || typeof echarts === 'undefined') return;
+
+        const theme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light';
+        const colors = window.ThemeManager ? window.ThemeManager.getChartTheme(theme) : {};
+
+        if (errorBarChart && !errorBarChart.isDisposed()) {
+            errorBarChart.dispose();
         }
+        errorBarChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
 
         const total = evalCount + dataCount + platformCount + avCount + avTestCount + otherCount;
-        const getPercent = (count) => total === 0 ? 0 : ((count / total) * 100).toFixed(1);
+        const categoryKeys = ['other_error', 'audio_video_test', 'audio_video_error', 'platform_error', 'data_error', 'evaluation_error'];
+        const categories = ['其他异常', '音视频测试', '音视频异常', '平台异常', '数据异常', '评测异常'];
+        const values = [otherCount, avTestCount, avCount, platformCount, dataCount, evalCount];
 
-        const categoryKeys = ['evaluation_error', 'data_error', 'platform_error', 'audio_video_error', 'audio_video_test', 'other_error'];
+        const rawGradients = [
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#6a85b6' }, { offset: 1, color: '#bac8e0' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#1976d2' }, { offset: 1, color: '#42a5f5' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#8e44ad' }, { offset: 1, color: '#bb86fc' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#f7971e' }, { offset: 1, color: '#ffd200' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#ff6b6b' }, { offset: 1, color: '#ff8e53' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#11998e' }, { offset: 1, color: '#38ef7d' }])
+        ];
 
-        errorBarChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['评测异常', '数据异常', '平台异常', '音视频异常', '音视频测试', '其他异常'],
-                datasets: [{
-                    label: '异常数量',
-                    data: [evalCount, dataCount, platformCount, avCount, avTestCount, otherCount],
-                    backgroundColor: function (context) {
-                        const chart = context.chart;
-                        const { ctx: chartCtx, chartArea } = chart;
-                        const dataIndex = context.dataIndex;
-                        const datasetIndex = context.datasetIndex;
+        const isDark = (window.ThemeManager && window.ThemeManager.getTheme() === 'dark') || document.documentElement.getAttribute('data-theme') === 'dark';
+        const dimColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(203, 213, 225, 0.4)';
 
-                        const meta = chart.getDatasetMeta(datasetIndex);
-                        const bar = meta && meta.data ? meta.data[dataIndex] : null;
+        const seriesData = values.map((val, idx) => {
+            const catKey = categoryKeys[idx];
+            const isDimmed = selectedCategory !== 'all' && selectedCategory !== catKey;
+            return {
+                value: val,
+                catKey: catKey,
+                itemStyle: {
+                    borderRadius: [0, 4, 4, 0],
+                    color: isDimmed ? dimColor : rawGradients[idx]
+                }
+            };
+        });
 
-                        const startX = bar && bar.base ? bar.base : (chartArea ? chartArea.left : 0);
-                        const endX = bar && bar.x && bar.x > startX ? bar.x : (chartArea ? chartArea.right : 400);
-
-                        // Highlight selected category or show full gradient
-                        const isDimmed = selectedCategory !== 'all' && selectedCategory !== categoryKeys[dataIndex];
-
-                        if (isDimmed) {
-                            return 'rgba(220, 223, 230, 0.4)'; // Grayed out if another category is selected
-                        }
-
-                        if (dataIndex === 0) { // 评测异常
-                            const evalGradient = chartCtx.createLinearGradient(startX, 0, endX, 0);
-                            evalGradient.addColorStop(0, '#11998e');
-                            evalGradient.addColorStop(1, '#38ef7d');
-                            return evalGradient;
-                        }
-                        if (dataIndex === 1) { // 数据异常
-                            const dataGradient = chartCtx.createLinearGradient(startX, 0, endX, 0);
-                            dataGradient.addColorStop(0, '#ff6b6b');
-                            dataGradient.addColorStop(1, '#ff8e53');
-                            return dataGradient;
-                        }
-                        if (dataIndex === 2) { // 平台异常
-                            const platformGradient = chartCtx.createLinearGradient(startX, 0, endX, 0);
-                            platformGradient.addColorStop(0, '#f7971e');
-                            platformGradient.addColorStop(1, '#ffd200');
-                            return platformGradient;
-                        }
-                        if (dataIndex === 3) { // 音视频异常
-                            const avGradient = chartCtx.createLinearGradient(startX, 0, endX, 0);
-                            avGradient.addColorStop(0, '#8e44ad');
-                            avGradient.addColorStop(1, '#bb86fc');
-                            return avGradient;
-                        }
-                        if (dataIndex === 4) { // 音视频测试
-                            const testGradient = chartCtx.createLinearGradient(startX, 0, endX, 0);
-                            testGradient.addColorStop(0, '#1976d2');
-                            testGradient.addColorStop(1, '#42a5f5');
-                            return testGradient;
-                        }
-                        if (dataIndex === 5) { // 其他异常
-                            const otherGradient = chartCtx.createLinearGradient(startX, 0, endX, 0);
-                            otherGradient.addColorStop(0, '#6a85b6');
-                            otherGradient.addColorStop(1, '#bac8e0');
-                            return otherGradient;
-                        }
-                        return '#909090';
-                    },
-                    borderColor: [
-                        '#0e837a',
-                        '#e05656',
-                        '#d98214',
-                        '#732d91',
-                        '#1565c0',
-                        '#5872a0'
-                    ],
-                    borderWidth: 1,
-                    borderRadius: 4
-                }]
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: function (params) {
+                    const p = params[0];
+                    const val = p.value;
+                    const pct = total === 0 ? '0.0' : ((val / total) * 100).toFixed(1);
+                    return `<div style="font-weight: 600; margin-bottom: 4px;">${p.name}</div>
+                            <div>异常频次: <span style="font-weight: bold;">${val}</span> 次 (${pct}%)</div>
+                            <div style="font-size: 11px; color: #909399; margin-top: 2px;">(点击柱条可直接筛选该分类)</div>`;
+                }
             },
-            plugins: [{
-                id: 'datalabels',
-                afterDatasetsDraw: function (chart) {
-                    const chartCtx = chart.ctx;
-                    chart.data.datasets.forEach(function (dataset, i) {
-                        const meta = chart.getDatasetMeta(i);
-                        meta.data.forEach(function (bar, index) {
-                            const data = dataset.data[index];
-                            if (data > 0) {
-                                chartCtx.fillStyle = '#303133';
-                                chartCtx.font = 'bold 12px Arial';
-                                chartCtx.textAlign = 'left';
-                                chartCtx.textBaseline = 'middle';
-                                chartCtx.fillText(data + ' 次', bar.x + 8, bar.y);
-                            }
-                        });
-                    });
+            grid: {
+                top: 15,
+                left: 85,
+                right: 60,
+                bottom: 25
+            },
+            xAxis: {
+                type: 'value',
+                minInterval: 1,
+                splitLine: { lineStyle: { color: colors.gridColor || '#f0f2f5' } },
+                axisLabel: { color: colors.textColor || '#909399', fontSize: 11 }
+            },
+            yAxis: {
+                type: 'category',
+                data: categories,
+                axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
+                axisLabel: {
+                    color: colors.textColor || '#303133',
+                    fontWeight: 500,
+                    fontSize: 12
                 }
-            }],
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                onClick: (event, elements) => {
-                    if (elements && elements.length > 0) {
-                        const clickedIndex = elements[0].index;
-                        const clickedCategory = categoryKeys[clickedIndex];
+            },
+            series: [{
+                name: '异常数量',
+                type: 'bar',
+                barWidth: 16,
+                label: {
+                    show: true,
+                    position: 'right',
+                    formatter: '{c} 次',
+                    color: colors.textColor || '#303133',
+                    fontWeight: 600,
+                    fontSize: 11
+                },
+                data: seriesData
+            }]
+        };
 
-                        // Switch active tab and render
-                        switchTab(clickedCategory);
-                    }
-                },
-                layout: {
-                    padding: {
-                        right: 50
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                const count = context.raw;
-                                const percent = getPercent(count);
-                                return `${count} 次 (${percent}%)`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        grace: '10%',
-                        grid: {
-                            color: '#f0f2f5'
-                        },
-                        ticks: {
-                            precision: 0,
-                            color: '#909399',
-                            font: {
-                                size: 11
-                            }
-                        }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: '#303133',
-                            font: {
-                                size: 13,
-                                weight: 500
-                            }
-                        }
-                    }
-                }
+        errorBarChart.setOption(option);
+        errorBarChart.on('click', (params) => {
+            if (params.data && params.data.catKey) {
+                switchTab(params.data.catKey);
             }
         });
     }
@@ -593,9 +533,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateChartHighlight() {
-        if (errorBarChart) {
-            errorBarChart.update();
-        }
+        if (!errorBarChart || typeof errorBarChart.setOption !== 'function' || errorBarChart.isDisposed() || !lastExceptionChartParams) return;
+        const { evalCount, dataCount, platformCount, avCount, avTestCount, otherCount } = lastExceptionChartParams;
+        const categoryKeys = ['other_error', 'audio_video_test', 'audio_video_error', 'platform_error', 'data_error', 'evaluation_error'];
+        const values = [otherCount, avTestCount, avCount, platformCount, dataCount, evalCount];
+
+        const rawGradients = [
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#6a85b6' }, { offset: 1, color: '#bac8e0' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#1976d2' }, { offset: 1, color: '#42a5f5' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#8e44ad' }, { offset: 1, color: '#bb86fc' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#f7971e' }, { offset: 1, color: '#ffd200' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#ff6b6b' }, { offset: 1, color: '#ff8e53' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#11998e' }, { offset: 1, color: '#38ef7d' }])
+        ];
+
+        const isDark = (window.ThemeManager && window.ThemeManager.getTheme() === 'dark') || document.documentElement.getAttribute('data-theme') === 'dark';
+        const dimColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(203, 213, 225, 0.4)';
+
+        const seriesData = values.map((val, idx) => {
+            const catKey = categoryKeys[idx];
+            const isDimmed = selectedCategory !== 'all' && selectedCategory !== catKey;
+            return {
+                value: val,
+                catKey: catKey,
+                itemStyle: {
+                    borderRadius: [0, 4, 4, 0],
+                    color: isDimmed ? dimColor : rawGradients[idx]
+                }
+            };
+        });
+
+        errorBarChart.setOption({
+            series: [{
+                data: seriesData
+            }]
+        });
     }
 
     // Bind event listeners for Tab controls
@@ -1152,9 +1124,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (window.self !== window.parent) {
             window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html', fromExceptionDetail: true }, '*');
-            setTimeout(() => {
-                window.location.href = '../singleQuery/singleQuery.html';
-            }, 150);
         } else {
             window.location.href = '../singleQuery/singleQuery.html';
         }
@@ -1450,4 +1419,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return JSON.stringify(mockPayload, null, 2);
     }
+
+    // Theme synchronization for errorBarChart
+    window.addEventListener('themeChanged', () => {
+        if (lastExceptionChartParams) {
+            renderExceptionChart(
+                lastExceptionChartParams.evalCount,
+                lastExceptionChartParams.dataCount,
+                lastExceptionChartParams.platformCount,
+                lastExceptionChartParams.otherCount,
+                lastExceptionChartParams.avCount,
+                lastExceptionChartParams.avTestCount
+            );
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (errorBarChart && !errorBarChart.isDisposed()) {
+            errorBarChart.resize();
+        }
+    });
 });
+

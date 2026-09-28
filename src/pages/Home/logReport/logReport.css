@@ -405,11 +405,15 @@ body {
     font-size: 13px;
 }
 
-/* Selected state for dynamic exception accounts */
+/* Selected state for dynamic exception accounts (统一为学生查询风格) */
 .history-item.selected {
-    background-color: #f2f6fc;
-    border-color: #dcdfe6;
-    border-left-color: #409eff;
+    background-color: #e6f4ff;
+    border-color: #91caff;
+    border-left: 4px solid #1677ff;
+}
+
+.history-item.selected:hover {
+    background-color: #d4ecff;
 }
 
 .history-item.selected .history-avatar {
@@ -457,6 +461,303 @@ body {
     color: #ffffff;
     border-color: #409eff;
     box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+}
+
+/* Base Semantic Controls & Badges */
+.report-date-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #606266;
+    white-space: nowrap;
+}
+
+.report-date-input {
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+}
+
+.dau-stat-box {
+    margin-top: 8px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.dau-stat-label {
+    font-size: 13px;
+    color: #606266;
+    font-weight: 500;
+}
+
+.dau-stat-val {
+    font-size: 24px;
+    font-weight: 700;
+    color: #409eff;
+    line-height: 1;
+}
+
+.dau-stat-unit {
+    font-size: 13px;
+    color: #909399;
+    font-weight: 500;
+}
+
+.sort-selector {
+    padding: 4px 8px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #606266;
+    outline: none;
+    cursor: pointer;
+    background: #fff;
+}
+
+.panel-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+    margin: 0;
+}
+
+.panel-subtitle {
+    font-size: 12px;
+    color: #909399;
+}
+
+.account-error-badge {
+    font-size: 11px;
+    color: #a8071a;
+    font-weight: 600;
+    background-color: #fff1f0;
+    border: 1px solid #ffa39e;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.account-time-badge {
+    font-size: 12px;
+    color: #0050b3;
+    font-weight: 700;
+    background-color: #e6f7ff;
+    border: 1px solid #91d5ff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+/* ==========================================================================
+   logReport Dark Mode Overrides (增强所有标题与面板对比度)
+   ========================================================================== */
+[data-theme="dark"] body {
+    background-color: #0a0f16 !important;
+    color: #cbd5e1 !important;
+}
+
+/* Header & Date Pickers */
+[data-theme="dark"] .dashboard-header {
+    background: #111a22 !important;
+    border: 1px solid #1e2c38 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .dashboard-header h1 {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .dashboard-header .subtitle {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .report-date-label {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .report-date-input {
+    background-color: #172430 !important;
+    border: 1px solid #233646 !important;
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .report-date-input:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+}
+
+/* Cards & All Titles (确保近10日日活统计等所有标题绝对清晰) */
+[data-theme="dark"] .card {
+    background: #111a22 !important;
+    border: 1px solid #1e2c38 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+[data-theme="dark"] .panel-header {
+    border-bottom: 1px solid #1e2c38 !important;
+}
+
+[data-theme="dark"] .panel-header h2,
+[data-theme="dark"] .panel-title,
+[data-theme="dark"] .bottom-panel h2,
+[data-theme="dark"] .card h2,
+[data-theme="dark"] .card h3 {
+    color: #f1f5f9 !important;
+    font-weight: 600 !important;
+}
+
+[data-theme="dark"] .panel-subtitle,
+[data-theme="dark"] .dau-stat-label,
+[data-theme="dark"] .dau-stat-unit {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .dau-stat-val {
+    color: #38bdf8 !important;
+    text-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+}
+
+/* Action Buttons */
+[data-theme="dark"] .view-dau-btn {
+    background-color: rgba(56, 189, 248, 0.12) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.28) !important;
+}
+
+[data-theme="dark"] .view-dau-btn:hover {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    color: #ffffff !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 2px 10px rgba(56, 189, 248, 0.35) !important;
+}
+
+/* Today Error Accounts Side Panel */
+[data-theme="dark"] .badge-count {
+    background-color: rgba(56, 189, 248, 0.15) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+[data-theme="dark"] .sort-selector {
+    background-color: #172430 !important;
+    border: 1px solid #233646 !important;
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .sort-selector:focus {
+    border-color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .sort-selector option {
+    background-color: #172430 !important;
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .history-item {
+    background-color: #15222c !important;
+    border: 1px solid #1e2c38 !important;
+    border-left: 3px solid transparent !important;
+}
+
+[data-theme="dark"] .history-item:hover {
+    background-color: #1a2a38 !important;
+    border-color: #2a3d4e !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .history-name {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .history-avatar {
+    background-color: rgba(56, 189, 248, 0.15) !important;
+    color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .history-item.selected {
+    background-color: rgba(14, 165, 233, 0.15) !important;
+    border-color: rgba(56, 189, 248, 0.4) !important;
+    border-left: 4px solid #38bdf8 !important;
+}
+
+[data-theme="dark"] .history-item.selected:hover {
+    background-color: rgba(14, 165, 233, 0.22) !important;
+}
+
+[data-theme="dark"] .history-item.selected .history-name {
+    color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .history-item.selected .history-avatar {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .history-arrow {
+    color: #64748b !important;
+}
+
+[data-theme="dark"] .history-item:hover .history-arrow {
+    color: #38bdf8 !important;
+}
+
+/* Dynamic Account Badges in Dark Mode */
+[data-theme="dark"] .account-error-badge {
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    color: #f87171 !important;
+    border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+
+[data-theme="dark"] .account-time-badge {
+    background-color: rgba(56, 189, 248, 0.15) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.35) !important;
+}
+
+/* Stat Cards in Dark Mode */
+[data-theme="dark"] .stat-card {
+    background: #111a22 !important;
+    border: 1px solid #1e2c38 !important;
+}
+
+[data-theme="dark"] .stat-label {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .stat-value {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .stat-card.error { border-top: 3px solid #f87171 !important; }
+[data-theme="dark"] .stat-card.warning { border-top: 3px solid #fbbf24 !important; }
+[data-theme="dark"] .stat-card.info { border-top: 3px solid #38bdf8 !important; }
+[data-theme="dark"] .stat-card.success { border-top: 3px solid #34d399 !important; }
+
+[data-theme="dark"] .stat-card.error .stat-icon { background-color: rgba(239, 68, 68, 0.15) !important; color: #f87171 !important; }
+[data-theme="dark"] .stat-card.warning .stat-icon { background-color: rgba(245, 158, 11, 0.15) !important; color: #fbbf24 !important; }
+[data-theme="dark"] .stat-card.info .stat-icon { background-color: rgba(56, 189, 248, 0.15) !important; color: #38bdf8 !important; }
+[data-theme="dark"] .stat-card.success .stat-icon { background-color: rgba(16, 185, 129, 0.15) !important; color: #34d399 !important; }
+
+/* Analysis Notes */
+[data-theme="dark"] .analysis-notes {
+    background-color: #15222c !important;
+    border: 1px dashed #233646 !important;
+}
+
+[data-theme="dark"] .analysis-notes h3 {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .analysis-notes li {
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .analysis-notes li strong {
+    color: #38bdf8 !important;
 }
 
 

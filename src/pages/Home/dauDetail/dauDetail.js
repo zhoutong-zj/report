@@ -38,27 +38,61 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentModalUser = null; // 当前弹窗展示的用户数据对象
     let toastTimeout = null;
 
+    // Safe storage access helpers to prevent browser SecurityError under file:// protocol
+    function safeGetSession(key, fallback = '') {
+        try {
+            return sessionStorage.getItem(key) || fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+    function safeSetSession(key, value) {
+        try {
+            sessionStorage.setItem(key, value);
+        } catch (e) { }
+    }
+    function safeRemoveSession(key) {
+        try {
+            sessionStorage.removeItem(key);
+        } catch (e) { }
+    }
+    function safeGetLocal(key, fallback = '') {
+        try {
+            return localStorage.getItem(key) || fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
     // 2. Initialize Date Picker
-    const savedDate = sessionStorage.getItem('dauReportDate') || sessionStorage.getItem('reportDate') || new Date().toISOString().split('T')[0];
-    dauDateInput.value = savedDate;
+    const savedDate = safeGetSession('dauReportDate') || safeGetSession('reportDate') || new Date().toISOString().split('T')[0];
+    if (dauDateInput) {
+        dauDateInput.value = savedDate;
+    }
 
     // 检查是否有强制刷新标记（例如在单查询页面删除了用户数据）
-    const needForceRefreshDau = sessionStorage.getItem('force_refresh_dau') === 'true';
+    const needForceRefreshDau = safeGetSession('force_refresh_dau') === 'true';
     if (needForceRefreshDau) {
-        sessionStorage.removeItem('force_refresh_dau');
-        sessionStorage.removeItem('dau_state_cache');
+        safeRemoveSession('force_refresh_dau');
+        safeRemoveSession('dau_state_cache');
     }
 
     // 3. Back Button Event
-    backBtn.addEventListener('click', () => {
-        // 返回日志报表后，清除日活详情页的暂存数据
-        sessionStorage.removeItem('dau_state_cache');
-        window.location.href = '../logReport/logReport.html';
-    });
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            // 返回日志报表后，同步当前选中的日期，清除日活详情页的暂存数据
+            const selectedDate = dauDateInput ? dauDateInput.value : '';
+            if (selectedDate) {
+                safeSetSession('reportDate', selectedDate);
+            }
+            safeRemoveSession('dau_state_cache');
+            window.location.href = '../logReport/logReport.html';
+        });
+    }
 
     // 4. Initialize OSS Client
     function initOssClient() {
-        const savedConfig = localStorage.getItem('oss_tool_config');
+        const savedConfig = safeGetLocal('oss_tool_config');
         if (!savedConfig) {
             noConfigAlert.style.display = 'block';
             return null;
@@ -695,10 +729,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 8.2 Render Chart.js Line Chart for School DAU Distribution
+    // 8.2 Render ECharts Bar Chart for School DAU Distribution
     let schoolChart = null;
+    let lastSchoolChartParams = null;
+
     function renderSchoolDauChart(schoolData, totalStudentCount) {
-        const canvasEl = document.getElementById('schoolDauLineChart');
-        if (!canvasEl) return;
+        lastSchoolChartParams = { schoolData, totalStudentCount };
+        const dom = document.getElementById('schoolDauLineChart');
+        if (!dom || typeof echarts === 'undefined') return;
 
         const totalStudents = totalStudentCount !== undefined ? totalStudentCount : (schoolData ? schoolData.reduce((acc, cur) => acc + (cur.dauCount || 0), 0) : 0);
         if (studentTotalCount) {
@@ -709,175 +747,128 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!schoolData || schoolData.length === 0) {
-            if (schoolChart) {
-                schoolChart.data.labels = [];
-                schoolChart.data.datasets[0].data = [];
-                schoolChart.update();
+            if (schoolChart && !schoolChart.isDisposed()) {
+                schoolChart.clear();
             }
             return;
         }
 
-        const ctx = canvasEl.getContext('2d');
-        const labels = schoolData.map(item => item.schoolName);
-        const counts = schoolData.map(item => item.dauCount);
+        const theme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light';
+        const colors = window.ThemeManager ? window.ThemeManager.getChartTheme(theme) : {};
+
+        if (schoolChart && !schoolChart.isDisposed()) {
+            schoolChart.dispose();
+        }
+        schoolChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
+        schoolChart._schoolData = schoolData;
+
+        schoolChart.on('click', (params) => {
+            if (params.dataIndex !== undefined) {
+                const currentList = schoolChart._schoolData || [];
+                const clickedItem = currentList[params.dataIndex];
+                if (clickedItem && dauSchoolSelect) {
+                    const targetId = clickedItem.shopId || clickedItem.schoolId || clickedItem.shopName || clickedItem.schoolName;
+                    const curVal = dauSchoolSelect.value;
+                    if (curVal === clickedItem.schoolId || curVal === clickedItem.schoolName || curVal === clickedItem.shopId || curVal === clickedItem.shopName) {
+                        dauSchoolSelect.value = 'all';
+                    } else {
+                        dauSchoolSelect.value = targetId;
+                    }
+                    saveCurrentStateToCache();
+                    renderDauTable();
+                }
+            }
+        });
 
         const selectedSchool = (dauSchoolSelect ? dauSchoolSelect.value : 'all');
+        const labels = schoolData.map(item => item.schoolName);
 
-        const bgColors = [];
-        const borderColors = [];
-        const labelColors = [];
-        const borderWidths = [];
+        const seriesData = schoolData.map(item => {
+            const isSelected = (selectedSchool !== 'all') && (
+                item.schoolId === selectedSchool || item.schoolName === selectedSchool ||
+                item.shopId === selectedSchool || item.shopName === selectedSchool
+            );
+            const isDimmed = (selectedSchool !== 'all') && !isSelected;
 
-        const defaultGradient = ctx.createLinearGradient(0, 0, 0, 250);
-        defaultGradient.addColorStop(0, '#00b4db'); // 默认顶端：优雅湖蓝色
-        defaultGradient.addColorStop(1, '#0083b0'); // 默认底端：深海蓝色
-
-        schoolData.forEach(item => {
-            if (selectedSchool === 'all') {
-                bgColors.push(defaultGradient);
-                borderColors.push('#0083b0');
-                labelColors.push('#0083b0');
-                borderWidths.push(1);
-            } else if (item.schoolId === selectedSchool || item.schoolName === selectedSchool || item.shopId === selectedSchool || item.shopName === selectedSchool) {
-                const highlightGradient = ctx.createLinearGradient(0, 0, 0, 250);
-                highlightGradient.addColorStop(0, '#ff9900'); // 选中顶端：温暖活力橙
-                highlightGradient.addColorStop(1, '#ffdd6b'); // 选中底端：明亮暖阳黄
-                bgColors.push(highlightGradient);
-                borderColors.push('#ff9900');
-                labelColors.push('#ff9900');
-                borderWidths.push(3); // 选中时边框加粗，视觉上稍微放大
+            let color;
+            if (isSelected) {
+                color = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#ff9900' },
+                    { offset: 1, color: '#ffdd6b' }
+                ]);
+            } else if (isDimmed) {
+                color = 'rgba(0, 180, 219, 0.2)';
             } else {
-                bgColors.push('rgba(0, 180, 219, 0.15)'); // 未选中：半透明湖蓝
-                borderColors.push('rgba(0, 180, 219, 0.3)');
-                labelColors.push('#909399');
-                borderWidths.push(1);
+                color = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#00b4db' },
+                    { offset: 1, color: '#0083b0' }
+                ]);
             }
+
+            return {
+                value: item.dauCount,
+                schoolItem: item,
+                itemStyle: {
+                    color: color,
+                    borderRadius: [4, 4, 0, 0]
+                }
+            };
         });
 
-        // 核心优化：如果图表已存在，则直接就地更新数据与样式，不销毁重建，避免柱状图从底部重新动画弹起
-        if (schoolChart) {
-            schoolChart.data.labels = labels;
-            schoolChart.data.datasets[0].data = counts;
-            schoolChart.data.datasets[0].backgroundColor = bgColors;
-            schoolChart.data.datasets[0].borderColor = borderColors;
-            schoolChart.data.datasets[0].borderWidth = borderWidths;
-            schoolChart.labelColors = labelColors;
-            schoolChart.selectedSchool = selectedSchool;
-            schoolChart.schoolData = schoolData;
-            schoolChart.update();
-            return;
-        }
-
-        schoolChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '日活人数',
-                    data: counts,
-                    backgroundColor: bgColors,
-                    borderColor: borderColors,
-                    borderWidth: borderWidths,
-                    borderRadius: 6,
-                    maxBarThickness: 48
-                }]
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: function (params) {
+                    const p = params[0];
+                    const item = p.data ? p.data.schoolItem : null;
+                    const sTitle = item ? `${item.schoolName} (${item.schoolId || item.shopId || '-'})` : p.name;
+                    return `<div style="font-weight: 600; margin-bottom: 4px;">${sTitle}</div>
+                            <div>日活人数: <span style="font-weight: bold; color: #00b4db;">${p.value}</span> 人</div>
+                            <div style="font-size: 11px; color: #909399; margin-top: 2px;">(点击柱条可快速筛选该学校)</div>`;
+                }
             },
-            plugins: [{
-                id: 'schoolDataLabels',
-                afterDatasetsDraw: function (chart) {
-                    const chartCtx = chart.ctx;
-                    chart.data.datasets.forEach(function (dataset, i) {
-                        const meta = chart.getDatasetMeta(i);
-                        meta.data.forEach(function (point, index) {
-                            const val = dataset.data[index];
-                            if (val !== undefined && val !== null) {
-                                chartCtx.fillStyle = labelColors[index] || '#409eff';
-                                const isHighlighted = selectedSchool !== 'all' && (
-                                    schoolData[index].schoolId === selectedSchool ||
-                                    schoolData[index].schoolName === selectedSchool ||
-                                    schoolData[index].shopId === selectedSchool ||
-                                    schoolData[index].shopName === selectedSchool
-                                );
-                                chartCtx.font = isHighlighted ? 'bold 12px Arial' : 'bold 11px Arial';
-                                chartCtx.textAlign = 'center';
-                                chartCtx.textBaseline = 'bottom';
-                                chartCtx.fillText(val + ' 人', point.x, point.y - 6);
-                            }
-                        });
-                    });
+            grid: {
+                top: 35,
+                left: 50,
+                right: 25,
+                bottom: labels.length > 8 ? 45 : 28
+            },
+            xAxis: {
+                type: 'category',
+                data: labels,
+                axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
+                axisLabel: {
+                    color: colors.textColor || '#606266',
+                    interval: 0,
+                    rotate: labels.length > 8 ? 25 : 0,
+                    fontSize: 11
                 }
-            }],
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                onClick: (event, elements) => {
-                    if (elements && elements.length > 0) {
-                        const idx = elements[0].index;
-                        const clickedItem = schoolData[idx];
-                        if (dauSchoolSelect) {
-                            const targetId = clickedItem.shopId || clickedItem.schoolId;
-                            // 如果已选中当前柱子，再次点击则取消选中
-                            if (dauSchoolSelect.value === clickedItem.schoolId || dauSchoolSelect.value === clickedItem.schoolName || dauSchoolSelect.value === clickedItem.shopId || dauSchoolSelect.value === clickedItem.shopName) {
-                                dauSchoolSelect.value = 'all';
-                            } else {
-                                dauSchoolSelect.value = targetId;
-                            }
-                            saveCurrentStateToCache();
-                            renderDauTable();
-                        }
-                    }
+            },
+            yAxis: {
+                type: 'value',
+                minInterval: 1,
+                splitLine: { lineStyle: { color: colors.gridColor || '#f0f2f5' } },
+                axisLabel: { color: colors.textColor || '#909399', fontSize: 11 }
+            },
+            series: [{
+                name: '日活人数',
+                type: 'bar',
+                barMaxWidth: 42,
+                label: {
+                    show: true,
+                    position: 'top',
+                    formatter: '{c} 人',
+                    color: colors.textColor || '#0083b0',
+                    fontWeight: 'bold',
+                    fontSize: 11
                 },
-                layout: {
-                    padding: {
-                        top: 25 // 预留顶部空间，防止柱状图上方数字被裁剪/遮挡
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            title: function (context) {
-                                const idx = context[0].dataIndex;
-                                const item = schoolData[idx];
-                                return `${item.schoolName} (${item.schoolId})`;
-                            },
-                            label: function (context) {
-                                return ` 日活人数: ${context.raw} 人`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: '#606266',
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grace: '15%', // 自动增加Y轴顶部15%的弹性间距，确保最大值标签完整展示
-                        grid: {
-                            color: '#f0f2f5'
-                        },
-                        ticks: {
-                            precision: 0,
-                            color: '#909399',
-                            font: {
-                                size: 11
-                            }
-                        }
-                    }
-                }
-            }
-        });
+                data: seriesData
+            }]
+        };
+
+        schoolChart.setOption(option);
     }
 
     // 8.3 缓存获取与保存逻辑（使用 sessionStorage 跨子页面持久化）
@@ -935,17 +926,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // 跳转前保存当前所有状态（包括选中的学校、搜索词、列表数据、选中行、滚动位置）
         saveCurrentStateToCache();
 
-        sessionStorage.setItem('autoSearchUsername', username);
+        safeSetSession('autoSearchUsername', username);
         if (dateVal) {
-            sessionStorage.setItem('autoSearchDate', dateVal);
+            safeSetSession('autoSearchDate', dateVal);
         }
-        sessionStorage.setItem('fromDauDetail', 'true');
+        safeSetSession('fromDauDetail', 'true');
 
         if (window.self !== window.parent) {
             window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html', fromDauDetail: true }, '*');
-            setTimeout(() => {
-                window.location.href = '../singleQuery/singleQuery.html';
-            }, 150);
         } else {
             window.location.href = '../singleQuery/singleQuery.html';
         }
@@ -985,7 +973,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 10. Load and refresh data
     async function loadData(forceRefresh = false) {
         const selectedDate = dauDateInput ? dauDateInput.value : '';
-        sessionStorage.setItem('dauReportDate', selectedDate);
+        safeSetSession('dauReportDate', selectedDate);
 
         // 如果不是强制刷新，且已存在当前日期的内存/持久化缓存数据，则直接使用缓存数据，不重新请求
         if (!forceRefresh) {
@@ -1263,12 +1251,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Instant visual micro-feedback on copy button
+    function flashButtonCopied(btn, successText = '已复制') {
+        if (!btn) return;
+        const origHtml = btn.innerHTML;
+        btn.classList.add('copied');
+        if (btn.classList.contains('mini-copy-btn')) {
+            btn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        } else if (btn.classList.contains('card-copy-btn') || btn.classList.contains('u-mini-btn')) {
+            btn.innerHTML = `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>${successText}</span>`;
+        } else if (btn.classList.contains('u-footer-btn')) {
+            btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>已复制全部</span>`;
+        }
+        setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.innerHTML = origHtml;
+        }, 1200);
+    }
+
     // Copy Events in Modal
     if (uModalCopyAccountBtn) {
         uModalCopyAccountBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (currentModalUser) {
                 copyToClipboard(currentModalUser.loginName || currentModalUser.account, '账号已复制');
+                flashButtonCopied(uModalCopyAccountBtn);
             }
         });
     }
@@ -1278,6 +1285,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             if (currentModalUser) {
                 copyToClipboard(currentModalUser.loginName || currentModalUser.account, '登录名已复制');
+                flashButtonCopied(copyLoginNameBtn);
             }
         });
     }
@@ -1287,6 +1295,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             if (currentModalUser) {
                 copyToClipboard(currentModalUser.userId, '用户ID已复制');
+                flashButtonCopied(copyUserIdBtn);
             }
         });
     }
@@ -1296,6 +1305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             if (currentModalUser) {
                 copyToClipboard(currentModalUser.schoolId || currentModalUser.shopId, '学校ID已复制');
+                flashButtonCopied(copySchoolIdBtn);
             }
         });
     }
@@ -1306,6 +1316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const uJsonContentBlock = document.getElementById('uJsonContentBlock');
             if (uJsonContentBlock) {
                 copyToClipboard(uJsonContentBlock.textContent, 'JSON结构数据已复制');
+                flashButtonCopied(uCopyJsonBtn, '已复制');
             }
         });
     }
@@ -1333,6 +1344,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ].join('\n');
 
             copyToClipboard(summaryText, '已复制该用户的完整档案');
+            flashButtonCopied(uCopyAllSummaryBtn);
         });
     }
 
@@ -1401,4 +1413,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial load
     loadData(needForceRefreshDau);
+
+    // Theme synchronization for schoolChart
+    window.addEventListener('themeChanged', () => {
+        if (lastSchoolChartParams) {
+            renderSchoolDauChart(lastSchoolChartParams.schoolData, lastSchoolChartParams.totalStudentCount);
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (schoolChart && !schoolChart.isDisposed()) {
+            schoolChart.resize();
+        }
+    });
 });
+

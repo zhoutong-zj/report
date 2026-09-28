@@ -792,66 +792,81 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        const labels = TIME_SLOT_DEFS.map(s => `${s.icon} ${s.name} (${s.range})`);
-        const data = TIME_SLOT_DEFS.map(s => slotCounts[s.key] || 0);
-        const bgColors = TIME_SLOT_DEFS.map(s => s.color);
+        const chartData = TIME_SLOT_DEFS.map(s => ({
+            name: `${s.icon} ${s.name}`,
+            value: slotCounts[s.key] || 0,
+            slotKey: s.key,
+            range: s.range,
+            itemStyle: { color: s.color }
+        }));
 
-        if (distributionChart) distributionChart.destroy();
+        if (distributionChart && !distributionChart.isDisposed()) {
+            distributionChart.dispose();
+        }
 
-        distributionChart = new Chart(distributionCanvas.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: bgColors,
-                    borderWidth: 2,
-                    borderColor: '#ffffff',
-                    hoverOffset: 6
-                }]
+        const theme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light';
+        const colors = window.ThemeManager ? window.ThemeManager.getChartTheme(theme) : {};
+
+        distributionChart = echarts.init(distributionCanvas, theme === 'dark' ? 'dark' : null);
+
+        const totalSlots = chartData.reduce((acc, cur) => acc + cur.value, 0);
+
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'item',
+                formatter: function (p) {
+                    const pct = totalSlots > 0 ? ((p.value / totalSlots) * 100).toFixed(1) : 0;
+                    const d = p.data;
+                    return `<div style="font-weight: 600; margin-bottom: 4px;">${p.name} [${d.range}]</div>
+                            <div>活跃人数: <span style="font-weight: bold;">${p.value}</span> 人 (${pct}%)</div>`;
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            boxWidth: 12,
-                            padding: 8,
-                            font: { size: 11 }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (ctx) {
-                                const val = ctx.raw || 0;
-                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                                const slotDef = TIME_SLOT_DEFS[ctx.dataIndex];
-                                const rangeText = slotDef ? ` [${slotDef.range}]` : '';
-                                return ` ${slotDef ? slotDef.icon + ' ' + slotDef.name : ctx.label}${rangeText}: ${val} 人 (${pct}%)`;
-                            }
-                        }
+            legend: {
+                bottom: 5,
+                icon: 'circle',
+                itemWidth: 10,
+                itemHeight: 10,
+                textStyle: {
+                    color: colors.textColor || '#606266',
+                    fontSize: 11
+                }
+            },
+            series: [{
+                name: '时段分布',
+                type: 'pie',
+                radius: ['45%', '70%'],
+                center: ['50%', '45%'],
+                avoidLabelOverlap: false,
+                itemStyle: {
+                    borderRadius: 4,
+                    borderColor: theme === 'dark' ? '#131c2e' : '#ffffff',
+                    borderWidth: 2
+                },
+                label: { show: false },
+                emphasis: {
+                    label: {
+                        show: true,
+                        fontSize: 12,
+                        fontWeight: 'bold',
+                        color: colors.textColor || '#303133'
                     }
                 },
-                cutout: '62%',
-                onClick: (evt, elements) => {
-                    if (elements && elements.length > 0) {
-                        const index = elements[0].index;
-                        const slotDef = TIME_SLOT_DEFS[index];
-                        if (slotDef) {
-                            activateTimeSlotFilter(slotDef.key);
-                        }
-                    }
-                }
+                data: chartData
+            }]
+        };
+
+        distributionChart.setOption(option);
+        distributionChart.on('click', (params) => {
+            if (params.data && params.data.slotKey) {
+                activateTimeSlotFilter(params.data.slotKey);
             }
         });
     }
 
-    // Line Chart: 24h Hourly Trend
+    // Line Chart: 24h Hourly Trend with ECharts
     function renderHourlyTrendChart() {
-        if (!hourlyTrendCanvas) return;
+        if (!hourlyTrendCanvas || typeof echarts === 'undefined') return;
 
         const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
         const hourCounts = new Array(24).fill(0);
@@ -862,123 +877,133 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        if (hourlyTrendChart) hourlyTrendChart.destroy();
+        if (hourlyTrendChart && !hourlyTrendChart.isDisposed()) {
+            hourlyTrendChart.dispose();
+        }
 
-        const ctx = hourlyTrendCanvas.getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
-        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+        const theme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light';
+        const colors = window.ThemeManager ? window.ThemeManager.getChartTheme(theme) : {};
 
-        hourlyTrendChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: hours,
-                datasets: [{
-                    label: '游戏游玩次数',
-                    data: hourCounts,
-                    borderColor: '#10b981',
-                    backgroundColor: gradient,
-                    borderWidth: 2.5,
-                    fill: true,
-                    tension: 0.35,
-                    pointBackgroundColor: '#10b981',
-                    pointRadius: 3,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => ` 活跃次数: ${ctx.raw} 次`
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { display: false },
-                        ticks: { font: { size: 11 }, maxRotation: 0 }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: { precision: 0, font: { size: 11 } },
-                        grid: { color: '#f3f4f6' }
-                    }
+        hourlyTrendChart = echarts.init(hourlyTrendCanvas, theme === 'dark' ? 'dark' : null);
+
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                formatter: (p) => {
+                    const item = p[0];
+                    return `<div style="font-weight: 600; margin-bottom: 4px;">${item.name}</div>
+                            <div>活跃次数: <span style="font-weight: bold; color: #10b981;">${item.value}</span> 次</div>`;
                 }
-            }
-        });
+            },
+            grid: {
+                top: 25,
+                left: 45,
+                right: 25,
+                bottom: 30
+            },
+            xAxis: {
+                type: 'category',
+                data: hours,
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
+                axisLabel: { color: colors.textColor || '#909399', fontSize: 11 }
+            },
+            yAxis: {
+                type: 'value',
+                minInterval: 1,
+                splitLine: { lineStyle: { color: colors.gridColor || '#f3f4f6' } },
+                axisLabel: { color: colors.textColor || '#909399', fontSize: 11 }
+            },
+            series: [{
+                name: '游戏游玩次数',
+                type: 'line',
+                smooth: 0.35,
+                symbol: 'circle',
+                symbolSize: 6,
+                itemStyle: { color: '#10b981' },
+                lineStyle: { width: 2.5, color: '#10b981' },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(16, 185, 129, 0.4)' },
+                        { offset: 1, color: 'rgba(16, 185, 129, 0.01)' }
+                    ])
+                },
+                data: hourCounts
+            }]
+        };
+
+        hourlyTrendChart.setOption(option);
     }
 
-    // Bar Chart: Top Students
+    // Bar Chart: Top Students with ECharts
     function renderTopStudentsBar() {
-        if (!topStudentsCanvas) return;
+        if (!topStudentsCanvas || typeof echarts === 'undefined') return;
 
         const top8 = studentSummaryList.slice(0, 8);
         const labels = top8.map(s => s.studentName !== '-' ? s.studentName : s.username);
         const data = top8.map(s => s.totalCount);
 
-        if (topStudentsChart) topStudentsChart.destroy();
+        if (topStudentsChart && !topStudentsChart.isDisposed()) {
+            topStudentsChart.dispose();
+        }
 
-        topStudentsChart = new Chart(topStudentsCanvas.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '玩游戏总次数',
-                    data: data,
-                    backgroundColor: '#3b82f6',
-                    hoverBackgroundColor: '#2563eb',
-                    borderRadius: 4,
-                    barThickness: 16
-                }]
+        const theme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light';
+        const colors = window.ThemeManager ? window.ThemeManager.getChartTheme(theme) : {};
+
+        topStudentsChart = echarts.init(topStudentsCanvas, theme === 'dark' ? 'dark' : null);
+
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: (p) => {
+                    const item = p[0];
+                    return `<div style="font-weight: 600; margin-bottom: 4px;">${item.name}</div>
+                            <div>游玩: <span style="font-weight: bold; color: #3b82f6;">${item.value}</span> 次 (点击查看详情)</div>`;
+                }
             },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                onHover: (event, chartElement) => {
-                    if (event && event.native && event.native.target) {
-                        event.native.target.style.cursor = (chartElement && chartElement.length) ? 'pointer' : 'default';
-                    }
+            grid: {
+                top: 15,
+                left: 75,
+                right: 30,
+                bottom: 25
+            },
+            xAxis: {
+                type: 'value',
+                minInterval: 1,
+                splitLine: { lineStyle: { color: colors.gridColor || '#f3f4f6' } },
+                axisLabel: { color: colors.textColor || '#909399', fontSize: 10 }
+            },
+            yAxis: {
+                type: 'category',
+                data: labels,
+                inverse: true,
+                axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
+                axisLabel: { color: colors.textColor || '#606266', fontSize: 11 }
+            },
+            series: [{
+                name: '玩游戏总次数',
+                type: 'bar',
+                barWidth: 16,
+                itemStyle: {
+                    borderRadius: [0, 4, 4, 0],
+                    color: '#3b82f6'
                 },
-                onClick: (evt, elements) => {
-                    let clickedIndex = -1;
-                    if (elements && elements.length > 0) {
-                        clickedIndex = elements[0].index;
-                    } else if (topStudentsChart) {
-                        const nearest = topStudentsChart.getElementsAtEventForMode(evt.native || evt, 'y', { intersect: false }, false);
-                        if (nearest && nearest.length > 0) {
-                            clickedIndex = nearest[0].index;
-                        }
-                    }
-                    if (clickedIndex >= 0 && clickedIndex < top8.length) {
-                        const student = top8[clickedIndex];
-                        if (student && student.username) {
-                            showUserGameDetail(student.username);
-                        }
-                    }
+                emphasis: {
+                    itemStyle: { color: '#2563eb' }
                 },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => ` 游玩 ${ctx.raw} 次 (点击查看详情)`
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        ticks: { precision: 0, font: { size: 10 } },
-                        grid: { color: '#f3f4f6' }
-                    },
-                    y: {
-                        ticks: { font: { size: 11 } },
-                        grid: { display: false }
-                    }
+                data: data
+            }]
+        };
+
+        topStudentsChart.setOption(option);
+        topStudentsChart.on('click', (params) => {
+            if (params.dataIndex >= 0 && params.dataIndex < top8.length) {
+                const student = top8[params.dataIndex];
+                if (student && student.username) {
+                    showUserGameDetail(student.username);
                 }
             }
         });
@@ -2230,4 +2255,21 @@ document.addEventListener('DOMContentLoaded', () => {
     initDate();
     initOssClient();
     loadDataForDate(reportDateInput.value);
+
+    // Theme synchronization for charts
+    function syncBehaviorChartsTheme() {
+        renderCharts();
+    }
+
+    window.addEventListener('themeChanged', () => {
+        syncBehaviorChartsTheme();
+    });
+
+    window.addEventListener('resize', () => {
+        if (distributionChart && !distributionChart.isDisposed()) distributionChart.resize();
+        if (hourlyTrendChart && !hourlyTrendChart.isDisposed()) hourlyTrendChart.resize();
+        if (topStudentsChart && !topStudentsChart.isDisposed()) topStudentsChart.resize();
+    });
 });
+
+
