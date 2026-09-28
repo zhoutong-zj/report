@@ -14,6 +14,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const noConfigAlert = document.getElementById('noConfigAlert');
     const studentTotalCount = document.getElementById('studentTotalCount');
     const schoolTotalCount = document.getElementById('schoolTotalCount');
+    const chartTabSchool = document.getElementById('chartTabSchool');
+    const chartTabTimeline = document.getElementById('chartTabTimeline');
+    const chartSubtitle = document.getElementById('chartSubtitle');
+    const schoolTotalBadge = document.getElementById('schoolTotalBadge');
+    const timelinePeakBadge = document.getElementById('timelinePeakBadge');
+    const timelinePeakTime = document.getElementById('timelinePeakTime');
+    const timelinePeakCount = document.getElementById('timelinePeakCount');
+    const resetHourFilterBtn = document.getElementById('resetHourFilterBtn');
+    const resetHourFilterText = document.getElementById('resetHourFilterText');
+    const schoolDauLineChartDom = document.getElementById('schoolDauLineChart');
+    const timelineDauChartDom = document.getElementById('timelineDauChart');
 
     // User Profile Modal Elements
     const userInfoModal = document.getElementById('userInfoModal');
@@ -36,6 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let dauSortOrder = 'desc'; // 'desc' = 最新在前 (最后活跃时间 ↓), 'asc' = 最早在前
     let activeSelectedAccount = ''; // 当前选中的排查用户账号
     let currentModalUser = null; // 当前弹窗展示的用户数据对象
+    let activeChartTab = 'school'; // 'school' | 'timeline'
+    let selectedHourFilter = null; // null | 0 ~ 23
     let toastTimeout = null;
 
     // Safe storage access helpers to prevent browser SecurityError under file:// protocol
@@ -567,6 +580,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     return false;
                 }
             }
+            if (selectedHourFilter !== null) {
+                if (!item.lastModified) return false;
+                const d = new Date(item.lastModified);
+                if (isNaN(d.getTime()) || d.getHours() !== selectedHourFilter) {
+                    return false;
+                }
+            }
             if (!query) return true;
             return (item.username && item.username.toLowerCase().includes(query)) ||
                 (item.loginName && item.loginName.toLowerCase().includes(query)) ||
@@ -597,8 +617,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const currentDate = dauDateInput ? dauDateInput.value : '';
         const uniqueUsers = new Set(filteredList.map(item => item.loginName || item.account || item.key)).size;
+        const hourFilterNotice = (selectedHourFilter !== null) ? ` · 【时段筛选: ${String(selectedHourFilter).padStart(2, '0')}:00 - ${String((selectedHourFilter + 1) % 24).padStart(2, '0')}:00】` : '';
         if (dauPageSubtitle) {
-            dauPageSubtitle.textContent = `报表日期：${currentDate} · 活跃用户：${uniqueUsers} 人 · 共 ${filteredList.length} 条记录`;
+            dauPageSubtitle.textContent = `报表日期：${currentDate} · 活跃用户：${uniqueUsers} 人 · 共 ${filteredList.length} 条记录${hourFilterNotice}`;
         }
 
         // 更新“取消选中学校”按钮状态
@@ -612,6 +633,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 resetSchoolFilterBtn.style.display = 'none';
+            }
+        }
+
+        // 更新“取消时段筛选”按钮状态
+        if (resetHourFilterBtn) {
+            if (selectedHourFilter !== null) {
+                resetHourFilterBtn.style.display = 'inline-flex';
+                const nextHour = (selectedHourFilter + 1) % 24;
+                const hText = `${String(selectedHourFilter).padStart(2, '0')}:00 - ${String(nextHour).padStart(2, '0')}:00`;
+                if (resetHourFilterText) {
+                    resetHourFilterText.textContent = `取消时段筛选 (${hText})`;
+                }
+            } else {
+                resetHourFilterBtn.style.display = 'none';
             }
         }
 
@@ -689,6 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalStudents = new Set(chartList.map(item => item.loginName || item.account || item.key)).size;
         const schoolData = aggregateDauBySchool(chartList);
         renderSchoolDauChart(schoolData, totalStudents);
+        renderTimelineDauChart(chartList, selectedSchool);
     }
 
     // 8.1 Aggregate DAU List by School / Shop (using shopId/schoolId & shopName/schoolName, deduplicated by loginName)
@@ -871,6 +907,199 @@ document.addEventListener('DOMContentLoaded', () => {
         schoolChart.setOption(option);
     }
 
+    // 8.2.2 Render ECharts Smooth Area Line Chart for Hourly Student Online Distribution (24h)
+    let timelineChart = null;
+    let lastTimelineChartParams = null;
+
+    function renderTimelineDauChart(chartList, selectedSchool) {
+        lastTimelineChartParams = { chartList, selectedSchool };
+        const dom = document.getElementById('timelineDauChart');
+        if (!dom || typeof echarts === 'undefined') return;
+
+        // 如果用户选择了特定学校，时段趋势图进一步按该学校过滤
+        let targetList = chartList || [];
+        if (selectedSchool && selectedSchool !== 'all') {
+            targetList = targetList.filter(item => {
+                return item.schoolId === selectedSchool || item.schoolName === selectedSchool ||
+                    item.shopId === selectedSchool || item.shopName === selectedSchool;
+            });
+        }
+
+        // 统计 24 个小时点 (00:00 ~ 23:00) 的在线学生集合 (按账号去重)
+        const hourlyBuckets = Array.from({ length: 24 }, () => new Set());
+        targetList.forEach(item => {
+            if (!item.lastModified) return;
+            const d = new Date(item.lastModified);
+            if (!isNaN(d.getTime())) {
+                const hour = d.getHours();
+                const userKey = item.userId || item.loginName || item.account || item.key;
+                if (userKey) {
+                    hourlyBuckets[hour].add(userKey);
+                }
+            }
+        });
+
+        // 查找最高峰时段
+        let peakHour = 0;
+        let peakCount = 0;
+        hourlyBuckets.forEach((set, hour) => {
+            if (set.size > peakCount) {
+                peakCount = set.size;
+                peakHour = hour;
+            }
+        });
+
+        if (timelinePeakTime) {
+            const nextHour = (peakHour + 1) % 24;
+            timelinePeakTime.textContent = peakCount > 0
+                ? `${String(peakHour).padStart(2, '0')}:00 - ${String(nextHour).padStart(2, '0')}:00`
+                : '-';
+        }
+        if (timelinePeakCount) {
+            timelinePeakCount.textContent = peakCount;
+        }
+
+        const hoursLabels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+        const seriesData = hourlyBuckets.map((set, hour) => {
+            const isSelected = selectedHourFilter === hour;
+            return {
+                value: set.size,
+                hour: hour,
+                itemStyle: isSelected ? {
+                    color: '#ff9900',
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                    shadowBlur: 6,
+                    shadowColor: '#ff9900'
+                } : {
+                    color: '#722ed1'
+                }
+            };
+        });
+
+        const theme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light';
+        const colors = window.ThemeManager ? window.ThemeManager.getChartTheme(theme) : {};
+
+        if (timelineChart && !timelineChart.isDisposed()) {
+            timelineChart.dispose();
+        }
+        timelineChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
+
+        // 点击某个时间点可筛选该时段的学生
+        timelineChart.on('click', (params) => {
+            if (params.dataIndex !== undefined) {
+                const clickedHour = params.dataIndex;
+                if (selectedHourFilter === clickedHour) {
+                    selectedHourFilter = null;
+                } else {
+                    selectedHourFilter = clickedHour;
+                }
+                saveCurrentStateToCache();
+                renderDauTable();
+            }
+        });
+
+        const isDark = theme === 'dark';
+        const primaryLineColor = '#722ed1'; // 科技紫
+        const areaStartColor = isDark ? 'rgba(114, 46, 209, 0.45)' : 'rgba(114, 46, 209, 0.28)';
+        const areaEndColor = isDark ? 'rgba(114, 46, 209, 0.02)' : 'rgba(114, 46, 209, 0.01)';
+
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'line',
+                    lineStyle: {
+                        color: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)',
+                        type: 'dashed'
+                    }
+                },
+                formatter: function (params) {
+                    const p = params[0];
+                    const hour = p.dataIndex;
+                    const nextH = (hour + 1) % 24;
+                    const rangeText = `${String(hour).padStart(2, '0')}:00 ~ ${String(nextH).padStart(2, '0')}:00`;
+                    const isSelected = selectedHourFilter === hour;
+                    return `<div style="font-weight: 600; margin-bottom: 4px;">${rangeText} 时段</div>
+                            <div>在线学生人数: <span style="font-weight: bold; color: #722ed1;">${p.value}</span> 人</div>
+                            <div style="font-size: 11px; color: ${isSelected ? '#ff9900' : '#909399'}; margin-top: 4px;">
+                                ${isSelected ? '✓ 已选中筛选该时段 (点击柱点取消)' : '💡 点击可按此时间段过滤学生列表'}
+                            </div>`;
+                }
+            },
+            grid: {
+                top: 40,
+                left: 50,
+                right: 35,
+                bottom: 30
+            },
+            xAxis: {
+                type: 'category',
+                data: hoursLabels,
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
+                axisLabel: {
+                    color: colors.textColor || '#606266',
+                    interval: 1, // 每隔2小时显示一个标签
+                    fontSize: 11
+                }
+            },
+            yAxis: {
+                type: 'value',
+                minInterval: 1,
+                splitLine: { lineStyle: { color: colors.gridColor || '#f0f0f0' } },
+                axisLabel: { color: colors.textColor || '#606266' }
+            },
+            series: [{
+                name: '在线人数',
+                type: 'line',
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: (val, params) => (params.dataIndex === selectedHourFilter ? 10 : 6),
+                showSymbol: true,
+                itemStyle: {
+                    color: primaryLineColor
+                },
+                lineStyle: {
+                    width: 3,
+                    color: primaryLineColor,
+                    shadowColor: 'rgba(114, 46, 209, 0.3)',
+                    shadowBlur: 8,
+                    shadowOffsetY: 4
+                },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: areaStartColor },
+                        { offset: 1, color: areaEndColor }
+                    ])
+                },
+                markPoint: peakCount > 0 ? {
+                    symbol: 'pin',
+                    symbolSize: 46,
+                    itemStyle: { color: '#ff9900' },
+                    data: [
+                        { type: 'max', name: '最高峰', label: { fontSize: 10, fontWeight: 'bold' } }
+                    ]
+                } : undefined,
+                markLine: {
+                    silent: true,
+                    symbol: 'none',
+                    lineStyle: {
+                        type: 'dashed',
+                        color: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.25)'
+                    },
+                    data: [
+                        { type: 'average', name: '平均在线' }
+                    ]
+                },
+                data: seriesData
+            }]
+        };
+
+        timelineChart.setOption(option);
+    }
+
     // 8.3 缓存获取与保存逻辑（使用 sessionStorage 跨子页面持久化）
     function getGlobalCache() {
         try {
@@ -893,6 +1122,8 @@ document.addEventListener('DOMContentLoaded', () => {
             searchQuery: searchQuery,
             sortOrder: dauSortOrder,
             activeSelectedAccount: activeSelectedAccount,
+            activeChartTab: activeChartTab,
+            selectedHourFilter: selectedHourFilter,
             scrollY: scrollY
         };
 
@@ -996,10 +1227,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             : '最早在前 (最后活跃时间 ↑)';
                     }
                 }
+                if (cache.selectedHourFilter !== undefined) {
+                    selectedHourFilter = cache.selectedHourFilter;
+                }
 
                 updateSchoolSelectOptions(currentDauList, cache.selectedSchool);
                 if (cache.selectedSchool && dauSchoolSelect) {
                     dauSchoolSelect.value = cache.selectedSchool;
+                }
+
+                if (cache.activeChartTab && cache.activeChartTab !== activeChartTab) {
+                    switchChartTab(cache.activeChartTab);
                 }
 
                 renderDauTable();
@@ -1411,19 +1649,93 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Tab Switching for School / Timeline Chart
+    function switchChartTab(targetTab) {
+        if (activeChartTab === targetTab) return;
+        activeChartTab = targetTab;
+
+        if (targetTab === 'school') {
+            if (chartTabSchool) {
+                chartTabSchool.classList.add('active');
+                chartTabSchool.setAttribute('aria-selected', 'true');
+            }
+            if (chartTabTimeline) {
+                chartTabTimeline.classList.remove('active');
+                chartTabTimeline.setAttribute('aria-selected', 'false');
+            }
+            if (chartSubtitle) {
+                chartSubtitle.textContent = '根据 shopId 分类汇总各学校日活人数（横轴：学校，纵轴：日活人数）';
+            }
+            if (schoolDauLineChartDom) schoolDauLineChartDom.style.display = 'block';
+            if (timelineDauChartDom) timelineDauChartDom.style.display = 'none';
+
+            if (schoolTotalBadge) schoolTotalBadge.style.display = 'inline-flex';
+            if (timelinePeakBadge) timelinePeakBadge.style.display = 'none';
+
+            if (schoolChart && !schoolChart.isDisposed()) {
+                schoolChart.resize();
+            }
+        } else {
+            if (chartTabSchool) {
+                chartTabSchool.classList.remove('active');
+                chartTabSchool.setAttribute('aria-selected', 'false');
+            }
+            if (chartTabTimeline) {
+                chartTabTimeline.classList.add('active');
+                chartTabTimeline.setAttribute('aria-selected', 'true');
+            }
+            if (chartSubtitle) {
+                chartSubtitle.textContent = '当天 24 小时各时间段活跃学生人数分布曲线（横轴：时段，纵轴：在线人数）';
+            }
+            if (schoolDauLineChartDom) schoolDauLineChartDom.style.display = 'none';
+            if (timelineDauChartDom) timelineDauChartDom.style.display = 'block';
+
+            if (schoolTotalBadge) schoolTotalBadge.style.display = 'none';
+            if (timelinePeakBadge) timelinePeakBadge.style.display = 'inline-flex';
+
+            if (lastTimelineChartParams) {
+                renderTimelineDauChart(lastTimelineChartParams.chartList, lastTimelineChartParams.selectedSchool);
+            }
+            if (timelineChart && !timelineChart.isDisposed()) {
+                timelineChart.resize();
+            }
+        }
+    }
+
+    if (chartTabSchool) {
+        chartTabSchool.addEventListener('click', () => switchChartTab('school'));
+    }
+    if (chartTabTimeline) {
+        chartTabTimeline.addEventListener('click', () => switchChartTab('timeline'));
+    }
+
+    if (resetHourFilterBtn) {
+        resetHourFilterBtn.addEventListener('click', () => {
+            selectedHourFilter = null;
+            saveCurrentStateToCache();
+            renderDauTable();
+        });
+    }
+
     // Initial load
     loadData(needForceRefreshDau);
 
-    // Theme synchronization for schoolChart
+    // Theme synchronization for schoolChart & timelineChart
     window.addEventListener('themeChanged', () => {
         if (lastSchoolChartParams) {
             renderSchoolDauChart(lastSchoolChartParams.schoolData, lastSchoolChartParams.totalStudentCount);
+        }
+        if (lastTimelineChartParams) {
+            renderTimelineDauChart(lastTimelineChartParams.chartList, lastTimelineChartParams.selectedSchool);
         }
     });
 
     window.addEventListener('resize', () => {
         if (schoolChart && !schoolChart.isDisposed()) {
             schoolChart.resize();
+        }
+        if (timelineChart && !timelineChart.isDisposed()) {
+            timelineChart.resize();
         }
     });
 });

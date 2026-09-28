@@ -371,13 +371,64 @@ body {
 .panel-header-left {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
 }
 
 .panel-header h2 {
     font-size: 16px;
     font-weight: 600;
     color: #303133;
+}
+
+/* Chart Tabs */
+.chart-tab-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f0f2f5;
+    padding: 3px;
+    border-radius: 8px;
+    width: fit-content;
+}
+
+.chart-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #606266;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+}
+
+.chart-tab-btn svg {
+    opacity: 0.75;
+    transition: opacity 0.2s;
+}
+
+.chart-tab-btn:hover {
+    color: #1890ff;
+}
+
+.chart-tab-btn:hover svg {
+    opacity: 1;
+}
+
+.chart-tab-btn.active {
+    background: #ffffff;
+    color: #1890ff;
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.chart-tab-btn.active svg {
+    opacity: 1;
 }
 
 .panel-header-right {
@@ -417,6 +468,16 @@ body {
     color: #237804;
 }
 
+.timeline-peak-badge {
+    background: #f9f0ff;
+    border: 1px solid #d3adf7;
+    color: #722ed1;
+}
+
+.timeline-peak-badge strong {
+    color: #531dab;
+}
+
 .reset-school-btn {
     display: inline-flex;
     align-items: center;
@@ -440,6 +501,19 @@ body {
     color: #ffffff;
     border-color: #ff9900;
     box-shadow: 0 2px 8px rgba(255, 153, 0, 0.3);
+}
+
+.reset-hour-btn {
+    background-color: #f0f5ff;
+    border-color: #adc6ff;
+    color: #2f54eb;
+}
+
+.reset-hour-btn:hover {
+    background-color: #2f54eb;
+    color: #ffffff;
+    border-color: #2f54eb;
+    box-shadow: 0 2px 8px rgba(47, 84, 235, 0.3);
 }
 
 /* ==========================================================================
@@ -498,6 +572,7 @@ body.modal-open {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -521,6 +596,7 @@ body.modal-open {
         transform: scale(0.96) translateY(8px);
         opacity: 0;
     }
+
     to {
         transform: scale(1) translateY(0);
         opacity: 1;
@@ -607,9 +683,11 @@ body.modal-open {
     0% {
         box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45);
     }
+
     70% {
         box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
     }
+
     100% {
         box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
     }
@@ -1224,19 +1302,23 @@ body.modal-open {
 
 /* 暗黑模式下单元格字体色彩优化 */
 [data-theme="dark"] .dau-table td:nth-child(2) {
-    color: #38bdf8 !important; /* 账号ID亮蓝 */
+    color: #38bdf8 !important;
+    /* 账号ID亮蓝 */
 }
 
 [data-theme="dark"] .dau-table td:nth-child(3) {
-    color: #f1f5f9 !important; /* 学生姓名高亮清晰 */
+    color: #f1f5f9 !important;
+    /* 学生姓名高亮清晰 */
 }
 
 [data-theme="dark"] .dau-table td:nth-child(4) {
-    color: #94a3b8 !important; /* 学校名称柔和 */
+    color: #94a3b8 !important;
+    /* 学校名称柔和 */
 }
 
 [data-theme="dark"] .dau-table td:nth-child(7) {
-    color: #cbd5e1 !important; /* 设备名称 */
+    color: #cbd5e1 !important;
+    /* 设备名称 */
 }
 
 /* 徽章与按钮暗黑模式适配，杜绝默认亮白底色 */
@@ -1578,3 +1660,44 @@ body.modal-open {
     box-shadow: 0 4px 16px rgba(2, 132, 199, 0.5) !important;
 }
 
+/* Dark theme for Chart Tabs & Timeline Badge */
+[data-theme="dark"] .chart-tab-group {
+    background: #141b24;
+    border: 1px solid #203140;
+}
+
+[data-theme="dark"] .chart-tab-btn {
+    color: #8fa0b5;
+}
+
+[data-theme="dark"] .chart-tab-btn:hover {
+    color: #38bdf8;
+}
+
+[data-theme="dark"] .chart-tab-btn.active {
+    background: #203140;
+    color: #38bdf8;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .timeline-peak-badge {
+    background: rgba(114, 46, 209, 0.15);
+    border-color: rgba(114, 46, 209, 0.4);
+    color: #b37feb;
+}
+
+[data-theme="dark"] .timeline-peak-badge strong {
+    color: #d3adf7;
+}
+
+[data-theme="dark"] .reset-hour-btn {
+    background-color: rgba(47, 84, 235, 0.15);
+    border-color: rgba(47, 84, 235, 0.35);
+    color: #85a5ff;
+}
+
+[data-theme="dark"] .reset-hour-btn:hover {
+    background-color: #2f54eb;
+    color: #ffffff;
+    border-color: #2f54eb;
+}

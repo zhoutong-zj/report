@@ -32,12 +32,28 @@
             <span>⚠️ <strong>尚未配置 OSS 凭证</strong>。当前展示为静态演示数据。请前往「OSS 工具」配置凭证以查看实时日活详情。</span>
         </div>
 
-        <!-- School DAU Bar Chart Section (Placed directly below header) -->
+        <!-- School DAU & Hourly Timeline Chart Section -->
         <div class="chart-panel card">
             <div class="panel-header">
                 <div class="panel-header-left">
-                    <h2>各学校日活人数分布柱状图</h2>
-                    <span class="subtitle">根据 shopId 分类汇总各学校日活人数（横轴：学校，纵轴：日活人数）</span>
+                    <div class="chart-tab-group" role="tablist">
+                        <button id="chartTabSchool" class="chart-tab-btn active" role="tab" aria-selected="true"
+                            data-chart="school">
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+                                <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z" />
+                            </svg>
+                            <span>各学校日活分布</span>
+                        </button>
+                        <button id="chartTabTimeline" class="chart-tab-btn" role="tab" aria-selected="false"
+                            data-chart="timeline">
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+                                <path
+                                    d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                            </svg>
+                            <span>时段在线人数趋势 (24h)</span>
+                        </button>
+                    </div>
+                    <span class="subtitle" id="chartSubtitle">根据 shopId 分类汇总各学校日活人数（横轴：学校，纵轴：日活人数）</span>
                 </div>
                 <div class="panel-header-right">
                     <div id="studentTotalBadge" class="school-total-badge student-total-badge" title="当前统计的学生总人数">
@@ -54,6 +70,14 @@
                         </svg>
                         <span>学校总数：<strong id="schoolTotalCount">0</strong> 所</span>
                     </div>
+                    <div id="timelinePeakBadge" class="school-total-badge timeline-peak-badge" style="display: none;"
+                        title="当天最高峰在线时段与人数">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="opacity: 0.85;">
+                            <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z" />
+                        </svg>
+                        <span>在线峰值：<strong id="timelinePeakTime">-</strong> (<strong id="timelinePeakCount">0</strong>
+                            人)</span>
+                    </div>
                     <button id="resetSchoolFilterBtn" class="reset-school-btn" style="display: none;"
                         title="取消柱状图选中，查看全部学校">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
@@ -62,10 +86,18 @@
                         </svg>
                         <span id="resetSchoolFilterText">取消选中学校</span>
                     </button>
+                    <button id="resetHourFilterBtn" class="reset-school-btn" style="display: none;" title="取消时段筛选，查看全天">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                            <path
+                                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        </svg>
+                        <span id="resetHourFilterText">取消时段筛选</span>
+                    </button>
                 </div>
             </div>
             <div class="chart-container" style="position: relative; height: 280px; width: 100%; margin-top: 16px;">
                 <div id="schoolDauLineChart" style="width: 100%; height: 100%;"></div>
+                <div id="timelineDauChart" style="width: 100%; height: 100%; display: none;"></div>
             </div>
         </div>
 
@@ -152,14 +184,17 @@
                                 <code id="uModalAccount">-</code>
                                 <button class="mini-copy-btn" id="uModalCopyAccountBtn" title="复制账号">
                                     <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
-                                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                                        <path
+                                            d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
                                     </svg>
                                 </button>
                             </span>
                             <span class="meta-divider">·</span>
                             <span class="meta-item" id="uModalSchoolMeta">
-                                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" class="meta-icon-school">
-                                    <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z" />
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"
+                                    class="meta-icon-school">
+                                    <path
+                                        d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z" />
                                 </svg>
                                 <span class="meta-label">学校:</span>
                                 <span id="uModalHeaderSchool" class="meta-school-text">-</span>
@@ -170,7 +205,8 @@
                 <div class="user-header-right">
                     <button class="user-modal-close" id="uModalCloseX" title="关闭弹窗 (Esc)">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                            <path
+                                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                         </svg>
                     </button>
                 </div>
@@ -185,7 +221,8 @@
                         <div class="u-section-title">
                             <div class="section-title-icon-wrap icon-blue">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
+                                    <path
+                                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
                                 </svg>
                             </div>
                             <span>账号与身份档案</span>
@@ -197,7 +234,8 @@
                                     <span class="u-value highlight-blue" id="uGridLoginName">-</span>
                                     <button class="card-copy-btn" id="copyLoginNameBtn" title="复制登录名">
                                         <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
-                                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                                            <path
+                                                d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
                                         </svg>
                                         <span>复制</span>
                                     </button>
@@ -209,7 +247,8 @@
                                     <span class="u-value code-font" id="uGridUserId">-</span>
                                     <button class="card-copy-btn" id="copyUserIdBtn" title="复制用户ID">
                                         <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
-                                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                                            <path
+                                                d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
                                         </svg>
                                         <span>复制</span>
                                     </button>
@@ -235,7 +274,8 @@
                         <div class="u-section-title">
                             <div class="section-title-icon-wrap icon-amber">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                                    <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z" />
+                                    <path
+                                        d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z" />
                                 </svg>
                             </div>
                             <span>学校与教学信息</span>
@@ -253,7 +293,8 @@
                                     <span class="u-value code-font badge-shop" id="uGridSchoolId">-</span>
                                     <button class="card-copy-btn" id="copySchoolIdBtn" title="复制学校ID">
                                         <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
-                                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                                            <path
+                                                d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
                                         </svg>
                                         <span>复制</span>
                                     </button>
@@ -285,7 +326,8 @@
                         <div class="u-section-title">
                             <div class="section-title-icon-wrap icon-emerald">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                                    <path d="M4 6h18V4H4c-1.1 0-2 .9-2 2v11H0v3h14v-3H4V6zm19 2h-6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1zm-1 9h-4v-7h4v7z" />
+                                    <path
+                                        d="M4 6h18V4H4c-1.1 0-2 .9-2 2v11H0v3h14v-3H4V6zm19 2h-6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1zm-1 9h-4v-7h4v7z" />
                                 </svg>
                             </div>
                             <span>设备与活跃环境</span>
@@ -325,7 +367,8 @@
                         <div class="u-fold-left">
                             <div class="section-title-icon-wrap icon-slate">
                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                                    <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" />
+                                    <path
+                                        d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" />
                                 </svg>
                             </div>
                             <span>原始结构数据 (studentInfo / JSON)</span>
@@ -333,7 +376,8 @@
                         <div class="u-fold-right">
                             <button class="u-mini-btn" id="uCopyJsonBtn" title="复制完整JSON">
                                 <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
-                                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                                    <path
+                                        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
                                 </svg>
                                 <span>复制 JSON</span>
                             </button>
@@ -355,7 +399,8 @@
                 <div class="footer-left">
                     <button class="u-footer-btn outline" id="uCopyAllSummaryBtn" title="复制格式化用户档案文本">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                            <path
+                                d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
                         </svg>
                         <span>复制全部档案</span>
                     </button>
