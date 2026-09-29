@@ -2,6 +2,9 @@
   "name": "train-report-web",
   "version": "1.0.0",
   "scripts": {
+    "dev": "npx -y serve .",
+    "serve": "npx -y serve .",
+    "start": "npx -y serve .",
     "build": "tsc",
     "watch": "tsc --watch"
   },

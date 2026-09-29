@@ -77,11 +77,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 2. Initialize Date Picker
+    // 2. Initialize Date Picker & Quick Date Selectors
     const savedDate = safeGetSession('dauReportDate') || safeGetSession('reportDate') || new Date().toISOString().split('T')[0];
     if (dauDateInput) {
         dauDateInput.value = savedDate;
     }
+
+    function updateQuickDateActive(dateStr) {
+        const quickDateBtns = document.querySelectorAll('.quick-date-btn');
+        if (!dateStr) {
+            quickDateBtns.forEach(btn => btn.classList.remove('active'));
+            return;
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) {
+            quickDateBtns.forEach(btn => btn.classList.remove('active'));
+            return;
+        }
+        const curr = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        curr.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((curr - today) / (1000 * 60 * 60 * 24));
+
+        quickDateBtns.forEach(btn => {
+            const offset = parseInt(btn.dataset.offset, 10);
+            if (offset === diffDays) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    updateQuickDateActive(savedDate);
 
     // 检查是否有强制刷新标记（例如在单查询页面删除了用户数据）
     const needForceRefreshDau = safeGetSession('force_refresh_dau') === 'true';
@@ -146,11 +176,32 @@ document.addEventListener('DOMContentLoaded', () => {
     ossClient = initOssClient();
 
     // 5. Date formatting helpers
+    function parseDateSafe(dateInput) {
+        if (!dateInput) return null;
+        if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
+        if (typeof dateInput === 'number') {
+            const d = new Date(dateInput);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        let str = String(dateInput).trim();
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) return d;
+        d = new Date(str.replace(/-/g, '/'));
+        if (!isNaN(d.getTime())) return d;
+        return null;
+    }
+
+    function getItemDate(item) {
+        if (!item) return null;
+        const candidate = item.lastModified || (item.studentInfo && item.studentInfo.lastActiveTime) || (item.rawData && item.rawData.lastActiveTime);
+        return parseDateSafe(candidate);
+    }
+
     function formatLastModifiedDate(dateInput) {
         if (!dateInput) return '-';
         try {
-            const d = new Date(dateInput);
-            if (isNaN(d.getTime())) return String(dateInput);
+            const d = parseDateSafe(dateInput);
+            if (!d) return String(dateInput);
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
             const dd = String(d.getDate()).padStart(2, '0');
@@ -581,9 +632,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             if (selectedHourFilter !== null) {
-                if (!item.lastModified) return false;
-                const d = new Date(item.lastModified);
-                if (isNaN(d.getTime()) || d.getHours() !== selectedHourFilter) {
+                const d = getItemDate(item);
+                if (!d || d.getHours() !== selectedHourFilter) {
                     return false;
                 }
             }
@@ -910,6 +960,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 8.2.2 Render ECharts Smooth Area Line Chart for Hourly Student Online Distribution (24h)
     let timelineChart = null;
     let lastTimelineChartParams = null;
+    let lastTimelinePeakHour = null;
 
     function renderTimelineDauChart(chartList, selectedSchool) {
         lastTimelineChartParams = { chartList, selectedSchool };
@@ -928,9 +979,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // 统计 24 个小时点 (00:00 ~ 23:00) 的在线学生集合 (按账号去重)
         const hourlyBuckets = Array.from({ length: 24 }, () => new Set());
         targetList.forEach(item => {
-            if (!item.lastModified) return;
-            const d = new Date(item.lastModified);
-            if (!isNaN(d.getTime())) {
+            const d = getItemDate(item);
+            if (d) {
                 const hour = d.getHours();
                 const userKey = item.userId || item.loginName || item.account || item.key;
                 if (userKey) {
@@ -948,6 +998,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 peakHour = hour;
             }
         });
+        lastTimelinePeakHour = peakHour;
 
         if (timelinePeakTime) {
             const nextHour = (peakHour + 1) % 24;
@@ -969,8 +1020,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     color: '#ff9900',
                     borderColor: '#ffffff',
                     borderWidth: 2,
-                    shadowBlur: 6,
-                    shadowColor: '#ff9900'
+                    shadowBlur: 8,
+                    shadowColor: 'rgba(255, 153, 0, 0.6)'
                 } : {
                     color: '#722ed1'
                 }
@@ -985,17 +1036,79 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         timelineChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
 
-        // 点击某个时间点可筛选该时段的学生
-        timelineChart.on('click', (params) => {
-            if (params.dataIndex !== undefined) {
-                const clickedHour = params.dataIndex;
-                if (selectedHourFilter === clickedHour) {
-                    selectedHourFilter = null;
-                } else {
-                    selectedHourFilter = clickedHour;
+        // 统一时段点击切换处理函数
+        function handleHourToggle(targetHour) {
+            if (targetHour === null || targetHour === undefined || isNaN(targetHour)) return;
+            const hour = Number(targetHour);
+            if (hour < 0 || hour > 23) return;
+
+            if (selectedHourFilter === hour) {
+                // 再次点击同一时段 -> 取消时段筛选
+                selectedHourFilter = null;
+            } else {
+                selectedHourFilter = hour;
+            }
+            saveCurrentStateToCache();
+            renderDauTable();
+        }
+
+        // 提取被点击的对应时段（兼容点击 markPoint 气泡、折线上的数值/点、横坐标轴标签）
+        function extractHourFromParams(params) {
+            if (!params) return null;
+
+            // 1. 点击 markPoint（如最高峰数值气泡）
+            if (params.componentType === 'markPoint') {
+                if (params.data && params.data.hour !== undefined) {
+                    return params.data.hour;
                 }
-                saveCurrentStateToCache();
-                renderDauTable();
+                return peakHour;
+            }
+
+            // 2. 点击 series 上的折线圆点或数值 label
+            if (params.componentType === 'series') {
+                if (params.data && params.data.hour !== undefined) {
+                    return params.data.hour;
+                }
+                if (typeof params.dataIndex === 'number' && params.dataIndex >= 0 && params.dataIndex < 24) {
+                    return params.dataIndex;
+                }
+            }
+
+            // 3. 点击 X 轴刻度文字 (xAxis)
+            if (params.componentType === 'xAxis') {
+                const valStr = String(params.value || '');
+                const parsed = parseInt(valStr, 10);
+                if (!isNaN(parsed) && parsed >= 0 && parsed < 24) {
+                    return parsed;
+                }
+                const idx = hoursLabels.indexOf(valStr);
+                if (idx !== -1) return idx;
+            }
+
+            return null;
+        }
+
+        timelineChart.on('click', (params) => {
+            const clickedHour = extractHourFromParams(params);
+            if (clickedHour !== null) {
+                handleHourToggle(clickedHour);
+            }
+        });
+
+        // 支持点击折线图网格列空白区域智能定位对应时段
+        timelineChart.getZr().on('click', (e) => {
+            if (e.target && (e.target.style || e.target.shape)) {
+                return; // 具体图元由 echarts click 监听处理，避免重复触发
+            }
+            const pointInPixel = [e.offsetX, e.offsetY];
+            if (timelineChart.containPixel('grid', pointInPixel)) {
+                const pointInGrid = timelineChart.convertFromPixel({ seriesIndex: 0 }, pointInPixel);
+                if (pointInGrid && !isNaN(pointInGrid[0])) {
+                    const roundedHour = Math.round(pointInGrid[0]);
+                    if (roundedHour >= 0 && roundedHour < 24) {
+                        handleHourToggle(roundedHour);
+                    }
+                }
             }
         });
 
@@ -1017,19 +1130,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 formatter: function (params) {
                     const p = params[0];
-                    const hour = p.dataIndex;
+                    if (!p) return '';
+                    const hour = (p.data && p.data.hour !== undefined) ? p.data.hour : p.dataIndex;
                     const nextH = (hour + 1) % 24;
                     const rangeText = `${String(hour).padStart(2, '0')}:00 ~ ${String(nextH).padStart(2, '0')}:00`;
                     const isSelected = selectedHourFilter === hour;
                     return `<div style="font-weight: 600; margin-bottom: 4px;">${rangeText} 时段</div>
                             <div>在线学生人数: <span style="font-weight: bold; color: #722ed1;">${p.value}</span> 人</div>
                             <div style="font-size: 11px; color: ${isSelected ? '#ff9900' : '#909399'}; margin-top: 4px;">
-                                ${isSelected ? '✓ 已选中筛选该时段 (点击柱点取消)' : '💡 点击可按此时间段过滤学生列表'}
+                                ${isSelected ? '✓ 已选中筛选该时段 (再次点击可取消)' : '💡 点击可按此时间段过滤学生列表'}
                             </div>`;
                 }
             },
             grid: {
-                top: 40,
+                top: 42,
                 left: 50,
                 right: 35,
                 bottom: 30
@@ -1038,9 +1152,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'category',
                 data: hoursLabels,
                 boundaryGap: false,
+                triggerEvent: true,
                 axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
                 axisLabel: {
-                    color: colors.textColor || '#606266',
+                    color: (value) => {
+                        const h = parseInt(value, 10);
+                        return h === selectedHourFilter ? '#ff9900' : (colors.textColor || '#606266');
+                    },
+                    fontWeight: (value) => {
+                        const h = parseInt(value, 10);
+                        return h === selectedHourFilter ? 'bold' : 'normal';
+                    },
                     interval: 1, // 每隔2小时显示一个标签
                     fontSize: 11
                 }
@@ -1056,7 +1178,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'line',
                 smooth: true,
                 symbol: 'circle',
-                symbolSize: (val, params) => (params.dataIndex === selectedHourFilter ? 10 : 6),
+                symbolSize: (val, params) => (params.dataIndex === selectedHourFilter ? 12 : (val > 0 ? 8 : 4)),
                 showSymbol: true,
                 itemStyle: {
                     color: primaryLineColor
@@ -1074,12 +1196,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         { offset: 1, color: areaEndColor }
                     ])
                 },
+                label: {
+                    show: true,
+                    position: 'top',
+                    distance: 6,
+                    formatter: function (p) {
+                        return p.value > 0 ? `${p.value}` : '';
+                    },
+                    color: (p) => (p.dataIndex === selectedHourFilter ? '#ff9900' : (isDark ? '#c084fc' : '#722ed1')),
+                    fontSize: 11,
+                    fontWeight: 'bold'
+                },
                 markPoint: peakCount > 0 ? {
                     symbol: 'pin',
-                    symbolSize: 46,
-                    itemStyle: { color: '#ff9900' },
+                    symbolSize: 48,
+                    itemStyle: {
+                        color: '#ff9900',
+                        shadowBlur: 8,
+                        shadowColor: 'rgba(255, 153, 0, 0.4)'
+                    },
                     data: [
-                        { type: 'max', name: '最高峰', label: { fontSize: 10, fontWeight: 'bold' } }
+                        {
+                            name: '最高峰',
+                            coord: [hoursLabels[peakHour], peakCount],
+                            value: peakCount,
+                            hour: peakHour,
+                            label: {
+                                fontSize: 11,
+                                fontWeight: 'bold',
+                                color: '#ffffff'
+                            }
+                        }
                     ]
                 } : undefined,
                 markLine: {
@@ -1205,6 +1352,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadData(forceRefresh = false) {
         const selectedDate = dauDateInput ? dauDateInput.value : '';
         safeSetSession('dauReportDate', selectedDate);
+        updateQuickDateActive(selectedDate);
 
         // 如果不是强制刷新，且已存在当前日期的内存/持久化缓存数据，则直接使用缓存数据，不重新请求
         if (!forceRefresh) {
@@ -1618,8 +1766,38 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    dauDateInput.addEventListener('change', () => {
-        loadData(false);
+    if (dauDateInput) {
+        dauDateInput.addEventListener('change', () => {
+            const selectedDate = dauDateInput.value;
+            safeSetSession('dauReportDate', selectedDate);
+            safeSetSession('reportDate', selectedDate);
+            updateQuickDateActive(selectedDate);
+            loadData(false);
+        });
+    }
+
+    // Quick date button clicks (今日, 昨天, 前天)
+    const quickDateBtns = document.querySelectorAll('.quick-date-btn');
+    quickDateBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const offset = parseInt(btn.dataset.offset, 10);
+            const target = new Date();
+            target.setDate(target.getDate() + offset);
+            const y = target.getFullYear();
+            const m = String(target.getMonth() + 1).padStart(2, '0');
+            const d = String(target.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+
+            if (dauDateInput && dauDateInput.value === dateStr) return;
+
+            if (dauDateInput) {
+                dauDateInput.value = dateStr;
+            }
+            safeSetSession('dauReportDate', dateStr);
+            safeSetSession('reportDate', dateStr);
+            updateQuickDateActive(dateStr);
+            loadData(false);
+        });
     });
 
     if (dauSchoolSelect) {
@@ -1714,6 +1892,21 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedHourFilter = null;
             saveCurrentStateToCache();
             renderDauTable();
+        });
+    }
+
+    if (timelinePeakBadge) {
+        timelinePeakBadge.style.cursor = 'pointer';
+        timelinePeakBadge.addEventListener('click', () => {
+            if (lastTimelinePeakHour !== null && lastTimelinePeakHour !== undefined) {
+                if (selectedHourFilter === lastTimelinePeakHour) {
+                    selectedHourFilter = null;
+                } else {
+                    selectedHourFilter = lastTimelinePeakHour;
+                }
+                saveCurrentStateToCache();
+                renderDauTable();
+            }
         });
     }
 

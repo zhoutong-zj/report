@@ -122,6 +122,46 @@ body {
     border-color: #409eff;
 }
 
+/* Quick Date Selector */
+.quick-dates {
+    display: inline-flex;
+    align-items: center;
+    background: #f4f4f5;
+    padding: 3px;
+    border-radius: 6px;
+    gap: 2px;
+    height: 34px;
+    box-sizing: border-box;
+    margin-left: 2px;
+}
+
+.quick-date-btn {
+    border: none;
+    background: transparent;
+    padding: 0 10px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 12px;
+    color: #606266;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.quick-date-btn:hover {
+    color: #409eff;
+}
+
+.quick-date-btn.active {
+    background: #fff;
+    color: #409eff;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+
 .filter-item select {
     height: 34px;
     padding: 0 10px;
@@ -472,6 +512,20 @@ body {
     background: #f9f0ff;
     border: 1px solid #d3adf7;
     color: #722ed1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.timeline-peak-badge:hover {
+    background: #f0d8ff;
+    border-color: #b37feb;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(114, 46, 209, 0.15);
+}
+
+.timeline-peak-badge:active {
+    transform: translateY(0);
 }
 
 .timeline-peak-badge strong {
@@ -1700,4 +1754,24 @@ body.modal-open {
     background-color: #2f54eb;
     color: #ffffff;
     border-color: #2f54eb;
+}
+
+/* Quick Date Selectors in Dark Mode */
+[data-theme="dark"] .quick-dates {
+    background: #15222c !important;
+    border: 1px solid #203140 !important;
+}
+
+[data-theme="dark"] .quick-date-btn {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .quick-date-btn:hover {
+    color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .quick-date-btn.active {
+    background: #1e2c3a !important;
+    color: #38bdf8 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }

@@ -1968,11 +1968,44 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="meta-item"><span class="meta-label">文件路径</span><span class="meta-val" style="word-break: break-all; font-size: 11px;">${item.key}</span></div>
         `;
 
+        // JSON Syntax Highlight Helper
+        function syntaxHighlightJson(jsonStr) {
+            const escaped = jsonStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return escaped.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        function renderJsonContent(data) {
+            if (!data) {
+                modalJsonPre.textContent = '-';
+                return;
+            }
+            try {
+                const str = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+                modalJsonPre.innerHTML = syntaxHighlightJson(str);
+            } catch (e) {
+                modalJsonPre.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+            }
+        }
+
         modalJsonPre.textContent = '⏳ 正在加载原始上报文件内容...';
         detailModal.style.display = 'flex';
 
         if (item.parsedData) {
-            modalJsonPre.textContent = JSON.stringify(item.parsedData, null, 2);
+            renderJsonContent(item.parsedData);
             return;
         }
 
@@ -1981,12 +2014,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await ossClient.get(item.key);
                 const str = res.content ? res.content.toString() : '';
                 item.parsedData = JSON.parse(str);
-                modalJsonPre.textContent = JSON.stringify(item.parsedData, null, 2);
+                renderJsonContent(item.parsedData);
             } catch (e) {
                 modalJsonPre.textContent = `读取失败: ${e.message}`;
             }
         } else {
-            modalJsonPre.textContent = JSON.stringify(item, null, 2);
+            renderJsonContent(item);
         }
     }
 

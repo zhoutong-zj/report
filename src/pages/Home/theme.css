@@ -301,14 +301,53 @@ textarea {
     color: var(--theme-text-primary) !important;
 }
 
-/* Quick Date Selectors */
+/* 全局统一：快捷日期切换选择器（今日、昨天、前天胶囊按钮组） */
+.quick-dates {
+    display: inline-flex !important;
+    align-items: center !important;
+    background: #f4f4f5 !important;
+    padding: 3px !important;
+    border-radius: 6px !important;
+    gap: 2px !important;
+    height: 36px !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+}
+
+.quick-date-btn {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 10px !important;
+    height: 30px !important;
+    line-height: 30px !important;
+    font-size: 13px !important;
+    color: #606266 !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+    white-space: nowrap !important;
+    outline: none !important;
+}
+
+.quick-date-btn:hover {
+    color: #409eff !important;
+}
+
+.quick-date-btn.active {
+    background: #ffffff !important;
+    color: #409eff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
 [data-theme="dark"] .quick-dates {
-    background: var(--theme-bg-input) !important;
-    border: 1px solid var(--theme-border-color) !important;
+    background: #15222c !important;
+    border: 1px solid #203140 !important;
 }
 
 [data-theme="dark"] .quick-date-btn {
-    color: var(--theme-text-secondary) !important;
+    color: #94a3b8 !important;
 }
 
 [data-theme="dark"] .quick-date-btn:hover {
@@ -316,7 +355,7 @@ textarea {
 }
 
 [data-theme="dark"] .quick-date-btn.active {
-    background: var(--theme-bg-subtle) !important;
+    background: #1e2c3a !important;
     color: #38bdf8 !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
@@ -752,4 +791,193 @@ tr.active-account:hover td {
     background-color: rgba(0, 0, 0, 0.65) !important;
     backdrop-filter: blur(2px);
 }
+
+/* 全局统一：所有列表表格中的版本号徽章（与单日日活详情页完全保持一致） */
+.version-badge,
+.dau-version-badge {
+    color: #67c23a !important;
+    background-color: #f0f9eb !important;
+    border: 1px solid #c2e7b0 !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    display: inline-block !important;
+    line-height: 1.4 !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+}
+
+[data-theme="dark"] .version-badge,
+[data-theme="dark"] .dau-version-badge {
+    background-color: rgba(52, 211, 153, 0.12) !important;
+    color: #34d399 !important;
+    border: 1px solid rgba(52, 211, 153, 0.3) !important;
+}
+
+/* 全局统一：异常类型徽章（高质感胶囊徽章，字迹清晰，全系统完全一致） */
+.type-badge,
+.exception-status-badge,
+.popover-type-badge {
+    color: #ffffff !important;
+    padding: 3px 8px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    display: inline-block !important;
+    letter-spacing: 0.2px !important;
+    line-height: 1.4 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    transition: all 0.2s ease !important;
+}
+
+.type-badge .color-dot {
+    display: none !important;
+}
+
+/* 亮色模式各分类底色（兼容简写、全名与下划线） */
+.type-badge.eval,
+.type-badge.evaluationException,
+.type-badge.evaluation_error,
+.exception-tag-evaluationException,
+.popover-type-badge.eval { background-color: #48e59e !important; }
+
+.type-badge.data,
+.type-badge.dataException,
+.type-badge.data_error,
+.exception-tag-dataException,
+.popover-type-badge.data { background-color: #e5837a !important; }
+
+.type-badge.platform,
+.type-badge.platformException,
+.type-badge.platform_error,
+.exception-tag-platformException,
+.popover-type-badge.platform { background-color: #f5a623 !important; }
+
+.type-badge.av,
+.type-badge.audioVideoException,
+.type-badge.audio_video_error,
+.exception-tag-audioVideoException,
+.popover-type-badge.av { background-color: #ab47bc !important; }
+
+.type-badge.av-test,
+.type-badge.audioVideoTest,
+.type-badge.audio_video_test,
+.exception-tag-audioVideoTest,
+.popover-type-badge.av-test { background-color: #2196f3 !important; }
+
+.type-badge.other,
+.type-badge.otherException,
+.type-badge.other_error,
+.exception-tag-otherException,
+.popover-type-badge.other { background-color: #909090 !important; }
+
+/* 暗黑模式各分类底色（发光微边框 pill 美学，全系统完全一致） */
+[data-theme="dark"] .type-badge,
+[data-theme="dark"] .exception-status-badge,
+[data-theme="dark"] .popover-type-badge {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-theme="dark"] .type-badge.eval,
+[data-theme="dark"] .type-badge.evaluationException,
+[data-theme="dark"] .type-badge.evaluation_error,
+[data-theme="dark"] .exception-tag-evaluationException,
+[data-theme="dark"] .popover-type-badge.eval {
+    color: #34d399 !important;
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+
+[data-theme="dark"] .type-badge.data,
+[data-theme="dark"] .type-badge.dataException,
+[data-theme="dark"] .type-badge.data_error,
+[data-theme="dark"] .exception-tag-dataException,
+[data-theme="dark"] .popover-type-badge.data {
+    color: #f87171 !important;
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+
+[data-theme="dark"] .type-badge.platform,
+[data-theme="dark"] .type-badge.platformException,
+[data-theme="dark"] .type-badge.platform_error,
+[data-theme="dark"] .exception-tag-platformException,
+[data-theme="dark"] .popover-type-badge.platform {
+    color: #fbbf24 !important;
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+[data-theme="dark"] .type-badge.av,
+[data-theme="dark"] .type-badge.audioVideoException,
+[data-theme="dark"] .type-badge.audio_video_error,
+[data-theme="dark"] .exception-tag-audioVideoException,
+[data-theme="dark"] .popover-type-badge.av {
+    color: #c084fc !important;
+    background-color: rgba(168, 85, 247, 0.15) !important;
+    border: 1px solid rgba(168, 85, 247, 0.35) !important;
+}
+
+[data-theme="dark"] .type-badge.av-test,
+[data-theme="dark"] .type-badge.audioVideoTest,
+[data-theme="dark"] .type-badge.audio_video_test,
+[data-theme="dark"] .exception-tag-audioVideoTest,
+[data-theme="dark"] .popover-type-badge.av-test {
+    color: #60a5fa !important;
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    border: 1px solid rgba(59, 130, 246, 0.35) !important;
+}
+
+[data-theme="dark"] .type-badge.other,
+[data-theme="dark"] .type-badge.otherException,
+[data-theme="dark"] .type-badge.other_error,
+[data-theme="dark"] .exception-tag-otherException,
+[data-theme="dark"] .popover-type-badge.other {
+    color: #9ca3af !important;
+    background-color: rgba(156, 163, 175, 0.15) !important;
+    border: 1px solid rgba(156, 163, 175, 0.35) !important;
+}
+
+/* ==========================================================================
+   Global Unified JSON Syntax Highlighting & Code Preview in Modals / Popovers
+   ========================================================================== */
+.json-key {
+    color: #38bdf8 !important;
+    font-weight: 500;
+}
+
+.json-string {
+    color: #4ade80 !important;
+}
+
+.json-number {
+    color: #fbbf24 !important;
+}
+
+.json-boolean {
+    color: #c084fc !important;
+    font-weight: 600;
+}
+
+.json-null {
+    color: #94a3b8 !important;
+    font-style: italic;
+}
+
+/* 统一弹框内代码视窗等宽字体与基础行距 */
+.modal-body pre,
+.popover-body pre,
+.json-pre {
+    font-family: ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace !important;
+    line-height: 1.6 !important;
+    letter-spacing: 0.2px;
+}
+
+
+
 

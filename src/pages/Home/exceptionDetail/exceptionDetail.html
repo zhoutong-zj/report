@@ -9,8 +9,8 @@
     <link rel="icon" type="image/png" sizes="32x32" href="../../../assets/favicon-32x32.png?v=4">
     <link rel="icon" type="image/png" sizes="16x16" href="../../../assets/favicon-16x16.png?v=4">
     <link rel="shortcut icon" href="../../../assets/favicon.png?v=4">
-    <link rel="stylesheet" href="../theme.css?v=1722249000006">
-    <link rel="stylesheet" href="exceptionDetail.css?v=1722249000006">
+    <link rel="stylesheet" href="../theme.css?v=1722249000009">
+    <link rel="stylesheet" href="exceptionDetail.css?v=1722249000009">
     <script src="../theme.js"></script>
 </head>
 
@@ -49,6 +49,11 @@
                 <div class="filter-item">
                     <label for="exceptionDateInput">选择报表日期：</label>
                     <input type="date" id="exceptionDateInput">
+                    <div class="quick-dates">
+                        <button type="button" class="quick-date-btn" data-offset="0" title="切换到今日异常数据">今日</button>
+                        <button type="button" class="quick-date-btn" data-offset="-1" title="切换到昨天异常数据">昨天</button>
+                        <button type="button" class="quick-date-btn" data-offset="-2" title="切换到前天异常数据">前天</button>
+                    </div>
                 </div>
                 <div class="filter-item search-item">
                     <label for="exceptionSearchInput">综合搜索：</label>
@@ -104,7 +109,7 @@
                             <th style="width: 10%;">学生姓名</th>
                             <th style="width: 16%;">学校</th>
                             <th style="width: 10%;">老师</th>
-                            <th style="width: 9%; text-align: center;">版本</th>
+                            <th style="width: 9%; text-align: center;">版本号</th>
                             <th style="width: 11%; text-align: center;">异常类型</th>
                             <th style="width: 14%; text-align: center;">日志发生时间</th>
                             <th style="width: 13%; text-align: center;">操作</th>
@@ -122,17 +127,32 @@
     <div id="logModal" class="modal-backdrop" style="display: none;">
         <div class="modal-card">
             <header class="modal-header">
-                <div>
-                    <h3 id="modalTitle">日志文件内容</h3>
-                    <span id="modalSubtitle" style="font-size: 12px; color: #909399;">-</span>
+                <div class="modal-title-wrap">
+                    <div class="modal-title-row">
+                        <svg class="modal-title-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        <h3 id="modalTitle">日志文件内容</h3>
+                    </div>
+                    <span id="modalSubtitle" class="modal-subtitle">-</span>
                 </div>
-                <button id="modalCloseX" class="modal-close-x">&times;</button>
+                <button id="modalCloseX" class="modal-close-x" title="关闭">&times;</button>
             </header>
             <div class="modal-body">
                 <pre><code id="modalCodeBlock">-</code></pre>
             </div>
             <footer class="modal-footer">
-                <button id="modalCopyBtn" class="modal-copy-btn">复制日志</button>
+                <button id="modalCopyBtn" class="modal-copy-btn">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span class="copy-text">复制日志</span>
+                </button>
                 <button id="modalCloseBtn" class="modal-close-btn">关闭</button>
             </footer>
         </div>
@@ -166,7 +186,7 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <!-- Aliyun OSS JS SDK for loading dynamic report data -->
     <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
-    <script src="exceptionDetail.js?v=1722249000007"></script>
+    <script src="exceptionDetail.js?v=1722249000009"></script>
 </body>
 
 </html>

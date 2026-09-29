@@ -127,43 +127,52 @@ body {
 
 .error-box pre,
 .stack-box pre,
-.task-box pre {
-    padding: 16px;
-    background-color: #f5f7fa;
-    border-radius: 4px;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 13px;
-    color: #e5837a;
-    white-space: pre-wrap;
-    word-break: break-all;
-    max-height: 800px;
-    overflow-y: auto;
-    border: 1px solid #ebeef5;
-}
-
-.stack-box pre,
-.task-box pre {
-    color: #606266;
-}
-
-.crash-box {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
+.task-box pre,
 .crash-box pre {
-    padding: 16px;
-    background-color: #f5f7fa;
-    border-radius: 4px;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    padding: 16px 20px;
+    background-color: #0f172a;
+    border-radius: 8px;
+    font-family: ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
     font-size: 13px;
-    color: #606266;
+    line-height: 1.6;
+    letter-spacing: 0.2px;
+    color: #e2e8f0;
     white-space: pre-wrap;
     word-break: break-all;
     max-height: 800px;
     overflow-y: auto;
-    border: 1px solid #ebeef5;
+    border: 1px solid #1e293b;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.error-box pre::-webkit-scrollbar,
+.stack-box pre::-webkit-scrollbar,
+.task-box pre::-webkit-scrollbar,
+.crash-box pre::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.error-box pre::-webkit-scrollbar-track,
+.stack-box pre::-webkit-scrollbar-track,
+.task-box pre::-webkit-scrollbar-track,
+.crash-box pre::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.error-box pre::-webkit-scrollbar-thumb,
+.stack-box pre::-webkit-scrollbar-thumb,
+.task-box pre::-webkit-scrollbar-thumb,
+.crash-box pre::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.25);
+    border-radius: 4px;
+}
+
+.error-box pre::-webkit-scrollbar-thumb:hover,
+.stack-box pre::-webkit-scrollbar-thumb:hover,
+.task-box pre::-webkit-scrollbar-thumb:hover,
+.crash-box pre::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.45);
 }
 
 .task-info-header {
@@ -237,13 +246,15 @@ body {
 .header-status #status {
     display: inline-flex;
     align-items: center;
-    font-size: 13px;
-    color: #909399;
 }
 
-.header-status #status span {
-    font-weight: 500;
-    line-height: 1.4;
+.header-status #status .type-badge {
+    font-size: 13px !important;
+    padding: 3px 10px !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+    border-radius: 4px !important;
+    letter-spacing: 0.3px !important;
 }
 
 .header-actions {
@@ -464,9 +475,10 @@ body {
 [data-theme="dark"] .stack-box pre,
 [data-theme="dark"] .task-box pre,
 [data-theme="dark"] .crash-box pre {
-    background-color: #0b1117 !important;
+    background-color: #080c10 !important;
     border: 1px solid #1e2c38 !important;
-    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5) !important;
+    color: #e2e8f0 !important;
 }
 
 [data-theme="dark"] .error-box label,
@@ -474,16 +486,6 @@ body {
 [data-theme="dark"] .task-box label,
 [data-theme="dark"] .crash-box label {
     color: #94a3b8 !important;
-}
-
-[data-theme="dark"] .error-box pre {
-    color: #fca5a5 !important;
-}
-
-[data-theme="dark"] .stack-box pre,
-[data-theme="dark"] .task-box pre,
-[data-theme="dark"] .crash-box pre {
-    color: #cbd5e1 !important;
 }
 
 /* 操作与折叠按钮 */

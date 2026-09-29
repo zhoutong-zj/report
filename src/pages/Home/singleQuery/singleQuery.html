@@ -9,8 +9,8 @@
     <link rel="icon" type="image/png" sizes="32x32" href="../../../assets/favicon-32x32.png?v=4">
     <link rel="icon" type="image/png" sizes="16x16" href="../../../assets/favicon-16x16.png?v=4">
     <link rel="shortcut icon" href="../../../assets/favicon.png?v=4">
-    <link rel="stylesheet" href="../theme.css?v=1722249000006">
-    <link rel="stylesheet" href="singleQuery.css?v=1722249000006">
+    <link rel="stylesheet" href="../theme.css?v=1722249000012">
+    <link rel="stylesheet" href="singleQuery.css?v=1722249000012">
     <script src="../theme.js"></script>
 </head>
 
@@ -23,9 +23,16 @@
                     <input type="text" id="username" list="usernameList" placeholder="请输入用户名">
                     <datalist id="usernameList"></datalist>
                 </div>
-                <div class="filter-item">
+                <div class="filter-item date-filter-item">
                     <label for="date">日期</label>
-                    <input type="date" id="date">
+                    <div class="date-input-group">
+                        <input type="date" id="date">
+                        <div class="quick-dates">
+                            <button type="button" class="quick-date-btn" data-offset="0" title="切换到今天">今日</button>
+                            <button type="button" class="quick-date-btn" data-offset="-1" title="切换到昨天">昨天</button>
+                            <button type="button" class="quick-date-btn" data-offset="-2" title="切换到前天">前天</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="filter-item">
                     <label for="exceptionType">异常类型</label>
@@ -79,7 +86,7 @@
                         <th style="width: 17%;">学校</th>
                         <th style="width: 10%;">老师</th>
                         <th style="width: 8%; text-align: center;">年级</th>
-                        <th style="width: 9%; text-align: center;">版本</th>
+                        <th style="width: 9%; text-align: center;">版本号</th>
                         <th style="width: 17%; text-align: center;">错误时间</th>
                         <th style="width: 10%; text-align: center;">状态</th>
                         <th style="width: 13%; text-align: center;">操作</th>
@@ -120,7 +127,7 @@
     <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
     <!-- SheetJS for exporting data to Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="singleQuery.js?v=1722249000007"></script>
+    <script src="singleQuery.js?v=1722249000012"></script>
 </body>
 
 </html>

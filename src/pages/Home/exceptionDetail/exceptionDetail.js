@@ -49,12 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const folderToColor = {
-        'evaluation_error': '#11998e',
-        'data_error': '#ff6b6b',
-        'platform_error': '#f7971e',
-        'audio_video_error': '#8e44ad',
+        'evaluation_error': '#48e59e',
+        'data_error': '#e5837a',
+        'platform_error': '#f5a623',
+        'audio_video_error': '#ab47bc',
         'audio_video_test': '#2196f3',
-        'other_error': '#6a85b6',
+        'other_error': '#909090',
         'dataException': '#e5837a',
         'platformException': '#f5a623',
         'otherException': '#909090',
@@ -72,9 +72,39 @@ document.addEventListener('DOMContentLoaded', () => {
         'other_error': 'other'
     };
 
-    // 2. Initialize Date Picker
+    // 2. Initialize Date Picker & Quick Date Selectors
     const savedDate = sessionStorage.getItem('exceptionReportDate') || sessionStorage.getItem('reportDate') || new Date().toISOString().split('T')[0];
     exceptionDateInput.value = savedDate;
+
+    function updateQuickDateActive(dateStr) {
+        const quickDateBtns = document.querySelectorAll('.quick-date-btn');
+        if (!dateStr) {
+            quickDateBtns.forEach(btn => btn.classList.remove('active'));
+            return;
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) {
+            quickDateBtns.forEach(btn => btn.classList.remove('active'));
+            return;
+        }
+        const curr = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        curr.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((curr - today) / (1000 * 60 * 60 * 24));
+
+        quickDateBtns.forEach(btn => {
+            const offset = parseInt(btn.dataset.offset, 10);
+            if (offset === diffDays) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    updateQuickDateActive(savedDate);
 
     // 检查是否有强制刷新标记（例如在单查询页面删除了用户数据）
     const needForceRefresh = sessionStorage.getItem('force_refresh_exception') === 'true';
@@ -396,8 +426,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     teacherCell.title = item.teacherName;
                 }
                 const versionCell = row.querySelector('.version-cell');
-                if (versionCell && item.version && item.version !== '-') {
-                    versionCell.innerHTML = `<span class="version-badge">${escapeHtml(item.version)}</span>`;
+                if (versionCell) {
+                    versionCell.innerHTML = `<span class="version-badge">${escapeHtml(item.version || '-')}</span>`;
                 }
                 break;
             }
@@ -712,7 +742,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (typeBadge) {
             typeBadge.textContent = categoryName;
-            typeBadge.style.backgroundColor = color;
+            const categoryClass = folderToClass[item.category] || 'other';
+            typeBadge.className = `type-badge popover-type-badge ${categoryClass}`;
+            typeBadge.style.backgroundColor = '';
         }
 
         const userIdVal = item.username || item.userId || '-';
@@ -779,16 +811,33 @@ document.addEventListener('DOMContentLoaded', () => {
             return errorDataText;
         }
 
+        function renderPopoverContent(rawText) {
+            if (!rawText) {
+                contentEl.textContent = '-';
+                return;
+            }
+            try {
+                const parsed = JSON.parse(rawText);
+                contentEl.innerHTML = syntaxHighlightJson(JSON.stringify(parsed, null, 2));
+            } catch (e) {
+                if (/^\s*[\{\[]/.test(rawText)) {
+                    contentEl.innerHTML = syntaxHighlightJson(rawText);
+                } else {
+                    contentEl.textContent = rawText;
+                }
+            }
+        }
+
         const text = extractErrorDataText(item);
         if (text) {
-            contentEl.textContent = text;
+            renderPopoverContent(text);
         } else {
             contentEl.textContent = '正在获取错误数据...';
             getLogItemContent(item).then(updatedItem => {
                 if (currentPopoverItem === item) {
                     const updatedText = extractErrorDataText(updatedItem);
                     if (updatedText) {
-                        contentEl.textContent = updatedText;
+                        renderPopoverContent(updatedText);
                     } else {
                         const summary = {
                             loginName: item.username,
@@ -798,7 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             fileName: item.fileName,
                             remark: '暂无独立errorData字段，可点击「查看内容」查看完整日志'
                         };
-                        contentEl.textContent = JSON.stringify(summary, null, 2);
+                        renderPopoverContent(JSON.stringify(summary, null, 2));
                     }
                 }
             });
@@ -914,10 +963,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const schoolName = item.schoolName && item.schoolName !== '-' ? item.schoolName : '-';
             const teacherName = item.teacherName && item.teacherName !== '-' ? item.teacherName : '-';
-            const versionStr = item.version && item.version !== '-' ? item.version : '-';
-            const versionHtml = versionStr !== '-'
-                ? `<span class="version-badge">${escapeHtml(versionStr)}</span>`
-                : `<span style="color: #909399;">-</span>`;
+            const versionStr = item.version || '-';
+            const versionHtml = `<span class="version-badge">${escapeHtml(versionStr)}</span>`;
 
             html += `
                 <tr class="${selectedClass}" data-key="${item.key}">
@@ -930,10 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="teacher-name-cell" title="${escapeHtml(teacherName)}">${escapeHtml(teacherName)}</td>
                     <td class="version-cell" style="text-align: center;">${versionHtml}</td>
                     <td style="text-align: center;">
-                        <span class="type-badge ${categoryClass}">
-                            <span class="color-dot ${categoryClass}"></span>
-                            ${categoryName}
-                        </span>
+                        <span class="type-badge ${categoryClass}">${categoryName}</span>
                     </td>
                     <td class="time-cell" style="text-align: center;"><span style="font-weight: 500; color: #0050b3;">${timeFormatted}</span></td>
                     <td style="text-align: center;">
@@ -1060,6 +1104,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // JSON Syntax Highlight Helper
+    function syntaxHighlightJson(jsonStr) {
+        const escaped = jsonStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return escaped.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            let cls = 'json-number';
+            if (/^"/.test(match)) {
+                if (/:$/.test(match)) {
+                    cls = 'json-key';
+                } else {
+                    cls = 'json-string';
+                }
+            } else if (/true|false/.test(match)) {
+                cls = 'json-boolean';
+            } else if (/null/.test(match)) {
+                cls = 'json-null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+        });
+    }
+
     function displayModalContent(key, content) {
         const parts = key.split('/');
         const fileName = parts[parts.length - 1];
@@ -1069,7 +1133,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Format JSON nicely if valid JSON
             const parsed = JSON.parse(content);
-            modalCodeBlock.textContent = JSON.stringify(parsed, null, 2);
+            const formatted = JSON.stringify(parsed, null, 2);
+            modalCodeBlock.innerHTML = syntaxHighlightJson(formatted);
         } catch (e) {
             // fallback plain text
             modalCodeBlock.textContent = content;
@@ -1080,6 +1145,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function closeModal() {
         logModal.style.display = 'none';
         modalCodeBlock.textContent = '';
+        const textSpan = modalCopyBtn.querySelector('.copy-text');
+        if (textSpan) textSpan.textContent = '复制日志';
+        modalCopyBtn.classList.remove('copied');
         document.body.classList.remove('modal-open');
     }
 
@@ -1093,13 +1161,12 @@ document.addEventListener('DOMContentLoaded', () => {
     modalCopyBtn.addEventListener('click', () => {
         const codeText = modalCodeBlock.textContent;
         navigator.clipboard.writeText(codeText).then(() => {
-            modalCopyBtn.innerText = '已复制！';
-            modalCopyBtn.style.backgroundColor = '#67c23a';
-            modalCopyBtn.style.borderColor = '#67c23a';
+            const textSpan = modalCopyBtn.querySelector('.copy-text');
+            if (textSpan) textSpan.textContent = '已复制！';
+            modalCopyBtn.classList.add('copied');
             setTimeout(() => {
-                modalCopyBtn.innerText = '复制日志';
-                modalCopyBtn.style.backgroundColor = '#409eff';
-                modalCopyBtn.style.borderColor = '#409eff';
+                if (textSpan) textSpan.textContent = '复制日志';
+                modalCopyBtn.classList.remove('copied');
             }, 1500);
         }).catch(err => {
             console.error('Copy failed: ', err);
@@ -1163,6 +1230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadData(forceRefresh = false) {
         const selectedDate = exceptionDateInput.value;
         sessionStorage.setItem('exceptionReportDate', selectedDate);
+        updateQuickDateActive(selectedDate);
 
         // 只有从单查询排查页面点击“返回异常分类详情”返回，且存在持久化缓存时，才直接恢复现场；常规进入或刷新一律拉取实时最新数据
         const isBackFromSingleQuery = sessionStorage.getItem('fromExceptionDetail_back') === 'true';
@@ -1252,7 +1320,39 @@ document.addEventListener('DOMContentLoaded', () => {
         switchTab(selectedCategory);
     }
 
-    exceptionDateInput.addEventListener('change', () => loadData(false));
+    if (exceptionDateInput) {
+        exceptionDateInput.addEventListener('change', () => {
+            const selectedDate = exceptionDateInput.value;
+            sessionStorage.setItem('exceptionReportDate', selectedDate);
+            sessionStorage.setItem('reportDate', selectedDate);
+            updateQuickDateActive(selectedDate);
+            loadData(false);
+        });
+    }
+
+    // Quick date button clicks (今日, 昨天, 前天)
+    const quickDateBtns = document.querySelectorAll('.quick-date-btn');
+    quickDateBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const offset = parseInt(btn.dataset.offset, 10);
+            const target = new Date();
+            target.setDate(target.getDate() + offset);
+            const y = target.getFullYear();
+            const m = String(target.getMonth() + 1).padStart(2, '0');
+            const d = String(target.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+
+            if (exceptionDateInput && exceptionDateInput.value === dateStr) return;
+
+            if (exceptionDateInput) {
+                exceptionDateInput.value = dateStr;
+            }
+            sessionStorage.setItem('exceptionReportDate', dateStr);
+            sessionStorage.setItem('reportDate', dateStr);
+            updateQuickDateActive(dateStr);
+            loadData(false);
+        });
+    });
 
     const exceptionRefreshBtn = document.getElementById('exceptionRefreshBtn');
     if (exceptionRefreshBtn) {

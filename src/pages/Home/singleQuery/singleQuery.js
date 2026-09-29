@@ -115,10 +115,14 @@ class UserListApp {
                 sessionStorage.removeItem('autoSearchDate');
                 this.currentFilters.date = autoSearchDate;
                 document.getElementById('date').value = autoSearchDate;
+                this.updateQuickDateActive(autoSearchDate);
             }
 
             this.handleSearch();
         }
+
+        // 清理来自学生信息详情页面的标记
+        sessionStorage.removeItem('fromHomeDetail');
     }
 
     /**
@@ -221,10 +225,9 @@ class UserListApp {
     }
 
     /**
-     * 恢复会话中保存的数据和过滤状态，避免刷新页面后数据丢失
+     * 恢复会话中保存的数据和过滤状态，避免刷新页面或从详情页返回后数据丢失
      */
     restoreData() {
-        const savedData = sessionStorage.getItem('listData');
         const savedFilters = sessionStorage.getItem('listFilters');
         const savedSelectedKey = sessionStorage.getItem('singleQuery_selectedItemKey');
 
@@ -232,31 +235,152 @@ class UserListApp {
             this.selectedItemKey = savedSelectedKey;
         }
 
-        if (savedData && savedFilters) {
+        // 1. 优先尝试从父级全局内存恢复（最快、最完整、不丢失任何字段，永不受5MB存储配额限制）
+        let restoredFromParent = false;
+        try {
+            if (window.parent && window.parent !== window && window.parent.__singleQueryCache) {
+                const pCache = window.parent.__singleQueryCache;
+                if (pCache.allData && Array.isArray(pCache.allData) && pCache.allData.length > 0) {
+                    this.allData = pCache.allData;
+                    if (pCache.filters) {
+                        this.currentFilters = { ...pCache.filters };
+                    }
+                    if (pCache.selectedItemKey) {
+                        this.selectedItemKey = pCache.selectedItemKey;
+                    }
+                    restoredFromParent = true;
+                }
+            }
+        } catch (_) { }
+
+        // 2. 若父级内存未命中，则从 sessionStorage 恢复
+        if (!restoredFromParent) {
+            const savedData = sessionStorage.getItem('listData');
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        this.allData = parsed;
+                    }
+                } catch (error) {
+                    console.error('从 sessionStorage 恢复数据列表失败:', error);
+                }
+            }
+        }
+
+        // 3. 恢复筛选条件输入框显示值
+        if (savedFilters && !restoredFromParent) {
             try {
-                this.allData = JSON.parse(savedData);
                 const filters = JSON.parse(savedFilters);
                 this.currentFilters = filters;
+            } catch (_) { }
+        }
 
-                // 同步更新页面输入框和下拉框的显示值
-                document.getElementById('username').value = filters.username || '';
-                document.getElementById('date').value = filters.date || '';
-                document.getElementById('exceptionType').value = filters.exceptionType || 'all';
+        const usernameEl = document.getElementById('username');
+        const dateEl = document.getElementById('date');
+        const exceptionTypeEl = document.getElementById('exceptionType');
 
-                // 应用当前筛选过滤并重新渲染
-                this.applyFilter();
-            } catch (error) {
-                console.error('恢复数据失败:', error);
-            }
+        if (usernameEl && this.currentFilters.username) usernameEl.value = this.currentFilters.username;
+        if (dateEl && this.currentFilters.date) {
+            dateEl.value = this.currentFilters.date;
+            this.updateQuickDateActive(this.currentFilters.date);
+        }
+        if (exceptionTypeEl && this.currentFilters.exceptionType) exceptionTypeEl.value = this.currentFilters.exceptionType;
+
+        // 4. 若成功恢复数据，直接渲染展示，绝不刷新或重新加载数据！
+        if (this.allData && this.allData.length > 0) {
+            this.applyFilter();
         }
     }
 
     /**
-     * 将当前拉取到的数据和过滤条件保存至 sessionStorage
+     * 清理非当前页面必需的历史大型状态缓存（例如其他页面的状态），为当前页面腾出宝贵存储配额
+     */
+    freeUpStorageSpace() {
+        const keysToRemove = [
+            'exception_state_cache',
+            'dau_state_cache',
+            'force_refresh_exception',
+            'force_refresh_dau'
+        ];
+        keysToRemove.forEach(k => {
+            try { sessionStorage.removeItem(k); } catch (_) { }
+        });
+    }
+
+    /**
+     * 将当前拉取到的数据和过滤条件保存，双层保障：父级全局内存 + sessionStorage持久化
      */
     saveData() {
-        sessionStorage.setItem('listData', JSON.stringify(this.allData));
-        sessionStorage.setItem('listFilters', JSON.stringify(this.currentFilters));
+        if (!this.allData || this.allData.length === 0) {
+            try {
+                sessionStorage.removeItem('listData');
+                sessionStorage.setItem('listFilters', JSON.stringify(this.currentFilters));
+            } catch (_) { }
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.__singleQueryCache = null;
+                }
+            } catch (_) { }
+            return;
+        }
+
+        // 1. 同步保存至父级全局内存（不受5MB限制，跨iframe无缝持久，返回时0延迟直接展示）
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.__singleQueryCache = {
+                    allData: this.allData,
+                    filters: { ...this.currentFilters },
+                    selectedItemKey: this.selectedItemKey
+                };
+            }
+        } catch (_) { }
+
+        // 2. 持久化至 sessionStorage
+        // 首先清理其他页面的次要缓存，腾出充足空间
+        this.freeUpStorageSpace();
+
+        // 剪裁超长无用字段，保留展示和详情需要的内容，确保单条数据仅几百字节，整批数据几十KB，永不超限
+        const sanitizedList = this.allData.map(item => {
+            const copy = { ...item };
+            if (typeof copy.stackTrace === 'string' && copy.stackTrace.length > 800) {
+                copy.stackTrace = copy.stackTrace.slice(0, 800) + '... (略)';
+            }
+            if (typeof copy.errorData === 'string' && copy.errorData.length > 800) {
+                copy.errorData = copy.errorData.slice(0, 800) + '... (略)';
+            } else if (typeof copy.errorData === 'object' && copy.errorData !== null) {
+                try {
+                    const s = JSON.stringify(copy.errorData);
+                    if (s.length > 800) {
+                        copy.errorData = s.slice(0, 800) + '...';
+                    }
+                } catch (_) { }
+            }
+            delete copy.rawLog;
+            delete copy.content;
+            return copy;
+        });
+
+        try {
+            sessionStorage.setItem('listData', JSON.stringify(sanitizedList));
+        } catch (e) {
+            console.warn('sessionStorage 保存 listData 失败，尝试深度瘦身:', e);
+            try {
+                const minimalList = sanitizedList.map(it => {
+                    const { stackTrace, errorData, ...rest } = it;
+                    return rest;
+                });
+                sessionStorage.setItem('listData', JSON.stringify(minimalList));
+            } catch (err2) {
+                console.error('sessionStorage 存储超限:', err2);
+            }
+        }
+
+        try {
+            sessionStorage.setItem('listFilters', JSON.stringify(this.currentFilters));
+        } catch (e) {
+            console.warn('sessionStorage 保存 listFilters 失败:', e);
+        }
     }
 
     /**
@@ -278,6 +402,38 @@ class UserListApp {
         const day = String(today.getDate()).padStart(2, '0');
         dateInput.value = `${year}-${month}-${day}`;
         this.currentFilters.date = dateInput.value;
+        this.updateQuickDateActive(dateInput.value);
+    }
+
+    /**
+     * 更新快捷日期按钮的选中状态
+     */
+    updateQuickDateActive(dateStr) {
+        const quickDateBtns = document.querySelectorAll('.quick-date-btn');
+        if (!dateStr) {
+            quickDateBtns.forEach(btn => btn.classList.remove('active'));
+            return;
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) {
+            quickDateBtns.forEach(btn => btn.classList.remove('active'));
+            return;
+        }
+        const curr = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        curr.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((curr - today) / (1000 * 60 * 60 * 24));
+
+        quickDateBtns.forEach(btn => {
+            const offset = parseInt(btn.dataset.offset, 10);
+            if (offset === diffDays) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
     }
 
     /**
@@ -309,9 +465,35 @@ class UserListApp {
             this.currentFilters.username = e.target.value;
         });
 
-        // 监听日期选择器变动，实时更新过滤条件
+        // 监听日期选择器变动，实时更新过滤条件与快捷按钮
         dateInput.addEventListener('change', (e) => {
             this.currentFilters.date = e.target.value;
+            this.updateQuickDateActive(e.target.value);
+        });
+
+        // 监听快捷日期按钮点击事件
+        const quickDateBtns = document.querySelectorAll('.quick-date-btn');
+        quickDateBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const offset = parseInt(btn.dataset.offset, 10);
+                const target = new Date();
+                target.setDate(target.getDate() + offset);
+                const year = target.getFullYear();
+                const month = String(target.getMonth() + 1).padStart(2, '0');
+                const day = String(target.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+
+                if (dateInput.value === dateStr) return;
+
+                dateInput.value = dateStr;
+                this.currentFilters.date = dateStr;
+                this.updateQuickDateActive(dateStr);
+
+                // 如果已经输入了用户名，点击快捷日期自动触发搜索
+                if (usernameInput.value.trim()) {
+                    this.handleSearch();
+                }
+            });
         });
 
         // 监听异常类型下拉框变动，实时更新过滤条件并立即本地应用过滤
@@ -798,7 +980,8 @@ class UserListApp {
 
         if (typeBadge) {
             typeBadge.textContent = typeName;
-            typeBadge.style.backgroundColor = color;
+            typeBadge.className = `type-badge popover-type-badge exception-tag-${exceptionType}`;
+            typeBadge.style.backgroundColor = '';
         }
 
         const studentInfo = item.studentInfo || {};
@@ -851,7 +1034,40 @@ class UserListApp {
             errorDataText = JSON.stringify(summary, null, 2);
         }
 
-        contentEl.textContent = errorDataText;
+        // JSON Syntax Highlight Helper
+        function syntaxHighlightJson(jsonStr) {
+            const escaped = jsonStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return escaped.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        if (errorDataText) {
+            try {
+                const parsed = JSON.parse(errorDataText);
+                contentEl.innerHTML = syntaxHighlightJson(JSON.stringify(parsed, null, 2));
+            } catch (e) {
+                if (/^\s*[\{\[]/.test(errorDataText)) {
+                    contentEl.innerHTML = syntaxHighlightJson(errorDataText);
+                } else {
+                    contentEl.textContent = errorDataText;
+                }
+            }
+        } else {
+            contentEl.textContent = '-';
+        }
 
         // 计算弹框定位（防止超出屏幕边界）
         popover.style.display = 'flex';
@@ -1026,9 +1242,7 @@ class UserListApp {
             const gradeDisplay = this.formatGrade(rawGrade);
 
             const appVersion = item.versionName || studentInfo.versionName || item.appVersion || item.version || studentInfo.appVersion || studentInfo.version || item.clientVersion || '-';
-            const versionHtml = appVersion !== '-' 
-                ? `<span class="version-badge">${escapeHtml(appVersion)}</span>` 
-                : `<span style="color: #909399;">-</span>`;
+            const versionHtml = `<span class="version-badge">${escapeHtml(appVersion)}</span>`;
 
             const gradeHtml = gradeDisplay !== '-'
                 ? `<span class="grade-badge">${escapeHtml(gradeDisplay)}</span>`
@@ -1048,7 +1262,7 @@ class UserListApp {
                     <span class="error-time-badge">${this.formatReportTime(item.errorTime || item.reportTime || '-')}</span>
                 </td>
                 <td style="text-align: center;">
-                    <span class="exception-status-badge exception-tag-${exceptionType}" style="--badge-color: ${color};">${exceptionName}</span>
+                    <span class="type-badge exception-status-badge exception-tag-${exceptionType}">${exceptionName}</span>
                 </td>
                 <td style="text-align: center;">
                     <button class="view-detail-btn ${isSelected ? 'selected' : ''}" title="查看完整详情">
@@ -1080,7 +1294,19 @@ class UserListApp {
                 this.hideErrorPopover();
 
                 const itemWithIndex = { ...item, index: index + 1 };
-                sessionStorage.setItem('detailData', JSON.stringify(itemWithIndex));
+                // 标记进入详情页，确保返回时能够识别并保持列表状态
+                sessionStorage.setItem('fromHomeDetail', 'true');
+                try {
+                    sessionStorage.setItem('detailData', JSON.stringify(itemWithIndex));
+                } catch (e) {
+                    console.warn('detailData 保存超出限额，清理其他页面历史缓存后重试:', e);
+                    this.freeUpStorageSpace();
+                    try {
+                        sessionStorage.setItem('detailData', JSON.stringify(itemWithIndex));
+                    } catch (err2) {
+                        console.error('保存 detailData 失败:', err2);
+                    }
+                }
                 window.location.href = `../HomeDetail/homeDetail.html`;
             };
 

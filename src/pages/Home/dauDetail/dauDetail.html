@@ -9,8 +9,8 @@
     <link rel="icon" type="image/png" sizes="32x32" href="../../../assets/favicon-32x32.png?v=4">
     <link rel="icon" type="image/png" sizes="16x16" href="../../../assets/favicon-16x16.png?v=4">
     <link rel="shortcut icon" href="../../../assets/favicon.png?v=4">
-    <link rel="stylesheet" href="../theme.css?v=1722249000010">
-    <link rel="stylesheet" href="dauDetail.css?v=1722249000010">
+    <link rel="stylesheet" href="../theme.css?v=1722249000011">
+    <link rel="stylesheet" href="dauDetail.css?v=1722249000011">
     <script src="../theme.js"></script>
 </head>
 
@@ -107,6 +107,11 @@
                 <div class="filter-item">
                     <label for="dauDateInput">选择报表日期：</label>
                     <input type="date" id="dauDateInput">
+                    <div class="quick-dates">
+                        <button type="button" class="quick-date-btn" data-offset="0" title="切换到今日日活数据">今日</button>
+                        <button type="button" class="quick-date-btn" data-offset="-1" title="切换到昨天日活数据">昨天</button>
+                        <button type="button" class="quick-date-btn" data-offset="-2" title="切换到前天日活数据">前天</button>
+                    </div>
                 </div>
                 <div class="filter-item search-item">
                     <label for="dauSearchInput">搜索：</label>
@@ -422,7 +427,7 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <!-- Aliyun OSS JS SDK -->
     <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
-    <script src="dauDetail.js?v=1722249000010"></script>
+    <script src="dauDetail.js?v=1722249000011"></script>
 </body>
 
 </html>

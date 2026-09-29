@@ -782,15 +782,34 @@ body {
 }
 
 .json-pre {
-    background: #1e293b;
+    background: #0f172a;
     color: #e2e8f0;
     padding: 14px;
     border-radius: 8px;
-    font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
-    font-size: 12px;
-    line-height: 1.5;
+    font-family: ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
     overflow-x: auto;
     max-height: 380px;
+    letter-spacing: 0.2px;
+}
+
+.json-pre::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.json-pre::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.json-pre::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.25);
+    border-radius: 4px;
+}
+
+.json-pre::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.45);
 }
 
 /* ==========================================================
@@ -2553,7 +2572,7 @@ body {
 
 [data-theme="dark"] .json-pre {
     background-color: #080c10 !important;
-    color: #38bdf8 !important;
+    color: #e2e8f0 !important;
     border: 1px solid #203140 !important;
 }
 

@@ -16,6 +16,21 @@ const exceptionTypeColors = {
     'audioVideoTest': '#2196f3'
 };
 
+const typeToClass = {
+    'evaluationException': 'eval',
+    'dataException': 'data',
+    'platformException': 'platform',
+    'audioVideoException': 'av',
+    'audioVideoTest': 'av-test',
+    'otherException': 'other',
+    'evaluation_error': 'eval',
+    'data_error': 'data',
+    'platform_error': 'platform',
+    'audio_video_error': 'av',
+    'audio_video_test': 'av-test',
+    'other_error': 'other'
+};
+
 const reportTypeMapping = {
     0: 'dataException',
     1: 'platformException',
@@ -50,6 +65,7 @@ class DetailApp {
     bindEvents() {
         const backBtn = document.getElementById('backBtn');
         backBtn.addEventListener('click', () => {
+            sessionStorage.setItem('fromHomeDetail', 'true');
             window.location.href = '../singleQuery/singleQuery.html';
         });
 
@@ -184,6 +200,59 @@ class DetailApp {
             btn.style.color = '';
             btn.style.backgroundColor = '';
         }, 1500);
+    }
+
+    syntaxHighlightJson(jsonStr) {
+        if (!jsonStr) return '';
+        const escaped = jsonStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return escaped.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            let cls = 'json-number';
+            if (/^"/.test(match)) {
+                if (/:$/.test(match)) {
+                    cls = 'json-key';
+                } else {
+                    cls = 'json-string';
+                }
+            } else if (/true|false/.test(match)) {
+                cls = 'json-boolean';
+            } else if (/null/.test(match)) {
+                cls = 'json-null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+        });
+    }
+
+    renderCodeBlock(elementId, rawData) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        if (rawData === undefined || rawData === null || rawData === '') {
+            el.textContent = '-';
+            return;
+        }
+
+        if (typeof rawData === 'object') {
+            const formatted = JSON.stringify(rawData, null, 2);
+            el.innerHTML = this.syntaxHighlightJson(formatted);
+            return;
+        }
+
+        const str = String(rawData).trim();
+        if (!str || str === '-') {
+            el.textContent = '-';
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(str);
+            const formatted = JSON.stringify(parsed, null, 2);
+            el.innerHTML = this.syntaxHighlightJson(formatted);
+        } catch (e) {
+            if (/^\s*[\{\[]/.test(str)) {
+                el.innerHTML = this.syntaxHighlightJson(str);
+            } else {
+                el.textContent = str;
+            }
+        }
     }
 
     async loadData() {
@@ -324,13 +393,14 @@ class DetailApp {
         }
 
         document.getElementById('errorTime').textContent = this.formatDateTime(data.errorTime || data.reportTime || '-');
-        document.getElementById('status').innerHTML = `<span style="background-color: ${color}; color: #fff; padding: 4px 8px; border-radius: 4px;">${typeName}</span>`;
+        const typeClass = typeToClass[exceptionType] || 'other';
+        document.getElementById('status').innerHTML = `<span class="type-badge ${typeClass}">${escapeHtml(typeName)}</span>`;
         document.getElementById('appVersion').textContent = data.versionName || data.version || '-';
         document.getElementById('deviceName').textContent = data.deviceName || studentInfo.deviceName || '-';
         document.getElementById('phonePlatformVersion').textContent = data.phonePlatformVersion || studentInfo.phonePlatformVersion || '-';
         document.getElementById('reportTime').textContent = this.formatDateTime(data.reportTime || data.report_time);
-        document.getElementById('errorData').textContent = data.errorData || '-';
-        document.getElementById('stackTrace').textContent = data.stackTrace || '-';
+        this.renderCodeBlock('errorData', data.errorData);
+        this.renderCodeBlock('stackTrace', data.stackTrace);
 
         const mediaContentItem = document.getElementById('mediaContentItem');
         const mediaContentEl = document.getElementById('mediaContent');
@@ -407,7 +477,7 @@ class DetailApp {
             }
         }
 
-        document.getElementById('scheduleTask').textContent = scheduleTaskStr;
+        this.renderCodeBlock('scheduleTask', scheduleTaskStr);
 
         const studyTextbookEl = document.getElementById('studyTextbook');
         studyTextbookEl.textContent = studyTextbook || '-';
@@ -430,7 +500,7 @@ class DetailApp {
                 }
             }
         }
-        document.getElementById('learningDetail').textContent = learningDetailStr;
+        this.renderCodeBlock('learningDetail', learningDetailStr);
 
         let studentInfoStr = '-';
         if (data.studentInfo) {
@@ -444,7 +514,7 @@ class DetailApp {
                 }
             }
         }
-        document.getElementById('studentInfoDetail').textContent = studentInfoStr;
+        this.renderCodeBlock('studentInfoDetail', studentInfoStr);
 
         if (exceptionType === 'evaluationException') {
             const crashSection = document.getElementById('crashSection');
@@ -513,7 +583,7 @@ class DetailApp {
                     const response = await fetch(crashUrl);
                     if (response.ok) {
                         const crashData = await response.text();
-                        document.getElementById('crashData').textContent = crashData;
+                        this.renderCodeBlock('crashData', crashData);
                         downloadBtn.dataset.crashData = crashData;
                     } else {
                         document.getElementById('crashData').textContent = '无数据';
@@ -532,7 +602,7 @@ class DetailApp {
         document.body.innerHTML = `
             <div class="container" style="text-align: center; padding: 50px;">
                 <h2 style="color: #f56c6c;">${message}</h2>
-                <button onclick="window.location.href='../singleQuery/singleQuery.html'" style="margin-top: 20px; padding: 10px 20px; background: #409eff; color: #fff; border: none; border-radius: 4px; cursor: pointer;">返回</button>
+                <button onclick="sessionStorage.setItem('fromHomeDetail', 'true'); window.location.href='../singleQuery/singleQuery.html'" style="margin-top: 20px; padding: 10px 20px; background: #409eff; color: #fff; border: none; border-radius: 4px; cursor: pointer;">返回</button>
             </div>
         `;
     }
