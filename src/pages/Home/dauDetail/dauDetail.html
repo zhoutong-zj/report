@@ -23,6 +23,15 @@
                 <p class="subtitle" id="dauPageSubtitle">报表日期：- · 共 0 条活跃记录</p>
             </div>
             <div class="header-right">
+                <div class="header-date-filter">
+                    <label for="dauDateInput">选择报表日期：</label>
+                    <input type="date" id="dauDateInput">
+                    <div class="quick-dates">
+                        <button type="button" class="quick-date-btn" data-offset="0" title="切换到今日日活数据">今日</button>
+                        <button type="button" class="quick-date-btn" data-offset="-1" title="切换到昨天日活数据">昨天</button>
+                        <button type="button" class="quick-date-btn" data-offset="-2" title="切换到前天日活数据">前天</button>
+                    </div>
+                </div>
                 <button id="backBtn" class="back-btn">← 返回日志报表</button>
             </div>
         </header>
@@ -104,15 +113,6 @@
         <!-- Filter & Control Panel -->
         <div class="control-panel card">
             <div class="filter-group">
-                <div class="filter-item">
-                    <label for="dauDateInput">选择报表日期：</label>
-                    <input type="date" id="dauDateInput">
-                    <div class="quick-dates">
-                        <button type="button" class="quick-date-btn" data-offset="0" title="切换到今日日活数据">今日</button>
-                        <button type="button" class="quick-date-btn" data-offset="-1" title="切换到昨天日活数据">昨天</button>
-                        <button type="button" class="quick-date-btn" data-offset="-2" title="切换到前天日活数据">前天</button>
-                    </div>
-                </div>
                 <div class="filter-item search-item">
                     <label for="dauSearchInput">搜索：</label>
                     <input type="text" id="dauSearchInput" placeholder="按用户名 / 年级 / 学校 / 设备 / 账号搜索..." />
@@ -121,6 +121,12 @@
                     <label for="dauSchoolSelect">学校分类：</label>
                     <select id="dauSchoolSelect">
                         <option value="all">全部学校</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="dauVersionSelect">版本分类：</label>
+                    <select id="dauVersionSelect">
+                        <option value="all">全部版本</option>
                     </select>
                 </div>
             </div>
@@ -143,6 +149,16 @@
 
         <!-- Main Data Table Panel -->
         <div class="table-panel card">
+            <!-- 版本分类统计标签栏 -->
+            <div class="dau-version-legend-bar" id="dauVersionLegendBar" style="display: none;">
+                <div class="legend-title">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    <span>版本分布：</span>
+                </div>
+                <div class="legend-tags" id="dauVersionLegendTags"></div>
+            </div>
             <div class="table-wrapper">
                 <table class="dau-table">
                     <thead>

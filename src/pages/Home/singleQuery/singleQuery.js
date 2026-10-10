@@ -1148,6 +1148,10 @@ class UserListApp {
             return timeB.localeCompare(timeA);
         });
 
+        if (window.updateVersionColorMapping) {
+            window.updateVersionColorMapping(sortedData);
+        }
+
         // 循环遍历渲染数据行
         sortedData.forEach((item, index) => {
             const tr = document.createElement('tr');
@@ -1242,7 +1246,9 @@ class UserListApp {
             const gradeDisplay = this.formatGrade(rawGrade);
 
             const appVersion = item.versionName || studentInfo.versionName || item.appVersion || item.version || studentInfo.appVersion || studentInfo.version || item.clientVersion || '-';
-            const versionHtml = `<span class="version-badge">${escapeHtml(appVersion)}</span>`;
+            const versionHtml = window.createVersionBadgeHtml
+                ? window.createVersionBadgeHtml(appVersion)
+                : `<span class="version-badge">${escapeHtml(appVersion)}</span>`;
 
             const gradeHtml = gradeDisplay !== '-'
                 ? `<span class="grade-badge">${escapeHtml(gradeDisplay)}</span>`

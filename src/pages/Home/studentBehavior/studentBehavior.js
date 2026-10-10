@@ -53,6 +53,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    /**
+     * 将页面文件名前缀（如 card_album_page, fruit_cutting_page, e_bao_page 等）规范化为对应模块 code
+     */
+    function resolveGameCode(rawCode) {
+        if (!rawCode) return 'other';
+        const clean = String(rawCode).toLowerCase().trim();
+
+        // 1. 直接匹配 GAME_CONFIGS
+        if (GAME_CONFIGS[clean]) return clean;
+
+        // 2. 去除 _page 后缀匹配 (例如 card_album_page -> card_album)
+        const strippedPage = clean.replace(/_page$/, '');
+        if (GAME_CONFIGS[strippedPage]) return strippedPage;
+
+        // 3. 常见关键字与别名智能匹配
+        if (clean.includes('fruit') && (clean.includes('cut') || clean.includes('slice'))) return 'fruit_cutting';
+        if (clean.includes('fruit') && (clean.includes('store') || clean.includes('shop') || clean.includes('market'))) return 'fruit_store';
+        if (clean.includes('card') && (clean.includes('gacha') || clean.includes('draw') || clean.includes('lottery'))) return 'card_gacha';
+        if (clean.includes('card') && (clean.includes('album') || clean.includes('book'))) return 'card_album';
+        if (clean.includes('ebao') || clean.includes('e_bao') || clean === 'ebao_page') return 'e_bao';
+
+        return strippedPage || clean;
+    }
+
+    /**
+     * 获取模块/游戏对应的配置信息，未预设模块自动生成友好名称与标签
+     */
+    function getGameConfig(gameCode, rawName) {
+        if (GAME_CONFIGS[gameCode]) return GAME_CONFIGS[gameCode];
+
+        const raw = rawName || gameCode || 'other';
+        const isSub = raw.endsWith('_page') || raw.includes('sub');
+        // 将 snake_case 转换为易读名称
+        const formattedName = raw.replace(/_page$/, '')
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+        return {
+            code: gameCode,
+            name: formattedName || '页面行为',
+            systemCode: 'other',
+            systemName: '其他页面行为',
+            isSub: isSub,
+            parentName: '通用页面',
+            color: '#6366f1',
+            tagClass: 'page-track'
+        };
+    }
+
     // DOM Elements
     const reportDateInput = document.getElementById('reportDate');
     const quickDateBtns = document.querySelectorAll('.quick-date-btn');
@@ -362,14 +412,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 4. Fetch Game Data from OSS
+    // 4. Fetch Game and Behavior Track Data from OSS
     async function loadDataForDate(dateStr) {
         if (!ossClient) {
             if (!initOssClient()) return;
         }
 
         const formattedDate = dateStr.replace(/-/g, '_');
-        const prefix = `usertemp/xuelianxitong/${formattedDate}/game/`;
+        const prefix = `usertemp/xuelianxitong/${formattedDate}/page_track/`;
 
         renderLoadingState();
 
@@ -387,6 +437,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 marker = result.isTruncated ? result.nextMarker : null;
             } while (marker);
 
+            objects = objects.filter(o => o.name && o.name.endsWith('.json'));
+
             if (objects.length === 0) {
                 // If OSS returns no data for this date, show empty state or fallback
                 rawObjectsList = [];
@@ -401,15 +453,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Fetch DAU users and last activity time slots concurrently
             fetchDauActivityForDate(dateStr);
         } catch (e) {
-            console.error('Failed to list game files from OSS:', e);
+            console.error('Failed to list files from OSS:', e);
             // On network error or empty, fallback
             useStaticMockData();
         }
     }
 
     /**
-     * 将 2026_09_17_144933 或各类格式转换为标准年月日时分秒
-     * 例如：2026年09月17日 14时49分33秒
+     * 将 2026_09_17_144933 或 card_album_page_2026_10_08_160346.json 等各类格式转换为标准年月日时分秒
+     * 例如：2026年10月08日 16时03分46秒
      */
     function parseReportTime(raw) {
         if (!raw || raw === '-') {
@@ -423,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const str = String(raw).trim();
 
-        // 1. 处理 2026_09_17_144933 或 2026_09_17_144933.json 或 2026_09_17_144933_xxx
+        // 1. 处理如 2026_10_08_160346 或 card_album_page_2026_10_08_160346.json
         const mCompact = str.match(/(\d{4})_(\d{2})_(\d{2})_(\d{2})(\d{2})(\d{2})/);
         if (mCompact) {
             const [_, y, m, d, hh, mm, ss] = mCompact;
@@ -436,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
-        // 2. 处理 2026_09_17_14_49_33
+        // 2. 处理如 2026_10_08_16_03_46
         const mFull = str.match(/(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_(\d{2})/);
         if (mFull) {
             const [_, y, m, d, hh, mm, ss] = mFull;
@@ -478,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // 5. Parse Object Keys into structured game items
+    // 5. Parse Object Keys into structured game and behavior items
     function parseAndAnalyzeObjects(objects, dateStr) {
         rawObjectsList = [];
 
@@ -486,28 +538,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const key = obj.name;
             if (!key.endsWith('.json')) return;
 
-            // Pattern: usertemp/xuelianxitong/{date}/game/{username}/{gameType}/{file}.json
             const parts = key.split('/');
-            const gameIdx = parts.indexOf('game');
-            if (gameIdx === -1 || parts.length < gameIdx + 3) return;
+            const trackIdx = parts.indexOf('page_track');
+            if (trackIdx === -1 || parts.length < trackIdx + 3) return;
 
-            const username = parts[gameIdx + 1] || 'unknown';
-            const gameCode = parts[gameIdx + 2] || 'unknown';
-            const fileName = parts[gameIdx + 3] || '';
+            // Pattern: usertemp/xuelianxitong/{date}/page_track/{username}/{fileName}.json
+            // 例如: usertemp/xuelianxitong/2026_10_08/page_track/13107342492/card_album_page_2026_10_08_160346.json
+            const username = parts[trackIdx + 1] || 'unknown';
+            const fileName = parts[trackIdx + 2] || '';
 
-            // Extract time: parse filename (e.g. 2026_09_17_144933.json) or lastModified
+            // 从文件名中剔除时间后缀与 .json，提取行为页面代码
+            let base = fileName.replace(/\.json$/i, '');
+            base = base.replace(/_\d{4}_\d{2}_\d{2}(_\d{6}|_\d{2}_\d{2}_\d{2})?$/, '');
+            const rawGameCode = base || 'page_track';
+
+            // Extract time: parse filename or lastModified
             const timeInfo = parseReportTime(fileName || obj.lastModified);
-
-            const gameCfg = GAME_CONFIGS[gameCode] || {
-                code: gameCode,
-                name: gameCode,
-                systemCode: 'other',
-                systemName: '其他游戏',
-                isSub: false,
-                parentName: '',
-                color: '#9ca3af',
-                tagClass: 'other'
-            };
+            const gameCode = resolveGameCode(rawGameCode);
+            const gameCfg = getGameConfig(gameCode, rawGameCode);
 
             const item = {
                 key: key,
@@ -517,6 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 teacherName: userToInfoCache[username]?.teacherName || '-',
                 gameCode: gameCode,
                 gameCfg: gameCfg,
+                fileName: fileName,
                 fullCnTime: timeInfo.fullCnTime,
                 shortCnTime: timeInfo.shortCnTime,
                 timeStr: timeInfo.timeStr,
@@ -571,6 +620,8 @@ document.addEventListener('DOMContentLoaded', () => {
             studentMap[u].totalCount++;
             if (studentMap[u].gameCounts[item.gameCode] !== undefined) {
                 studentMap[u].gameCounts[item.gameCode]++;
+            } else {
+                studentMap[u].gameCounts[item.gameCode] = (studentMap[u].gameCounts[item.gameCode] || 0) + 1;
             }
             // Keep latest time based on sortKey
             if ((item.sortKey || item.timeStr) > (studentMap[u].lastSortKey || '')) {
@@ -1106,6 +1157,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (s.gameCounts.card_album > 0) pillsHtml += `<span class="pill card">卡册: ${s.gameCounts.card_album}</span>`;
             if (ebaoCount > 0) pillsHtml += `<span class="pill ebao">E宝: ${ebaoCount}</span>`;
 
+            // 扩展显示其他行为/页面
+            Object.keys(s.gameCounts || {}).forEach(k => {
+                if (!['fruit_cutting', 'fruit_store', 'card_gacha', 'card_album', 'e_bao'].includes(k) && s.gameCounts[k] > 0) {
+                    const cfg = getGameConfig(k);
+                    pillsHtml += `<span class="pill other">${cfg.name}: ${s.gameCounts[k]}</span>`;
+                }
+            });
+
             const isSelected = (selectedSummaryUsername && s.username === selectedSummaryUsername);
 
             return `
@@ -1161,9 +1220,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Render first 200 items for high performance
         const displayList = list.slice(0, 200);
 
+        if (window.updateVersionColorMapping) {
+            window.updateVersionColorMapping(displayList);
+        }
+
         logsTableBody.innerHTML = displayList.map(it => {
             const subLabel = it.gameCfg.isSub ? ` (${it.gameCfg.name})` : '';
             const isSelected = (selectedLogKey && it.key === selectedLogKey);
+            const verHtml = window.createVersionBadgeHtml ? window.createVersionBadgeHtml(it.platformVersion) : (it.platformVersion || '-');
 
             return `
                 <tr data-key="${it.key}" class="${isSelected ? 'selected-row' : ''}">
@@ -1178,7 +1242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </span>
                     </td>
                     <td class="device-val">${it.deviceName || '-'}</td>
-                    <td class="platform-val">${it.platformVersion || '-'}</td>
+                    <td class="platform-val" style="text-align: center;">${verHtml}</td>
                     <td style="text-align: center;">
                         <button class="action-link open-detail-btn" data-key="${it.key}">查看详情</button>
                     </td>
@@ -1289,15 +1353,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (window.updateVersionColorMapping) {
+            window.updateVersionColorMapping(list);
+        }
+
         dauTimeSlotTableBody.innerHTML = list.map((item, idx) => {
             const isSelected = (selectedSummaryUsername && item.username === selectedSummaryUsername);
             const gameBadge = (item.gameSummary && item.gameSummary.totalCount > 0)
                 ? `<span class="game-participate-pill played" title="点击查看该学生游戏详情" data-username="${item.username}">🎮 玩过 ${item.gameSummary.totalCount} 次</span>`
                 : `<span class="game-participate-pill none">仅日活未玩游戏</span>`;
 
-            const deviceText = (item.deviceName && item.deviceName !== '-')
-                ? `${item.deviceName} · ${item.platformVersion || ''}`
-                : (item.platformVersion && item.platformVersion !== '-' ? item.platformVersion : '-');
+            const verBadge = (item.platformVersion && item.platformVersion !== '-')
+                ? (window.createVersionBadgeHtml ? window.createVersionBadgeHtml(item.platformVersion) : `<span class="version-badge">${escapeHtml(item.platformVersion)}</span>`)
+                : '';
+            const devicePart = (item.deviceName && item.deviceName !== '-') ? escapeHtml(item.deviceName) : '';
+            const deviceText = (devicePart && verBadge)
+                ? `${devicePart} · ${verBadge}`
+                : (verBadge || devicePart || '-');
 
             return `
                 <tr data-username="${item.username}" class="${isSelected ? 'selected-row' : ''}">
@@ -1712,13 +1784,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 分组为三大独立游戏线路：
+        // 分组为三大独立游戏及通用行为线路：
         // 1. 水果商店系统 (含水果商店主页及切水果子玩法)
         const fruitItems = items.filter(it => it.gameCfg.systemCode === 'fruit');
         // 2. 卡册系统 (含卡册主页及抽卡子玩法)
         const cardItems = items.filter(it => it.gameCfg.systemCode === 'card');
         // 3. E宝游戏 (独立游戏)
         const ebaoItems = items.filter(it => it.gameCfg.systemCode === 'ebao');
+        // 4. 其他页面行为轨迹
+        const otherItems = items.filter(it => it.gameCfg.systemCode !== 'fruit' && it.gameCfg.systemCode !== 'card' && it.gameCfg.systemCode !== 'ebao');
 
         const trackConfigs = [
             {
@@ -1741,6 +1815,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 subtag: '独立关卡互动与答题',
                 cssClass: 'ebao-track',
                 items: ebaoItems
+            },
+            {
+                code: 'other',
+                title: '🌐 线路四：其他页面轨迹',
+                subtag: '包含：页面浏览与通用交互记录',
+                cssClass: 'other-track',
+                items: otherItems
             }
         ];
 
@@ -1884,9 +1965,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (window.updateVersionColorMapping) {
+            window.updateVersionColorMapping(items);
+        }
+
         userLogsTableBody.innerHTML = items.map((it, idx) => {
             const subNote = it.gameCfg.isSub ? `属于【${it.gameCfg.parentName}】子页面` : '系统主入口';
             const isSelected = (selectedUserLogKey && it.key === selectedUserLogKey);
+            const verHtml = window.createVersionBadgeHtml ? window.createVersionBadgeHtml(it.platformVersion) : (it.platformVersion || '-');
             return `
                 <tr data-key="${it.key}" class="${isSelected ? 'selected-row' : ''}">
                     <td style="color: #9ca3af; font-weight: 500;">${idx + 1}</td>
@@ -1899,7 +1985,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td style="color: #6b7280; font-size: 12px;">${subNote}</td>
                     <td>${it.deviceName || '-'}</td>
-                    <td>${it.platformVersion || '-'}</td>
+                    <td style="text-align: center;">${verHtml}</td>
                     <td style="text-align: center;">
                         <button class="action-link user-log-detail-btn" data-key="${it.key}">查看详情</button>
                     </td>
@@ -2112,7 +2198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 13. High-Quality Static Mock Data
     function useStaticMockData() {
         const mockUsers = [
-            { username: '13812345678', name: '李明轩', school: '光明实验外国语小学', teacher: '王老师' },
+            { username: '13107342492', name: '李明轩', school: '光明实验外国语小学', teacher: '王老师' },
             { username: '13987654321', name: '张子萱', school: '汇文第一寄宿学校', teacher: '张老师' },
             { username: '13700112233', name: '陈梓涵', school: '育才实验示范学校', teacher: '刘老师' },
             { username: '13611223344', name: '王子涵', school: '南开实验学校本部', teacher: '赵老师' },
@@ -2131,8 +2217,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const gameKeys = ['fruit_cutting', 'fruit_store', 'card_gacha', 'card_album', 'e_bao'];
+        const pageCodeMap = {
+            'fruit_cutting': 'fruit_cutting_page',
+            'fruit_store': 'fruit_store_page',
+            'card_gacha': 'card_gacha_page',
+            'card_album': 'card_album_page',
+            'e_bao': 'e_bao_page'
+        };
         const mockObjects = [];
-        const dateStr = reportDateInput.value || '2026-09-17';
+        const dateStr = reportDateInput.value || '2026-10-08';
         const formattedDate = dateStr.replace(/-/g, '_');
 
         // Generate ~86 realistic game events
@@ -2147,12 +2240,14 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (rand < 0.88) g = 'card_album';
             else g = 'e_bao';
 
+            const pageName = pageCodeMap[g] || `${g}_page`;
             const hour = Math.floor(Math.random() * 14) + 8; // 08:00 - 22:00
             const min = Math.floor(Math.random() * 60);
             const sec = Math.floor(Math.random() * 60);
             const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
             const timeSuffix = `${String(hour).padStart(2, '0')}${String(min).padStart(2, '0')}${String(sec).padStart(2, '0')}`;
-            const key = `usertemp/xuelianxitong/${formattedDate}/game/${user.username}/${g}/${formattedDate}_${timeSuffix}.json`;
+            // 路径结构: usertemp/xuelianxitong/{date}/page_track/{username}/{pageName}_{date}_{timeSuffix}.json
+            const key = `usertemp/xuelianxitong/${formattedDate}/page_track/${user.username}/${pageName}_${formattedDate}_${timeSuffix}.json`;
 
             mockObjects.push({
                 name: key,

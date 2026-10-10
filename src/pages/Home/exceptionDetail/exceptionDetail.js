@@ -427,7 +427,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 const versionCell = row.querySelector('.version-cell');
                 if (versionCell) {
-                    versionCell.innerHTML = `<span class="version-badge">${escapeHtml(item.version || '-')}</span>`;
+                    versionCell.innerHTML = window.createVersionBadgeHtml
+                        ? window.createVersionBadgeHtml(item.version || '-')
+                        : `<span class="version-badge">${escapeHtml(item.version || '-')}</span>`;
                 }
                 break;
             }
@@ -949,6 +951,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (window.updateVersionColorMapping) {
+            window.updateVersionColorMapping(filteredList);
+        }
+
         let html = '';
         filteredList.forEach((item, index) => {
             const serialNum = index + 1;
@@ -964,7 +970,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const schoolName = item.schoolName && item.schoolName !== '-' ? item.schoolName : '-';
             const teacherName = item.teacherName && item.teacherName !== '-' ? item.teacherName : '-';
             const versionStr = item.version || '-';
-            const versionHtml = `<span class="version-badge">${escapeHtml(versionStr)}</span>`;
+            const versionHtml = window.createVersionBadgeHtml
+                ? window.createVersionBadgeHtml(versionStr)
+                : `<span class="version-badge">${escapeHtml(versionStr)}</span>`;
 
             html += `
                 <tr class="${selectedClass}" data-key="${item.key}">

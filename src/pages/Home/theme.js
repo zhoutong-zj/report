@@ -179,4 +179,90 @@
             });
         }
     });
+
+    // ==========================================
+    // 8. 全局统一：版本号多色彩分类管理系统
+    // 确保单日日活、单用户查询、异常详情、学生行为等各列表中的版本号呈现一致的多彩分类
+    // ==========================================
+    const globalVersionColorMap = new Map();
+    const TOTAL_VERSION_PALETTES = 10;
+
+    /**
+     * 注册/更新版本列表的色彩映射
+     * @param {Array} list 含有版本号的对象数组或纯版本字符串数组
+     */
+    window.updateVersionColorMapping = function (list) {
+        if (!Array.isArray(list)) return;
+        const uniqueVersions = [];
+        list.forEach(item => {
+            let v = '';
+            if (typeof item === 'string') {
+                v = item;
+            } else if (item && typeof item === 'object') {
+                v = item.appVersion || item.version || item.versionName || item.platformVersion || '';
+            }
+            v = (v || '').trim();
+            if (v && v !== '-' && !uniqueVersions.includes(v)) {
+                uniqueVersions.push(v);
+            }
+        });
+
+        // 语义降序排序（例如 2.5.4 > 2.5.3 > 2.5.2）
+        uniqueVersions.sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }));
+
+        uniqueVersions.forEach((v) => {
+            if (!globalVersionColorMap.has(v)) {
+                const usedIndices = new Set(globalVersionColorMap.values());
+                let assigned = -1;
+                for (let i = 0; i < TOTAL_VERSION_PALETTES; i++) {
+                    if (!usedIndices.has(i)) {
+                        assigned = i;
+                        break;
+                    }
+                }
+                if (assigned === -1) {
+                    assigned = globalVersionColorMap.size % TOTAL_VERSION_PALETTES;
+                }
+                globalVersionColorMap.set(v, assigned);
+            }
+        });
+    };
+
+    /**
+     * 获取指定版本号对应的色彩类名
+     * @param {string} version
+     * @returns {string} 类名，如 'dau-version-c0' 或 'dau-version-default'
+     */
+    window.getVersionBadgeClass = function (version) {
+        const v = (version || '').trim();
+        if (!v || v === '-') {
+            return 'dau-version-default';
+        }
+        if (globalVersionColorMap.has(v)) {
+            return `dau-version-c${globalVersionColorMap.get(v)}`;
+        }
+        // 未提前登记时的确定性哈希
+        let hash = 0;
+        for (let i = 0; i < v.length; i++) {
+            hash = ((hash << 5) - hash) + v.charCodeAt(i);
+            hash |= 0;
+        }
+        const colorIdx = Math.abs(hash) % TOTAL_VERSION_PALETTES;
+        globalVersionColorMap.set(v, colorIdx);
+        return `dau-version-c${colorIdx}`;
+    };
+
+    /**
+     * 生成统一的多彩版本号徽章 HTML
+     * @param {string} version 版本号
+     * @param {string} extraClass 附加类名
+     * @returns {string} HTML 字符串
+     */
+    window.createVersionBadgeHtml = function (version, extraClass = '') {
+        const v = (version || '-').trim() || '-';
+        const colorClass = window.getVersionBadgeClass(v);
+        const safeText = v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        return `<span class="version-badge dau-version-badge ${colorClass} ${extraClass}" data-version="${safeText}" title="版本号: ${safeText}">${safeText}</span>`;
+    };
 })();
+

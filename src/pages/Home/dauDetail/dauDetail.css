@@ -26,10 +26,52 @@ body {
     justify-content: space-between;
     align-items: center;
     background: #ffffff;
-    padding: 20px 24px;
+    padding: 18px 24px;
     border-radius: 8px;
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    flex-wrap: wrap;
+    gap: 16px;
 }
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.header-date-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #606266;
+    font-weight: 500;
+}
+
+.header-date-filter label {
+    font-weight: 500;
+    color: inherit;
+    white-space: nowrap;
+}
+
+.header-date-filter input[type="date"] {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #dcdfe6;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    background-color: #ffffff;
+    color: #303133;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.header-date-filter input[type="date"]:focus {
+    border-color: #409eff;
+}
+
 
 .header-left h1 {
     font-size: 20px;
@@ -340,14 +382,154 @@ body {
 }
 
 .dau-version-badge {
-    color: #67c23a;
-    background-color: #f0f9eb;
-    border: 1px solid #c2e7b0;
     font-size: 11px;
     font-weight: 600;
-    padding: 2px 6px;
+    padding: 2.5px 7px;
     border-radius: 4px;
     display: inline-block;
+    line-height: 1.4;
+    text-align: center;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    border: 1px solid transparent;
+}
+
+.dau-version-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* 默认未指定色彩时的绿色徽章 */
+.dau-version-badge:not([class*="dau-version-c"]):not(.dau-version-default) {
+    color: #67c23a;
+    background-color: #f0f9eb;
+    border-color: #c2e7b0;
+}
+
+/* ========================================================
+   单日日活多版本色彩分类体系 (10 套高对比度现代化色彩)
+   让不同版本在列表中呈现鲜明的分类对比与层级视觉
+   ======================================================== */
+.dau-version-c0, .badge-version.dau-version-c0 {
+    color: #15803d !important;
+    background-color: #dcfce7 !important;
+    border: 1px solid #86efac !important;
+}
+.dau-version-c1, .badge-version.dau-version-c1 {
+    color: #0369a1 !important;
+    background-color: #e0f2fe !important;
+    border: 1px solid #7dd3fc !important;
+}
+.dau-version-c2, .badge-version.dau-version-c2 {
+    color: #6d28d9 !important;
+    background-color: #ede9fe !important;
+    border: 1px solid #c4b5fd !important;
+}
+.dau-version-c3, .badge-version.dau-version-c3 {
+    color: #b45309 !important;
+    background-color: #fef3c7 !important;
+    border: 1px solid #fcd34d !important;
+}
+.dau-version-c4, .badge-version.dau-version-c4 {
+    color: #be123c !important;
+    background-color: #ffe4e6 !important;
+    border: 1px solid #fda4af !important;
+}
+.dau-version-c5, .badge-version.dau-version-c5 {
+    color: #0f766e !important;
+    background-color: #ccfbf1 !important;
+    border: 1px solid #5eead4 !important;
+}
+.dau-version-c6, .badge-version.dau-version-c6 {
+    color: #4338ca !important;
+    background-color: #e0e7ff !important;
+    border: 1px solid #a5b4fc !important;
+}
+.dau-version-c7, .badge-version.dau-version-c7 {
+    color: #a21caf !important;
+    background-color: #fae8ff !important;
+    border: 1px solid #f0abfc !important;
+}
+.dau-version-c8, .badge-version.dau-version-c8 {
+    color: #4d7c0f !important;
+    background-color: #ecfccb !important;
+    border: 1px solid #bef264 !important;
+}
+.dau-version-c9, .badge-version.dau-version-c9 {
+    color: #c2410c !important;
+    background-color: #ffedd5 !important;
+    border: 1px solid #fdba74 !important;
+}
+.dau-version-default, .badge-version.dau-version-default {
+    color: #64748b !important;
+    background-color: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+/* 版本统计图例/标签栏 */
+.dau-version-legend-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 9px 14px;
+    margin-bottom: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.dau-version-legend-bar .legend-title {
+    font-weight: 600;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 2px;
+}
+
+.dau-version-legend-bar .legend-title svg {
+    color: #f59e0b;
+}
+
+.dau-version-legend-bar .legend-tags {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.dau-version-legend-tag {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.18s ease;
+    box-sizing: border-box;
+}
+
+.dau-version-legend-tag:not(.dau-version-badge) {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2.5px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    line-height: 1.4;
+    color: #475569;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+}
+
+.dau-version-legend-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.dau-version-legend-tag.active {
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    font-weight: 700;
 }
 
 .dau-os-badge {
@@ -1387,10 +1569,108 @@ body.modal-open {
     border-color: rgba(56, 189, 248, 0.3) !important;
 }
 
-[data-theme="dark"] .dau-version-badge {
+/* Dark Mode: 版本分类徽章多色彩系统 */
+[data-theme="dark"] .dau-version-badge:not([class*="dau-version-c"]):not(.dau-version-default) {
     background-color: rgba(52, 211, 153, 0.12) !important;
     color: #34d399 !important;
     border-color: rgba(52, 211, 153, 0.3) !important;
+}
+
+[data-theme="dark"] .dau-version-c0,
+[data-theme="dark"] .badge-version.dau-version-c0 {
+    color: #4ade80 !important;
+    background-color: rgba(74, 222, 128, 0.16) !important;
+    border: 1px solid rgba(74, 222, 128, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-version-c1,
+[data-theme="dark"] .badge-version.dau-version-c1 {
+    color: #38bdf8 !important;
+    background-color: rgba(56, 189, 248, 0.16) !important;
+    border: 1px solid rgba(56, 189, 248, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-version-c2,
+[data-theme="dark"] .badge-version.dau-version-c2 {
+    color: #a78bfa !important;
+    background-color: rgba(167, 139, 250, 0.16) !important;
+    border: 1px solid rgba(167, 139, 250, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-version-c3,
+[data-theme="dark"] .badge-version.dau-version-c3 {
+    color: #fbbf24 !important;
+    background-color: rgba(251, 191, 36, 0.16) !important;
+    border: 1px solid rgba(251, 191, 36, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-version-c4,
+[data-theme="dark"] .badge-version.dau-version-c4 {
+    color: #fb7185 !important;
+    background-color: rgba(251, 113, 133, 0.16) !important;
+    border: 1px solid rgba(251, 113, 133, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-version-c5,
+[data-theme="dark"] .badge-version.dau-version-c5 {
+    color: #2dd4bf !important;
+    background-color: rgba(45, 212, 191, 0.16) !important;
+    border: 1px solid rgba(45, 212, 191, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-version-c6,
+[data-theme="dark"] .badge-version.dau-version-c6 {
+    color: #818cf8 !important;
+    background-color: rgba(129, 140, 248, 0.16) !important;
+    border: 1px solid rgba(129, 140, 248, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-version-c7,
+[data-theme="dark"] .badge-version.dau-version-c7 {
+    color: #e879f9 !important;
+    background-color: rgba(232, 121, 249, 0.16) !important;
+    border: 1px solid rgba(232, 121, 249, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-version-c8,
+[data-theme="dark"] .badge-version.dau-version-c8 {
+    color: #a3e635 !important;
+    background-color: rgba(163, 230, 53, 0.16) !important;
+    border: 1px solid rgba(163, 230, 53, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-version-c9,
+[data-theme="dark"] .badge-version.dau-version-c9 {
+    color: #fb923c !important;
+    background-color: rgba(251, 146, 60, 0.16) !important;
+    border: 1px solid rgba(251, 146, 60, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-version-default,
+[data-theme="dark"] .badge-version.dau-version-default {
+    color: #94a3b8 !important;
+    background-color: rgba(148, 163, 184, 0.16) !important;
+    border: 1px solid rgba(148, 163, 184, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-version-legend-bar {
+    background: #151d2c;
+    border-color: #243044;
+}
+
+[data-theme="dark"] .dau-version-legend-bar .legend-title {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .dau-version-legend-tag:not(.dau-version-badge) {
+    color: #cbd5e1;
+    background-color: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .dau-version-legend-tag.active {
+    outline-color: #38bdf8;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
 }
 
 [data-theme="dark"] .dau-os-badge {
@@ -1774,4 +2054,19 @@ body.modal-open {
     background: #1e2c3a !important;
     color: #38bdf8 !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .header-date-filter {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .header-date-filter input[type="date"] {
+    background-color: #15222c !important;
+    border-color: #203140 !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .header-date-filter input[type="date"]:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
 }

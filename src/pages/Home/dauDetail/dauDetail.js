@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const dauDateInput = document.getElementById('dauDateInput');
     const dauSearchInput = document.getElementById('dauSearchInput');
     const dauSchoolSelect = document.getElementById('dauSchoolSelect');
+    const dauVersionSelect = document.getElementById('dauVersionSelect');
+    const dauVersionLegendBar = document.getElementById('dauVersionLegendBar');
+    const dauVersionLegendTags = document.getElementById('dauVersionLegendTags');
     const dauSortBtn = document.getElementById('dauSortBtn');
     const dauSortText = document.getElementById('dauSortText');
     const dauTableBody = document.getElementById('dauTableBody');
@@ -75,6 +78,69 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             return fallback;
         }
+    }
+
+    // ==========================================
+    // 1.1 版本号多色彩分类体系 (不同版本显示不同颜色)
+    // ==========================================
+    const versionColorMap = new Map();
+    const TOTAL_VERSION_PALETTES = 10;
+
+    /**
+     * 刷新与建立版本号颜色映射表
+     * 确保同一列表内的不同版本号分配到完全不同的颜色，直观分类展示
+     */
+    function updateVersionColorMapping(list) {
+        if (!Array.isArray(list)) return;
+        const uniqueVersions = [];
+        list.forEach(item => {
+            const v = (item.appVersion || '').trim();
+            if (v && v !== '-' && !uniqueVersions.includes(v)) {
+                uniqueVersions.push(v);
+            }
+        });
+
+        // 语义降序排序（如 2.5.4 > 2.5.3 > 2.5.2）
+        uniqueVersions.sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }));
+
+        uniqueVersions.forEach((v) => {
+            if (!versionColorMap.has(v)) {
+                const usedIndices = new Set(versionColorMap.values());
+                let assigned = -1;
+                for (let i = 0; i < TOTAL_VERSION_PALETTES; i++) {
+                    if (!usedIndices.has(i)) {
+                        assigned = i;
+                        break;
+                    }
+                }
+                if (assigned === -1) {
+                    assigned = versionColorMap.size % TOTAL_VERSION_PALETTES;
+                }
+                versionColorMap.set(v, assigned);
+            }
+        });
+    }
+
+    /**
+     * 根据版本号获取对应徽章的色彩类名
+     */
+    function getVersionBadgeClass(version) {
+        const v = (version || '').trim();
+        if (!v || v === '-') {
+            return 'dau-version-default';
+        }
+        if (versionColorMap.has(v)) {
+            return `dau-version-c${versionColorMap.get(v)}`;
+        }
+        // 未登记时的兜底确定性哈希
+        let hash = 0;
+        for (let i = 0; i < v.length; i++) {
+            hash = ((hash << 5) - hash) + v.charCodeAt(i);
+            hash |= 0;
+        }
+        const colorIdx = Math.abs(hash) % TOTAL_VERSION_PALETTES;
+        versionColorMap.set(v, colorIdx);
+        return `dau-version-c${colorIdx}`;
     }
 
     // 2. Initialize Date Picker & Quick Date Selectors
@@ -624,10 +690,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const query = (dauSearchInput ? dauSearchInput.value.trim().toLowerCase() : '');
         const selectedSchool = (dauSchoolSelect ? dauSchoolSelect.value : 'all');
+        const selectedVersion = (dauVersionSelect ? dauVersionSelect.value : 'all');
 
         let filteredList = currentDauList.filter(item => {
             if (selectedSchool !== 'all') {
                 if (item.schoolId !== selectedSchool && item.schoolName !== selectedSchool && item.shopId !== selectedSchool && item.shopName !== selectedSchool) {
+                    return false;
+                }
+            }
+            if (selectedVersion !== 'all') {
+                const itemVer = (item.appVersion || '').trim() || '-';
+                if (itemVer !== selectedVersion) {
                     return false;
                 }
             }
@@ -722,6 +795,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 ));
                 const selectedClass = isSelected ? 'dau-row-selected' : '';
 
+                const rawAppVersion = item.appVersion || '-';
+                const versionBadgeClass = getVersionBadgeClass(rawAppVersion);
+
                 html += `
                     <tr class="${selectedClass}" data-index="${index}">
                         <td style="text-align: center; color: ${isSelected ? '#1890ff' : '#909399'}; font-weight: ${isSelected ? '700' : '500'};">
@@ -733,7 +809,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td style="text-align: center;">
                             ${item.grade && item.grade !== '-' ? `<span class="dau-grade-badge">${escapeHtml(item.grade)}</span>` : '<span style="color: #909399;">-</span>'}
                         </td>
-                        <td style="text-align: center;"><span class="dau-version-badge">${escapeHtml(item.appVersion || '-')}</span></td>
+                        <td style="text-align: center;">
+                            <span class="dau-version-badge ${versionBadgeClass}" data-version="${escapeHtml(rawAppVersion)}" title="版本号: ${escapeHtml(rawAppVersion)} (点击快捷筛选)">
+                                ${escapeHtml(rawAppVersion)}
+                            </span>
+                        </td>
                         <td style="color: #303133;" title="${escapeHtml(item.deviceName || '')}">${escapeHtml(item.deviceName || '-')}</td>
                         <td style="text-align: center;"><span class="dau-os-badge">${escapeHtml(item.phonePlatformVersion || '-')}</span></td>
                         <td style="text-align: center;"><span class="dau-time-badge">${escapeHtml(timeFormatted)}</span></td>
@@ -752,6 +832,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             dauTableBody.innerHTML = html;
         }
+
+        // 渲染/同步顶部版本分类统计标签栏
+        renderVersionLegend(currentDauList, selectedVersion);
 
         // 核心修复：图表始终基于全量日活学校数据（或仅搜索框过滤的数据，而非下拉框过滤的数据）来汇总
         // 这样可以确保切换学校下拉框时，所有的学校柱子依然完整展示，仅仅是选中的柱子高亮/放大，其他柱子淡化
@@ -1259,6 +1342,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveCurrentStateToCache() {
         const selectedDate = dauDateInput ? dauDateInput.value : '';
         const selectedSchool = dauSchoolSelect ? dauSchoolSelect.value : 'all';
+        const selectedVersion = dauVersionSelect ? dauVersionSelect.value : 'all';
         const searchQuery = dauSearchInput ? dauSearchInput.value : '';
         const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
 
@@ -1266,6 +1350,7 @@ document.addEventListener('DOMContentLoaded', () => {
             date: selectedDate,
             list: currentDauList,
             selectedSchool: selectedSchool,
+            selectedVersion: selectedVersion,
             searchQuery: searchQuery,
             sortOrder: dauSortOrder,
             activeSelectedAccount: activeSelectedAccount,
@@ -1348,6 +1433,85 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 9.2 Dynamic update of Version Select Dropdown Options
+    function updateVersionSelectOptions(list, explicitVal) {
+        if (!dauVersionSelect) return;
+        const currentVal = explicitVal !== undefined ? explicitVal : (dauVersionSelect.value || 'all');
+
+        const versionStats = {};
+        (list || []).forEach(item => {
+            const v = (item.appVersion || '').trim() || '-';
+            versionStats[v] = (versionStats[v] || 0) + 1;
+        });
+
+        const sortedVersions = Object.keys(versionStats).sort((a, b) => {
+            if (a === '-') return 1;
+            if (b === '-') return -1;
+            return b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' });
+        });
+
+        let html = `<option value="all">全部版本 (共 ${list ? list.length : 0} 条)</option>`;
+        sortedVersions.forEach(v => {
+            const count = versionStats[v];
+            const label = v === '-' ? `未知版本 (${count}人)` : `版本 ${v} (${count}人)`;
+            html += `<option value="${v}">${label}</option>`;
+        });
+
+        dauVersionSelect.innerHTML = html;
+
+        if (versionStats[currentVal] !== undefined || currentVal === 'all') {
+            dauVersionSelect.value = currentVal;
+        } else {
+            dauVersionSelect.value = 'all';
+        }
+    }
+
+    // 9.3 Render Version Legend Bar above Table
+    function renderVersionLegend(list, activeVersion = 'all') {
+        if (!dauVersionLegendBar || !dauVersionLegendTags) return;
+
+        const versionStats = {};
+        (list || []).forEach(item => {
+            const v = (item.appVersion || '').trim() || '-';
+            versionStats[v] = (versionStats[v] || 0) + 1;
+        });
+
+        const versions = Object.keys(versionStats);
+        if (versions.length === 0) {
+            dauVersionLegendBar.style.display = 'none';
+            return;
+        }
+
+        versions.sort((a, b) => {
+            if (a === '-') return 1;
+            if (b === '-') return -1;
+            return b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' });
+        });
+
+        dauVersionLegendBar.style.display = 'flex';
+        let tagsHtml = `
+            <span class="dau-version-legend-tag ${activeVersion === 'all' ? 'active' : ''}" data-version="all" title="查看全部版本">
+                全部版本 (${list ? list.length : 0})
+            </span>
+        `;
+
+        versions.forEach(v => {
+            const count = versionStats[v];
+            const badgeClass = getVersionBadgeClass(v);
+            const isActive = (activeVersion === v);
+            const displayTitle = v === '-' ? '未知版本' : `v${v}`;
+            tagsHtml += `
+                <span class="dau-version-badge ${badgeClass} dau-version-legend-tag ${isActive ? 'active' : ''}"
+                      data-version="${v}"
+                      title="点击筛选版本 ${v} (${count}人)">
+                    ${displayTitle} (${count}人)
+                </span>
+            `;
+        });
+
+        dauVersionLegendTags.innerHTML = tagsHtml;
+    }
+
     // 10. Load and refresh data
     async function loadData(forceRefresh = false) {
         const selectedDate = dauDateInput ? dauDateInput.value : '';
@@ -1384,6 +1548,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     dauSchoolSelect.value = cache.selectedSchool;
                 }
 
+                updateVersionColorMapping(currentDauList);
+                updateVersionSelectOptions(currentDauList, cache.selectedVersion);
+                if (cache.selectedVersion && dauVersionSelect) {
+                    dauVersionSelect.value = cache.selectedVersion;
+                }
+
                 if (cache.activeChartTab && cache.activeChartTab !== activeChartTab) {
                     switchChartTab(cache.activeChartTab);
                 }
@@ -1413,7 +1583,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         currentDauList = await fetchDauDetails(selectedDate);
+        versionColorMap.clear();
+        updateVersionColorMapping(currentDauList);
         updateSchoolSelectOptions(currentDauList);
+        updateVersionSelectOptions(currentDauList);
         saveCurrentStateToCache();
         renderDauTable();
     }
@@ -1466,7 +1639,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (uGridGradeName) uGridGradeName.textContent = item.grade || '-';
         if (uGridTeacherName) uGridTeacherName.textContent = item.teacherName || '-';
         if (uGridServiceName) uGridServiceName.textContent = item.serviceName || '-';
-        if (uGridAppVersion) uGridAppVersion.textContent = item.appVersion || '-';
+        if (uGridAppVersion) {
+            const verStr = item.appVersion || '-';
+            uGridAppVersion.textContent = verStr;
+            uGridAppVersion.className = `u-value badge-version ${getVersionBadgeClass(verStr)}`;
+        }
         if (uGridDeviceName) uGridDeviceName.textContent = item.deviceName || '-';
         if (uGridPhonePlatform) uGridPhonePlatform.textContent = item.phonePlatformVersion || '-';
         if (uGridLastActiveTime) uGridLastActiveTime.textContent = formatLastModifiedDate(item.lastModified);
@@ -1567,6 +1744,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // 11. Event Listeners
     if (dauTableBody) {
         dauTableBody.addEventListener('click', (e) => {
+            // 点击版本号徽章快捷筛选该版本
+            const versionBadge = e.target.closest('.dau-version-badge');
+            if (versionBadge && !e.target.closest('.dau-actions-cell')) {
+                e.stopPropagation();
+                const verText = versionBadge.getAttribute('data-version') || versionBadge.textContent.trim();
+                if (verText && dauVersionSelect) {
+                    dauVersionSelect.value = (dauVersionSelect.value === verText) ? 'all' : verText;
+                    saveCurrentStateToCache();
+                    renderDauTable();
+                }
+                return;
+            }
+
             // 点击排查按钮
             const investigateBtn = e.target.closest('button[data-action="investigate"]');
             if (investigateBtn) {
@@ -1804,6 +1994,31 @@ document.addEventListener('DOMContentLoaded', () => {
         dauSchoolSelect.addEventListener('change', () => {
             saveCurrentStateToCache();
             renderDauTable();
+        });
+    }
+
+    if (dauVersionSelect) {
+        dauVersionSelect.addEventListener('change', () => {
+            saveCurrentStateToCache();
+            renderDauTable();
+        });
+    }
+
+    if (dauVersionLegendTags) {
+        dauVersionLegendTags.addEventListener('click', (e) => {
+            const tag = e.target.closest('.dau-version-legend-tag');
+            if (tag) {
+                const targetVer = tag.getAttribute('data-version') || 'all';
+                if (dauVersionSelect) {
+                    if (dauVersionSelect.value === targetVer && targetVer !== 'all') {
+                        dauVersionSelect.value = 'all';
+                    } else {
+                        dauVersionSelect.value = targetVer;
+                    }
+                    saveCurrentStateToCache();
+                    renderDauTable();
+                }
+            }
         });
     }
 
