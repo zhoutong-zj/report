@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const badgePlatform = document.getElementById('badge-platform');
     const badgeAv = document.getElementById('badge-av');
     const badgeAvTest = document.getElementById('badge-av-test');
+    const badgeNetwork = document.getElementById('badge-network');
     const badgeOther = document.getElementById('badge-other');
 
     // Modal elements
@@ -45,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'platform_error': '平台异常',
         'audio_video_error': '音视频异常',
         'audio_video_test': '音视频测试',
+        'network_error': '网络异常',
         'other_error': '其他异常'
     };
 
@@ -54,13 +56,15 @@ document.addEventListener('DOMContentLoaded', () => {
         'platform_error': '#f5a623',
         'audio_video_error': '#ab47bc',
         'audio_video_test': '#2196f3',
+        'network_error': '#00bcd4',
         'other_error': '#909090',
         'dataException': '#e5837a',
         'platformException': '#f5a623',
         'otherException': '#909090',
         'evaluationException': '#48e59e',
         'audioVideoException': '#ab47bc',
-        'audioVideoTest': '#2196f3'
+        'audioVideoTest': '#2196f3',
+        'networkException': '#00bcd4'
     };
 
     const folderToClass = {
@@ -69,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'platform_error': 'platform',
         'audio_video_error': 'av',
         'audio_video_test': 'av-test',
+        'network_error': 'network',
         'other_error': 'other'
     };
 
@@ -269,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 marker = result.isTruncated ? result.nextMarker : null;
             } while (marker);
 
-            const validFolders = new Set(['data_error', 'platform_error', 'other_error', 'evaluation_error', 'audio_video_error', 'audio_video_test']);
+            const validFolders = new Set(['data_error', 'platform_error', 'other_error', 'evaluation_error', 'audio_video_error', 'audio_video_test', 'network_error']);
 
             const filteredObjects = objects.filter(obj => {
                 const key = obj.name;
@@ -439,8 +444,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render Statistics Chart with ECharts
     let lastExceptionChartParams = null;
 
-    function renderExceptionChart(evalCount, dataCount, platformCount, avCount, avTestCount = 0, otherCount = 0) {
-        lastExceptionChartParams = { evalCount, dataCount, platformCount, avCount, avTestCount, otherCount };
+    function renderExceptionChart(evalCount, dataCount, platformCount, avCount, avTestCount = 0, otherCount = 0, networkCount = 0) {
+        lastExceptionChartParams = { evalCount, dataCount, platformCount, avCount, avTestCount, otherCount, networkCount };
         const dom = document.getElementById('errorTypePieChart');
         if (!dom || typeof echarts === 'undefined') return;
 
@@ -452,13 +457,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         errorBarChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
 
-        const total = evalCount + dataCount + platformCount + avCount + avTestCount + otherCount;
-        const categoryKeys = ['other_error', 'audio_video_test', 'audio_video_error', 'platform_error', 'data_error', 'evaluation_error'];
-        const categories = ['其他异常', '音视频测试', '音视频异常', '平台异常', '数据异常', '评测异常'];
-        const values = [otherCount, avTestCount, avCount, platformCount, dataCount, evalCount];
+        const total = evalCount + dataCount + platformCount + avCount + avTestCount + otherCount + networkCount;
+        const categoryKeys = ['other_error', 'network_error', 'audio_video_test', 'audio_video_error', 'platform_error', 'data_error', 'evaluation_error'];
+        const categories = ['其他异常', '网络异常', '音视频测试', '音视频异常', '平台异常', '数据异常', '评测异常'];
+        const values = [otherCount, networkCount, avTestCount, avCount, platformCount, dataCount, evalCount];
 
         const rawGradients = [
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#6a85b6' }, { offset: 1, color: '#bac8e0' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#00b4db' }, { offset: 1, color: '#0083b0' }]),
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#1976d2' }, { offset: 1, color: '#42a5f5' }]),
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#8e44ad' }, { offset: 1, color: '#bb86fc' }]),
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#f7971e' }, { offset: 1, color: '#ffd200' }]),
@@ -566,12 +572,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateChartHighlight() {
         if (!errorBarChart || typeof errorBarChart.setOption !== 'function' || errorBarChart.isDisposed() || !lastExceptionChartParams) return;
-        const { evalCount, dataCount, platformCount, avCount, avTestCount, otherCount } = lastExceptionChartParams;
-        const categoryKeys = ['other_error', 'audio_video_test', 'audio_video_error', 'platform_error', 'data_error', 'evaluation_error'];
-        const values = [otherCount, avTestCount, avCount, platformCount, dataCount, evalCount];
+        const { evalCount, dataCount, platformCount, avCount, avTestCount, otherCount, networkCount = 0 } = lastExceptionChartParams;
+        const categoryKeys = ['other_error', 'network_error', 'audio_video_test', 'audio_video_error', 'platform_error', 'data_error', 'evaluation_error'];
+        const values = [otherCount, networkCount, avTestCount, avCount, platformCount, dataCount, evalCount];
 
         const rawGradients = [
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#6a85b6' }, { offset: 1, color: '#bac8e0' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#00b4db' }, { offset: 1, color: '#0083b0' }]),
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#1976d2' }, { offset: 1, color: '#42a5f5' }]),
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#8e44ad' }, { offset: 1, color: '#bb86fc' }]),
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#f7971e' }, { offset: 1, color: '#ffd200' }]),
@@ -1210,6 +1217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let platformCount = 0;
         let avCount = 0;
         let avTestCount = 0;
+        let networkCount = 0;
         let otherCount = 0;
 
         currentLogsList.forEach(item => {
@@ -1218,6 +1226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (item.category === 'platform_error') platformCount++;
             else if (item.category === 'audio_video_error') avCount++;
             else if (item.category === 'audio_video_test') avTestCount++;
+            else if (item.category === 'network_error') networkCount++;
             else if (item.category === 'other_error') otherCount++;
         });
 
@@ -1228,10 +1237,11 @@ document.addEventListener('DOMContentLoaded', () => {
         badgePlatform.textContent = platformCount;
         badgeAv.textContent = avCount;
         if (badgeAvTest) badgeAvTest.textContent = avTestCount;
+        if (badgeNetwork) badgeNetwork.textContent = networkCount;
         badgeOther.textContent = otherCount;
 
         // Render Chart
-        renderExceptionChart(evalCount, dataCount, platformCount, avCount, avTestCount, otherCount);
+        renderExceptionChart(evalCount, dataCount, platformCount, avCount, avTestCount, otherCount, networkCount);
     }
 
     // Load Data Main Routine
@@ -1293,6 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let platformCount = 0;
         let avCount = 0;
         let avTestCount = 0;
+        let networkCount = 0;
         let otherCount = 0;
 
         currentLogsList.forEach(item => {
@@ -1301,6 +1312,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (item.category === 'platform_error') platformCount++;
             else if (item.category === 'audio_video_error') avCount++;
             else if (item.category === 'audio_video_test') avTestCount++;
+            else if (item.category === 'network_error') networkCount++;
             else if (item.category === 'other_error') otherCount++;
         });
 
@@ -1311,6 +1323,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'platform_error': platformCount,
             'audio_video_error': avCount,
             'audio_video_test': avTestCount,
+            'network_error': networkCount,
             'other_error': otherCount
         };
 
@@ -1393,18 +1406,19 @@ document.addEventListener('DOMContentLoaded', () => {
             'teacher_admin': { name: '教师管理员', school: '博雅外国语实验学校', teacher: '刘老师', version: '2.5.4' },
             'test_account': { name: '测试学生', school: '育才实验示范学校', teacher: '周老师', version: '2.5.4' }
         };
-        const mockFolders = ['evaluation_error', 'data_error', 'platform_error', 'audio_video_error', 'audio_video_test', 'other_error'];
+        const mockFolders = ['evaluation_error', 'data_error', 'platform_error', 'audio_video_error', 'audio_video_test', 'network_error', 'other_error'];
         const mockLogs = [];
 
         const dateClean = dateStr.replace(/-/g, '_');
 
-        // Let's seed numbers based on the user's report stats (59, 34, 23, 10, 8, 12)
+        // Let's seed numbers based on the user's report stats (59, 34, 23, 10, 8, 15, 12)
         const counts = {
             'evaluation_error': 59,
             'data_error': 34,
             'platform_error': 23,
             'audio_video_error': 10,
             'audio_video_test': 8,
+            'network_error': 15,
             'other_error': 12
         };
 
@@ -1520,6 +1534,15 @@ document.addEventListener('DOMContentLoaded', () => {
             mockPayload.errorMessage = "AudioVideoTest: Video playback test metric completed (fps: 30, dropped: 0)";
             mockPayload.stackTrace = "Benchmark: Test session completed successfully\n  at runAvBenchmark (av_test.js:88)\n  at VideoPlayerTester.onMetrics (tester.js:145)";
             mockPayload.mediaUrl = "https://example.com/test_video.mp4";
+        } else if (errorType === 'network_error') {
+            mockPayload.errorMessage = "NetworkException: Connect to api.xuelianxi.com:443 failed: Connection timed out";
+            mockPayload.stackTrace = "java.net.SocketTimeoutException: failed to connect to api.xuelianxi.com/106.15.92.12 (port 443) after 10000ms\n  at libcore.io.IoBridge.connectErrno(IoBridge.java:185)\n  at okhttp3.internal.connection.RealConnection.connectSocket(RealConnection.kt:297)";
+            mockPayload.networkState = {
+                "online": false,
+                "type": "none",
+                "signalStrength": "none",
+                "pingMs": -1
+            };
         } else {
             mockPayload.errorMessage = "Unexpected runtime crash: OutOfMemoryError in Javascript VM thread";
             mockPayload.stackTrace = "Fatal Error: Heap out of memory\n  at Array.map (<anonymous>)\n  at parseBigLogs (analyzer.js:204)\n  at runScheduleTask (cron.js:42)";
@@ -1535,9 +1558,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastExceptionChartParams.evalCount,
                 lastExceptionChartParams.dataCount,
                 lastExceptionChartParams.platformCount,
-                lastExceptionChartParams.otherCount,
                 lastExceptionChartParams.avCount,
-                lastExceptionChartParams.avTestCount
+                lastExceptionChartParams.avTestCount,
+                lastExceptionChartParams.otherCount,
+                lastExceptionChartParams.networkCount
             );
         }
     });

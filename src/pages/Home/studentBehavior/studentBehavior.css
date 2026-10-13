@@ -195,6 +195,7 @@ body {
 
 .stat-card.player-card { border-top-color: #10b981; }
 .stat-card.event-card { border-top-color: #3b82f6; }
+.stat-card.game-center-card { border-top-color: #0284c7; }
 .stat-card.fruit-card { border-top-color: #f97316; }
 .stat-card.card-system-card { border-top-color: #8b5cf6; }
 .stat-card.ebao-card { border-top-color: #06b6d4; }
@@ -233,6 +234,7 @@ body {
 
 .player-icon { background: #ecfdf5; color: #10b981; }
 .event-icon { background: #eff6ff; color: #3b82f6; }
+.game-center-icon { background: #e0f2fe; color: #0284c7; }
 .fruit-icon { background: #fff7ed; color: #f97316; }
 .card-system-icon { background: #f5f3ff; color: #8b5cf6; }
 .ebao-icon { background: #ecfeff; color: #06b6d4; }
@@ -537,6 +539,12 @@ body {
     white-space: nowrap;
 }
 
+.game-tag.game-center {
+    background-color: #e0f2fe;
+    color: #0284c7;
+    border: 1px solid #bae6fd;
+}
+
 .game-tag.fruit-cutting {
     background-color: #ffedd5;
     color: #c2410c;
@@ -549,7 +557,8 @@ body {
     border: 1px solid #ffedd5;
 }
 
-.game-tag.card-gacha {
+.game-tag.card-gacha,
+.game-tag.gacha-page {
     background-color: #fce7f3;
     color: #be185d;
     border: 1px solid #fbcfe8;
@@ -571,6 +580,66 @@ body {
     background-color: #eef2ff;
     color: #4338ca;
     border: 1px solid #c7d2fe;
+}
+
+.duration-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11.5px;
+    font-weight: 600;
+    font-family: monospace;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
+    word-break: keep-all;
+}
+
+.duration-badge.high {
+    background: #ecfdf5;
+    color: #059669;
+    border-color: #a7f3d0;
+}
+
+.asset-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.asset-chip.coin { color: #d97706; background: #fffbeb; border-color: #fde68a; font-weight: 600; }
+.asset-chip.diamond { color: #2563eb; background: #eff6ff; border-color: #bfdbfe; font-weight: 600; }
+.asset-chip.service { color: #7c3aed; background: #faf5ff; border-color: #e9d5ff; font-weight: 500; }
+
+.user-no-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-family: monospace;
+    font-weight: 600;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 1px 6px;
+    border-radius: 3px;
+}
+
+.grade-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #0284c7;
+    background: #e0f2fe;
+    padding: 1px 6px;
+    border-radius: 3px;
 }
 
 .system-label {
@@ -603,6 +672,11 @@ body {
     color: #4b5563;
 }
 
+.pill.game-center { background: #e0f2fe; color: #0284c7; }
+.pill.fruit-main { background: #fff7ed; color: #ea580c; }
+.pill.fruit-sub { background: #ffedd5; color: #c2410c; }
+.pill.card-main { background: #f5f3ff; color: #6d28d9; }
+.pill.gacha { background: #fce7f3; color: #be185d; }
 .pill.fruit { background: #fff7ed; color: #c2410c; }
 .pill.card { background: #f5f3ff; color: #6d28d9; }
 .pill.ebao { background: #ecfeff; color: #0891b2; }
@@ -975,6 +1049,10 @@ body {
     white-space: nowrap;
 }
 
+.profile-stat-box.duration { background: #f0fdf4; border-color: #dcfce7; }
+.profile-stat-box.duration .num { color: #16a34a; }
+.profile-stat-box.game-center { background: #f0f9ff; border-color: #e0f2fe; }
+.profile-stat-box.game-center .num { color: #0284c7; }
 .profile-stat-box.fruit { background: #fff7ed; border-color: #ffedd5; }
 .profile-stat-box.fruit .num { color: #ea580c; }
 .profile-stat-box.card { background: #f5f3ff; border-color: #ede9fe; }
@@ -1047,6 +1125,7 @@ body {
     border-radius: 50%;
 }
 
+.legend-item.game-center .dot { background: #0284c7; }
 .legend-item.fruit .dot { background: #f97316; }
 .legend-item.card .dot { background: #8b5cf6; }
 .legend-item.ebao .dot { background: #06b6d4; }
@@ -1068,6 +1147,12 @@ body {
     gap: 12px;
     position: relative;
     border-left: 5px solid #9ca3af;
+}
+
+.game-track.game-center-track {
+    border-left-color: #0284c7;
+    background: linear-gradient(to right, #f0f9ff 0%, #fafafa 100%);
+    border-color: #bae6fd;
 }
 
 .game-track.fruit-track {
@@ -1128,6 +1213,7 @@ body {
     color: #4b5563;
 }
 
+.game-center-track .track-subtag { background: #e0f2fe; color: #0284c7; }
 .fruit-track .track-subtag { background: #ffedd5; color: #c2410c; }
 .card-track .track-subtag { background: #ede9fe; color: #6d28d9; }
 .ebao-track .track-subtag { background: #cffafe; color: #0e7490; }
@@ -1172,10 +1258,12 @@ body {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
+.flow-step-card.game-center { border-top-color: #0284c7; border-color: #bae6fd; background: #f0f9ff; }
 .flow-step-card.fruit-store { border-top-color: #ea580c; border-color: #fed7aa; background: #fffdfa; }
 .flow-step-card.fruit-cutting { border-top-color: #f97316; border-color: #fdba74; background: #fffaf5; }
 .flow-step-card.card-album { border-top-color: #8b5cf6; border-color: #ddd6fe; background: #faf8ff; }
-.flow-step-card.card-gacha { border-top-color: #ec4899; border-color: #fbcfe8; background: #fff8fc; }
+.flow-step-card.card-gacha,
+.flow-step-card.gacha-page { border-top-color: #ec4899; border-color: #fbcfe8; background: #fff8fc; }
 .flow-step-card.selected-step-card {
     border-color: #1677ff !important;
     box-shadow: 0 0 0 2px #1677ff, 0 8px 20px rgba(22, 119, 255, 0.25) !important;
@@ -2157,7 +2245,14 @@ body {
     border-color: rgba(234, 88, 12, 0.3) !important;
 }
 
-[data-theme="dark"] .game-tag.card-gacha {
+[data-theme="dark"] .game-tag.game-center {
+    background-color: rgba(2, 132, 199, 0.18) !important;
+    color: #38bdf8 !important;
+    border-color: rgba(2, 132, 199, 0.35) !important;
+}
+
+[data-theme="dark"] .game-tag.card-gacha,
+[data-theme="dark"] .game-tag.gacha-page {
     background-color: rgba(236, 72, 153, 0.15) !important;
     color: #f472b6 !important;
     border-color: rgba(236, 72, 153, 0.3) !important;
@@ -2175,6 +2270,94 @@ body {
     border-color: rgba(6, 182, 212, 0.3) !important;
 }
 
+[data-theme="dark"] .duration-badge {
+    background: #1e293b !important;
+    color: #cbd5e1 !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] .duration-badge.high {
+    background: rgba(16, 185, 129, 0.18) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+[data-theme="dark"] .asset-chip {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .asset-chip.coin {
+    color: #fbbf24 !important;
+    background: rgba(217, 119, 6, 0.15) !important;
+    border-color: rgba(217, 119, 6, 0.35) !important;
+}
+
+[data-theme="dark"] .asset-chip.diamond {
+    color: #60a5fa !important;
+    background: rgba(37, 99, 235, 0.15) !important;
+    border-color: rgba(37, 99, 235, 0.35) !important;
+}
+
+[data-theme="dark"] .asset-chip.service {
+    color: #c084fc !important;
+    background: rgba(124, 58, 237, 0.15) !important;
+    border-color: rgba(124, 58, 237, 0.35) !important;
+}
+
+[data-theme="dark"] .user-no-tag {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .grade-tag {
+    background: rgba(2, 132, 199, 0.2) !important;
+    color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .profile-stat-box.duration {
+    background: rgba(16, 185, 129, 0.1) !important;
+    border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+[data-theme="dark"] .profile-stat-box.duration .num {
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .profile-stat-box.game-center {
+    background: rgba(2, 132, 199, 0.1) !important;
+    border-color: rgba(2, 132, 199, 0.25) !important;
+}
+
+[data-theme="dark"] .profile-stat-box.game-center .num {
+    color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .flow-step-card.game-center {
+    background: #111e2e !important;
+    border-color: rgba(2, 132, 199, 0.4) !important;
+    border-top-color: #0284c7 !important;
+}
+
+[data-theme="dark"] .flow-step-card.card-gacha,
+[data-theme="dark"] .flow-step-card.gacha-page {
+    background: #1e1320 !important;
+    border-color: rgba(236, 72, 153, 0.4) !important;
+    border-top-color: #ec4899 !important;
+}
+
+[data-theme="dark"] .game-track.game-center-track {
+    background: linear-gradient(to right, #0f1c2b 0%, #131d2a 100%) !important;
+    border-color: rgba(2, 132, 199, 0.3) !important;
+    border-left-color: #0284c7 !important;
+}
+
+[data-theme="dark"] .game-center-track .track-subtag {
+    background: rgba(2, 132, 199, 0.2) !important;
+    color: #38bdf8 !important;
+}
+
 [data-theme="dark"] .system-label {
     color: #94a3b8 !important;
 }
@@ -2189,14 +2372,27 @@ body {
     color: #94a3b8 !important;
 }
 
-[data-theme="dark"] .pill.fruit {
+[data-theme="dark"] .pill.game-center {
+    background-color: rgba(2, 132, 199, 0.2) !important;
+    color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .pill.fruit,
+[data-theme="dark"] .pill.fruit-main,
+[data-theme="dark"] .pill.fruit-sub {
     background-color: rgba(249, 115, 22, 0.15) !important;
     color: #fb923c !important;
 }
 
-[data-theme="dark"] .pill.card {
+[data-theme="dark"] .pill.card,
+[data-theme="dark"] .pill.card-main {
     background-color: rgba(139, 92, 246, 0.15) !important;
     color: #c084fc !important;
+}
+
+[data-theme="dark"] .pill.gacha {
+    background-color: rgba(236, 72, 153, 0.18) !important;
+    color: #f472b6 !important;
 }
 
 [data-theme="dark"] .pill.ebao {

@@ -54,10 +54,10 @@
 
         <!-- Core Metric Stat Cards -->
         <section class="stats-grid">
-            <!-- Card 1: 活跃玩家 -->
+            <!-- Card 1: 活跃学生 -->
             <div class="stat-card player-card">
                 <div class="stat-card-top">
-                    <span class="stat-label">今日玩游戏学生数</span>
+                    <span class="stat-label">今日活跃学生数</span>
                     <div class="stat-icon player-icon">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
                             <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 3s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
@@ -68,10 +68,10 @@
                 <div class="stat-sub">独立学生 (UV) 参与人数</div>
             </div>
 
-            <!-- Card 2: 总游戏行为频次 -->
+            <!-- Card 2: 行为频次与时长 -->
             <div class="stat-card event-card">
                 <div class="stat-card-top">
-                    <span class="stat-label">总游戏行为次数</span>
+                    <span class="stat-label">行为总记录与时长</span>
                     <div class="stat-icon event-icon">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
                             <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
@@ -79,10 +79,27 @@
                     </div>
                 </div>
                 <div class="stat-value" id="totalGamesCount">-</div>
-                <div class="stat-sub">全部模块累计上报记录 (PV)</div>
+                <div class="stat-sub" id="totalDurationSubText">累计停留: <strong id="totalDurationVal">-</strong></div>
             </div>
 
-            <!-- Card 3: 水果商店系统 -->
+            <!-- Card 3: 游戏中心 -->
+            <div class="stat-card game-center-card">
+                <div class="stat-card-top">
+                    <div>
+                        <span class="stat-label">🕹️ 游戏中心</span>
+                        <span class="system-tag">统一入口</span>
+                    </div>
+                    <div class="stat-icon game-center-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm8.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm-3-3c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-value" id="gameCenterCount">-</div>
+                <div class="stat-sub">中心主页访问分流</div>
+            </div>
+
+            <!-- Card 4: 水果商店系统 -->
             <div class="stat-card fruit-card">
                 <div class="stat-card-top">
                     <div>
@@ -97,12 +114,12 @@
                 </div>
                 <div class="stat-value" id="fruitSystemCount">-</div>
                 <div class="stat-breakdown">
-                    <span class="badge fruit-main">水果商店主页: <strong id="fruitStoreCount">-</strong></span>
-                    <span class="badge fruit-sub">切水果: <strong id="fruitCuttingCount">-</strong></span>
+                    <span class="badge fruit-main">水果商店: <strong id="fruitStoreCount">-</strong></span>
+                    <span class="badge fruit-sub">🍉 切水果: <strong id="fruitCuttingCount">-</strong></span>
                 </div>
             </div>
 
-            <!-- Card 4: 卡册系统 -->
+            <!-- Card 5: 卡册系统 -->
             <div class="stat-card card-system-card">
                 <div class="stat-card-top">
                     <div>
@@ -117,17 +134,17 @@
                 </div>
                 <div class="stat-value" id="cardSystemCount">-</div>
                 <div class="stat-breakdown">
-                    <span class="badge card-main">卡册主页: <strong id="cardAlbumCount">-</strong></span>
-                    <span class="badge card-sub">抽卡玩法: <strong id="cardGachaCount">-</strong></span>
+                    <span class="badge card-main">卡册中心: <strong id="cardAlbumCount">-</strong></span>
+                    <span class="badge card-sub">🎴 抽卡页面: <strong id="cardGachaCount">-</strong></span>
                 </div>
             </div>
 
-            <!-- Card 5: E宝游戏 -->
+            <!-- Card 6: E宝游戏 -->
             <div class="stat-card ebao-card">
                 <div class="stat-card-top">
                     <div>
-                        <span class="stat-label">🤖 E宝游戏</span>
-                        <span class="system-tag">单体游戏</span>
+                        <span class="stat-label">🤖 E宝/其他游戏</span>
+                        <span class="system-tag">独立玩法</span>
                     </div>
                     <div class="stat-icon ebao-icon">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
@@ -136,7 +153,7 @@
                     </div>
                 </div>
                 <div class="stat-value" id="eBaoCount">-</div>
-                <div class="stat-sub">独立游戏关卡与交互</div>
+                <div class="stat-sub">独立游戏关卡与扩展页面</div>
             </div>
         </section>
 
@@ -256,19 +273,20 @@
                     </div>
 
                     <select id="gameFilter" class="filter-select">
-                        <option value="all">🎮 全部游戏模块</option>
+                        <option value="all">🎮 全部页面与游戏模块</option>
+                        <option value="game_center_page">🕹️ 游戏中心 (主入口)</option>
                         <optgroup label="🍎 水果商店系统">
                             <option value="group_fruit">全部水果商店系统</option>
-                            <option value="fruit_store">&nbsp;&nbsp;├ 水果商店主页</option>
-                            <option value="fruit_cutting">&nbsp;&nbsp;└ 🍉 切水果 (子页面)</option>
+                            <option value="fruit_store_page">&nbsp;&nbsp;├ 🏪 水果商店主页</option>
+                            <option value="fruit_cutting_page">&nbsp;&nbsp;└ 🍉 切水果 (核心玩法)</option>
                         </optgroup>
                         <optgroup label="🎴 卡册系统">
                             <option value="group_card">全部卡册系统</option>
-                            <option value="card_album">&nbsp;&nbsp;├ 卡册主页</option>
-                            <option value="card_gacha">&nbsp;&nbsp;└ 🎴 抽卡 (子页面)</option>
+                            <option value="card_album_page">&nbsp;&nbsp;├ 📖 卡册中心主页</option>
+                            <option value="gacha_page">&nbsp;&nbsp;└ 🎴 抽卡页面 (抽卡玩法)</option>
                         </optgroup>
-                        <optgroup label="🤖 E宝游戏">
-                            <option value="e_bao">E宝游戏</option>
+                        <optgroup label="🤖 其他游戏">
+                            <option value="e_bao_page">🤖 E宝游戏</option>
                         </optgroup>
                     </select>
 
@@ -310,20 +328,22 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th style="width: 60px;">序号</th>
+                            <th style="width: 55px;">序号</th>
                             <th>学生账号</th>
                             <th>学生姓名</th>
-                            <th>所属学校</th>
+                            <th>校区 / 学校</th>
                             <th>教学老师</th>
-                            <th style="text-align: center;">总游玩次数</th>
-                            <th>参与游戏分布</th>
+                            <th>年级 / 编号</th>
+                            <th>资产与会员</th>
+                            <th style="text-align: center; min-width: 110px; white-space: nowrap;">总行为次数</th>
+                            <th>各系统参与频次</th>
                             <th>最新活动时间</th>
-                            <th style="text-align: center; width: 110px;">操作</th>
+                            <th style="text-align: center; width: 100px;">操作</th>
                         </tr>
                     </thead>
                     <tbody id="summaryTableBody">
                         <tr>
-                            <td colspan="9" class="loading-cell">正在加载学生游戏汇总数据...</td>
+                            <td colspan="11" class="loading-cell">正在加载学生行为汇总数据...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -334,20 +354,21 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th style="width: 190px;">发生时间</th>
+                            <th style="width: 170px;">发生时间</th>
+                            <th style="width: 120px; text-align: center; white-space: nowrap;">停留时长</th>
                             <th>学生账号</th>
                             <th>学生姓名</th>
                             <th>所属学校</th>
-                            <th>主系统归属</th>
-                            <th>具体游戏/子页面</th>
+                            <th>归属系统</th>
+                            <th>具体页面 / 模块</th>
                             <th>设备型号</th>
-                            <th>系统版本</th>
-                            <th style="text-align: center; width: 100px;">详情</th>
+                            <th>应用版本</th>
+                            <th style="text-align: center; width: 90px;">详情</th>
                         </tr>
                     </thead>
                     <tbody id="logsTableBody">
                         <tr>
-                            <td colspan="9" class="loading-cell">正在加载行为流水数据...</td>
+                            <td colspan="10" class="loading-cell">正在加载行为流水数据...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -415,17 +436,32 @@
                     <div class="name-row">
                         <h2 id="detailStudentName">-</h2>
                         <span class="account-tag" id="detailUsername">-</span>
+                        <span class="user-no-tag" id="detailUserNo">No.-</span>
+                        <span class="grade-tag" id="detailGrade">-</span>
                     </div>
                     <div class="meta-row">
-                        <span>🏫 学校: <strong id="detailSchoolName">-</strong></span>
+                        <span>🏫 校区/学校: <strong id="detailSchoolName">-</strong></span>
                         <span>👩‍🏫 老师: <strong id="detailTeacherName">-</strong></span>
+                        <span>💳 会员卡: <strong id="detailServiceName">-</strong></span>
+                    </div>
+                    <div class="assets-row">
+                        <span class="asset-item coin">🪙 金币: <strong id="detailCoin">-</strong></span>
+                        <span class="asset-item diamond">💎 钻石: <strong id="detailDiamond">-</strong></span>
                     </div>
                 </div>
             </div>
             <div class="student-profile-stats">
                 <div class="profile-stat-box">
                     <span class="num" id="detailTotalCount">0</span>
-                    <span class="label">今日总玩次数</span>
+                    <span class="label">今日行为总次数</span>
+                </div>
+                <div class="profile-stat-box duration">
+                    <span class="num" id="detailTotalDuration">0秒</span>
+                    <span class="label">游戏中心停留时长</span>
+                </div>
+                <div class="profile-stat-box game-center">
+                    <span class="num" id="detailGameCenterCount">0</span>
+                    <span class="label">游戏中心</span>
                 </div>
                 <div class="profile-stat-box fruit">
                     <span class="num" id="detailFruitCount">0</span>
@@ -433,11 +469,11 @@
                 </div>
                 <div class="profile-stat-box card">
                     <span class="num" id="detailCardCount">0</span>
-                    <span class="label">卡册/抽卡</span>
+                    <span class="label">卡册中心/抽卡</span>
                 </div>
                 <div class="profile-stat-box ebao">
                     <span class="num" id="detailEbaoCount">0</span>
-                    <span class="label">E宝游戏</span>
+                    <span class="label">E宝/其他游戏</span>
                 </div>
             </div>
         </div>
@@ -452,14 +488,15 @@
                         </svg>
                     </div>
                     <div>
-                        <h3>学生玩游戏时序流程图</h3>
-                        <p class="flowchart-sub">按当天时间先后顺序完整还原进入游戏、切换主页与子集玩法的流转过程，点击任意步骤可查看数据详情</p>
+                        <h3>学生行为时序流程图</h3>
+                        <p class="flowchart-sub">按当天时间先后顺序完整还原进入游戏、切换主页与子集玩法的流转过程，包含各页面停留时长，点击任意步骤可查看数据详情</p>
                     </div>
                 </div>
                 <div class="flowchart-legend">
-                    <span class="legend-item fruit"><span class="dot"></span>水果系统(主页/切水果)</span>
-                    <span class="legend-item card"><span class="dot"></span>卡册系统(主页/抽卡)</span>
-                    <span class="legend-item ebao"><span class="dot"></span>E宝游戏</span>
+                    <span class="legend-item game-center"><span class="dot"></span>游戏中心入口</span>
+                    <span class="legend-item fruit"><span class="dot"></span>水果商店系统(主页/切水果)</span>
+                    <span class="legend-item card"><span class="dot"></span>卡册系统(卡册中心/抽卡)</span>
+                    <span class="legend-item ebao"><span class="dot"></span>E宝/其他游戏</span>
                 </div>
             </div>
 
@@ -484,19 +521,20 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th style="width: 70px;">序号</th>
-                            <th style="width: 190px;">发生时间</th>
+                            <th style="width: 55px;">序号</th>
+                            <th style="width: 170px;">发生时间</th>
+                            <th style="width: 120px; text-align: center; white-space: nowrap;">停留时长</th>
                             <th>归属主系统</th>
                             <th>具体游戏/页面</th>
                             <th>子集归属说明</th>
                             <th>设备型号</th>
-                            <th>系统版本</th>
-                            <th style="text-align: center; width: 110px;">操作</th>
+                            <th>应用版本</th>
+                            <th style="text-align: center; width: 90px;">详情</th>
                         </tr>
                     </thead>
                     <tbody id="userLogsTableBody">
                         <tr>
-                            <td colspan="8" class="loading-cell">加载中...</td>
+                            <td colspan="9" class="loading-cell">加载中...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -531,7 +569,7 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="studentBehavior.js?v=1722249000012"></script>
+    <script src="studentBehavior.js?v=1728553750000"></script>
 </body>
 
 </html>

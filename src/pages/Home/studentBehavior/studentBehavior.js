@@ -1,80 +1,102 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Game Hierarchy Configuration
+    // 1. Game & Page Hierarchy Configuration
     const GAME_CONFIGS = {
-        'fruit_cutting': {
-            code: 'fruit_cutting',
-            name: '切水果',
-            systemCode: 'fruit',
-            systemName: '水果商店系统',
-            isSub: true,
-            parentName: '水果商店',
-            color: '#f97316',
-            tagClass: 'fruit-cutting'
+        'game_center_page': {
+            code: 'game_center_page',
+            name: '游戏中心',
+            systemCode: 'game_center',
+            systemName: '游戏中心',
+            isSub: false,
+            parentName: '',
+            color: '#0284c7',
+            tagClass: 'game-center',
+            icon: '🕹️'
         },
-        'fruit_store': {
-            code: 'fruit_store',
+        'fruit_store_page': {
+            code: 'fruit_store_page',
             name: '水果商店',
             systemCode: 'fruit',
             systemName: '水果商店系统',
             isSub: false,
             parentName: '',
             color: '#ea580c',
-            tagClass: 'fruit-store'
+            tagClass: 'fruit-store',
+            icon: '🏪'
         },
-        'card_gacha': {
-            code: 'card_gacha',
-            name: '抽卡',
-            systemCode: 'card',
-            systemName: '卡册系统',
+        'fruit_cutting_page': {
+            code: 'fruit_cutting_page',
+            name: '切水果',
+            systemCode: 'fruit',
+            systemName: '水果商店系统',
             isSub: true,
-            parentName: '卡册',
-            color: '#ec4899',
-            tagClass: 'card-gacha'
+            parentName: '水果商店',
+            color: '#f97316',
+            tagClass: 'fruit-cutting',
+            icon: '🍉'
         },
-        'card_album': {
-            code: 'card_album',
-            name: '卡册',
+        'card_album_page': {
+            code: 'card_album_page',
+            name: '卡册中心',
             systemCode: 'card',
             systemName: '卡册系统',
             isSub: false,
             parentName: '',
             color: '#8b5cf6',
-            tagClass: 'card-album'
+            tagClass: 'card-album',
+            icon: '📖'
         },
-        'e_bao': {
-            code: 'e_bao',
+        'gacha_page': {
+            code: 'gacha_page',
+            name: '抽卡页面',
+            systemCode: 'card',
+            systemName: '卡册系统',
+            isSub: true,
+            parentName: '卡册中心',
+            color: '#ec4899',
+            tagClass: 'gacha-page',
+            icon: '🎴'
+        },
+        'e_bao_page': {
+            code: 'e_bao_page',
             name: 'E宝游戏',
             systemCode: 'ebao',
             systemName: 'E宝游戏',
             isSub: false,
             parentName: '',
             color: '#06b6d4',
-            tagClass: 'e-bao'
+            tagClass: 'e-bao',
+            icon: '🤖'
         }
     };
 
     /**
-     * 将页面文件名前缀（如 card_album_page, fruit_cutting_page, e_bao_page 等）规范化为对应模块 code
+     * 将页面文件名前缀（如 game_center_page, fruit_cutting_page, gacha_page 等）规范化为对应模块 code
      */
     function resolveGameCode(rawCode) {
         if (!rawCode) return 'other';
         const clean = String(rawCode).toLowerCase().trim();
 
-        // 1. 直接匹配 GAME_CONFIGS
+        // 1. 直接匹配已知页面 code
+        if (clean === 'game_center_page' || clean === 'game_center') return 'game_center_page';
+        if (clean === 'fruit_cutting_page' || clean === 'fruit_cutting') return 'fruit_cutting_page';
+        if (clean === 'fruit_store_page' || clean === 'fruit_store') return 'fruit_store_page';
+        if (clean === 'gacha_page' || clean === 'gacha' || clean === 'card_gacha' || clean === 'card_gacha_page') return 'gacha_page';
+        if (clean === 'card_album_page' || clean === 'card_album') return 'card_album_page';
+        if (clean === 'e_bao_page' || clean === 'e_bao' || clean === 'ebao' || clean === 'ebao_page') return 'e_bao_page';
+
         if (GAME_CONFIGS[clean]) return clean;
+        const withPage = clean.endsWith('_page') ? clean : `${clean}_page`;
+        if (GAME_CONFIGS[withPage]) return withPage;
 
-        // 2. 去除 _page 后缀匹配 (例如 card_album_page -> card_album)
-        const strippedPage = clean.replace(/_page$/, '');
-        if (GAME_CONFIGS[strippedPage]) return strippedPage;
+        // 2. 常见关键字与别名智能匹配
+        if (clean.includes('game') && clean.includes('center')) return 'game_center_page';
+        if (clean.includes('fruit') && (clean.includes('cut') || clean.includes('slice'))) return 'fruit_cutting_page';
+        if (clean.includes('fruit') && (clean.includes('store') || clean.includes('shop') || clean.includes('market'))) return 'fruit_store_page';
+        if (clean.includes('gacha') || (clean.includes('card') && (clean.includes('draw') || clean.includes('lottery')))) return 'gacha_page';
+        if (clean.includes('card') && (clean.includes('album') || clean.includes('book'))) return 'card_album_page';
+        if (clean.includes('ebao') || clean.includes('e_bao')) return 'e_bao_page';
 
-        // 3. 常见关键字与别名智能匹配
-        if (clean.includes('fruit') && (clean.includes('cut') || clean.includes('slice'))) return 'fruit_cutting';
-        if (clean.includes('fruit') && (clean.includes('store') || clean.includes('shop') || clean.includes('market'))) return 'fruit_store';
-        if (clean.includes('card') && (clean.includes('gacha') || clean.includes('draw') || clean.includes('lottery'))) return 'card_gacha';
-        if (clean.includes('card') && (clean.includes('album') || clean.includes('book'))) return 'card_album';
-        if (clean.includes('ebao') || clean.includes('e_bao') || clean === 'ebao_page') return 'e_bao';
-
-        return strippedPage || clean;
+        return withPage || clean;
     }
 
     /**
@@ -99,8 +121,43 @@ document.addEventListener('DOMContentLoaded', () => {
             isSub: isSub,
             parentName: '通用页面',
             color: '#6366f1',
-            tagClass: 'page-track'
+            tagClass: 'page-track',
+            icon: '📄'
         };
+    }
+
+    /**
+     * 格式化停留时长 (秒 -> 优雅易读格式)
+     */
+    function formatDuration(sec) {
+        if (sec === undefined || sec === null || sec < 0) return '-';
+        const s = Math.round(Number(sec));
+        if (s < 60) return `${s}秒`;
+        const m = Math.floor(s / 60);
+        const rem = s % 60;
+        if (m < 60) return rem > 0 ? `${m}分${rem}秒` : `${m}分钟`;
+        const hours = Math.floor(s / 3600);
+        const remMins = Math.floor((s % 3600) / 60);
+        return remMins > 0 ? `${hours}小时${remMins}分` : `${hours}小时`;
+    }
+
+    /**
+     * 规范化年级显示名称
+     */
+    function formatGradeName(g) {
+        if (!g || g === '-') return '-';
+        const map = {
+            'oneGrade': '一年级',
+            'twoGrade': '二年级',
+            'threeGrade': '三年级',
+            'fourGrade': '四年级',
+            'fiveGrade': '五年级',
+            'sixGrade': '六年级',
+            'sevenGrade': '初一',
+            'eightGrade': '初二',
+            'nineGrade': '初三'
+        };
+        return map[g] || g;
     }
 
     // DOM Elements
@@ -112,6 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Stat Cards Elements
     const activePlayersCountEl = document.getElementById('activePlayersCount');
     const totalGamesCountEl = document.getElementById('totalGamesCount');
+    const totalDurationValEl = document.getElementById('totalDurationVal');
+    const gameCenterCountEl = document.getElementById('gameCenterCount');
     const fruitSystemCountEl = document.getElementById('fruitSystemCount');
     const fruitStoreCountEl = document.getElementById('fruitStoreCount');
     const fruitCuttingCountEl = document.getElementById('fruitCuttingCount');
@@ -437,7 +496,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 marker = result.isTruncated ? result.nextMarker : null;
             } while (marker);
 
-            objects = objects.filter(o => o.name && o.name.endsWith('.json'));
+            objects = objects.filter(o => {
+                if (!o.name || !o.name.endsWith('.json')) return false;
+                const lowerName = o.name.toLowerCase();
+                // 排除 anonymous 行为数据 (例如: usertemp/xuelianxitong/{date}/page_track/anonymous/...)
+                if (lowerName.includes('/page_track/anonymous/') || lowerName.includes('/anonymous/')) {
+                    return false;
+                }
+                return true;
+            });
 
             if (objects.length === 0) {
                 // If OSS returns no data for this date, show empty state or fallback
@@ -460,8 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * 将 2026_09_17_144933 或 card_album_page_2026_10_08_160346.json 等各类格式转换为标准年月日时分秒
-     * 例如：2026年10月08日 16时03分46秒
+     * 将 2026_10_10_163323_288 或 card_album_page_2026_10_08_160346.json 等各类格式转换为标准年月日时分秒
      */
     function parseReportTime(raw) {
         if (!raw || raw === '-') {
@@ -475,29 +541,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const str = String(raw).trim();
 
-        // 1. 处理如 2026_10_08_160346 或 card_album_page_2026_10_08_160346.json
-        const mCompact = str.match(/(\d{4})_(\d{2})_(\d{2})_(\d{2})(\d{2})(\d{2})/);
+        // 1. 处理如 2026_10_10_163323_288 或 2026_10_08_160346
+        const mCompact = str.match(/(\d{4})_(\d{2})_(\d{2})_(\d{2})(\d{2})(\d{2})(?:_(\d+))?/);
         if (mCompact) {
-            const [_, y, m, d, hh, mm, ss] = mCompact;
+            const [_, y, m, d, hh, mm, ss, ms] = mCompact;
             return {
                 fullCnTime: `${y}年${m}月${d}日 ${hh}时${mm}分${ss}秒`,
                 shortCnTime: `${hh}时${mm}分${ss}秒`,
                 timeStr: `${hh}:${mm}:${ss}`,
                 hour: parseInt(hh, 10) || 0,
-                sortKey: `${y}${m}${d}${hh}${mm}${ss}`
+                sortKey: `${y}${m}${d}${hh}${mm}${ss}${ms ? String(ms).padStart(3, '0') : '000'}`
             };
         }
 
-        // 2. 处理如 2026_10_08_16_03_46
-        const mFull = str.match(/(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_(\d{2})/);
-        if (mFull) {
-            const [_, y, m, d, hh, mm, ss] = mFull;
+        // 2. 处理 ISO 日期字符串如 2026-10-10T16:33:07.713489
+        const mIso = str.match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
+        if (mIso) {
+            const [_, y, m, d, hh, mm, ss] = mIso;
             return {
                 fullCnTime: `${y}年${m}月${d}日 ${hh}时${mm}分${ss}秒`,
                 shortCnTime: `${hh}时${mm}分${ss}秒`,
                 timeStr: `${hh}:${mm}:${ss}`,
                 hour: parseInt(hh, 10) || 0,
-                sortKey: `${y}${m}${d}${hh}${mm}${ss}`
+                sortKey: `${y}${m}${d}${hh}${mm}${ss}000`
             };
         }
 
@@ -516,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     shortCnTime: `${hh}时${mm}分${ss}秒`,
                     timeStr: `${hh}:${mm}:${ss}`,
                     hour: dt.getHours(),
-                    sortKey: `${y}${m}${d}${hh}${mm}${ss}`
+                    sortKey: `${y}${m}${d}${hh}${mm}${ss}000`
                 };
             }
         } catch (e) { }
@@ -527,6 +593,29 @@ document.addEventListener('DOMContentLoaded', () => {
             timeStr: str,
             hour: 12,
             sortKey: str
+        };
+    }
+
+    /**
+     * 直接从文件名解析页面代码与发生时间
+     * 文件名格式如: gacha_page_2026_10_10_163323_288.json
+     */
+    function extractPageAndReportTimeFromFileName(fileName, lastModified) {
+        if (!fileName) return { rawGameCode: 'page_track', timeInfo: parseReportTime(lastModified) };
+        const clean = fileName.replace(/\.json$/i, '');
+        // 匹配: {pageName}_{YYYY}_{MM}_{DD}_{HH}{mm}{ss}_{SSS}
+        const m = clean.match(/^(.*?)_(\d{4}_\d{2}_\d{2}(?:_\d{6}|\d{2}_\d{2}_\d{2})?(?:_\d+)?)$/);
+        if (m) {
+            return {
+                rawGameCode: m[1],
+                timeInfo: parseReportTime(m[2])
+            };
+        }
+        // Fallback: 剔除日期后缀
+        const base = clean.replace(/_\d{4}_\d{2}_\d{2}.*$/, '');
+        return {
+            rawGameCode: base || 'page_track',
+            timeInfo: parseReportTime(clean || lastModified)
         };
     }
 
@@ -543,26 +632,31 @@ document.addEventListener('DOMContentLoaded', () => {
             if (trackIdx === -1 || parts.length < trackIdx + 3) return;
 
             // Pattern: usertemp/xuelianxitong/{date}/page_track/{username}/{fileName}.json
-            // 例如: usertemp/xuelianxitong/2026_10_08/page_track/13107342492/card_album_page_2026_10_08_160346.json
+            // 例如: usertemp/xuelianxitong/2026_10_10/page_track/13755188999/gacha_page_2026_10_10_163323_288.json
             const username = parts[trackIdx + 1] || 'unknown';
+            // 排除 anonymous 匿名行为数据 (例如: .../page_track/anonymous/...)
+            if (!username || username.toLowerCase() === 'anonymous') return;
             const fileName = parts[trackIdx + 2] || '';
 
-            // 从文件名中剔除时间后缀与 .json，提取行为页面代码
-            let base = fileName.replace(/\.json$/i, '');
-            base = base.replace(/_\d{4}_\d{2}_\d{2}(_\d{6}|_\d{2}_\d{2}_\d{2})?$/, '');
-            const rawGameCode = base || 'page_track';
-
-            // Extract time: parse filename or lastModified
-            const timeInfo = parseReportTime(fileName || obj.lastModified);
+            // 直接通过文件名识别具体页面及时间
+            const { rawGameCode, timeInfo } = extractPageAndReportTimeFromFileName(fileName, obj.lastModified);
             const gameCode = resolveGameCode(rawGameCode);
             const gameCfg = getGameConfig(gameCode, rawGameCode);
+            const userInfo = userToInfoCache[username] || {};
 
             const item = {
                 key: key,
                 username: username,
-                studentName: userToInfoCache[username]?.studentName || '-',
-                schoolName: userToInfoCache[username]?.schoolName || '-',
-                teacherName: userToInfoCache[username]?.teacherName || '-',
+                studentName: userInfo.studentName || '-',
+                schoolName: userInfo.schoolName || '-',
+                teacherName: userInfo.teacherName || '-',
+                grade: userInfo.grade || '-',
+                userNo: userInfo.userNo || '-',
+                coin: userInfo.coin || null,
+                diamondNum: userInfo.diamondNum || null,
+                serviceName: userInfo.serviceName || '-',
+                deviceName: userInfo.deviceName || '-',
+                platformVersion: userInfo.platformVersion || '-',
                 gameCode: gameCode,
                 gameCfg: gameCfg,
                 fileName: fileName,
@@ -572,6 +666,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 hour: timeInfo.hour,
                 sortKey: timeInfo.sortKey,
                 reportTime: timeInfo.fullCnTime,
+                durationSec: 0,
+                durationText: '-',
+                enterTime: null,
+                leaveTime: null,
+                action: 'page_view',
+                pageTitle: gameCfg.name,
                 size: obj.size,
                 lastModified: obj.lastModified,
                 parsedData: null
@@ -604,20 +704,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     studentName: item.studentName,
                     schoolName: item.schoolName,
                     teacherName: item.teacherName,
+                    grade: item.grade,
+                    userNo: item.userNo,
+                    coin: item.coin,
+                    diamondNum: item.diamondNum,
+                    serviceName: item.serviceName,
                     totalCount: 0,
+                    totalDurationSec: 0,
+                    gameCenterDurationSec: 0,
                     lastTime: item.fullCnTime || item.timeStr,
                     lastSortKey: item.sortKey || item.timeStr,
                     gameCounts: {
-                        fruit_cutting: 0,
-                        fruit_store: 0,
-                        card_gacha: 0,
-                        card_album: 0,
-                        e_bao: 0
+                        game_center_page: 0,
+                        fruit_store_page: 0,
+                        fruit_cutting_page: 0,
+                        card_album_page: 0,
+                        gacha_page: 0,
+                        e_bao_page: 0
                     }
                 };
             }
 
             studentMap[u].totalCount++;
+            studentMap[u].totalDurationSec += (item.durationSec || 0);
+            if (item.gameCode === 'game_center_page') {
+                studentMap[u].gameCenterDurationSec = (studentMap[u].gameCenterDurationSec || 0) + (item.durationSec || 0);
+            }
+
             if (studentMap[u].gameCounts[item.gameCode] !== undefined) {
                 studentMap[u].gameCounts[item.gameCode]++;
             } else {
@@ -638,35 +751,47 @@ document.addEventListener('DOMContentLoaded', () => {
         const activePlayers = studentSummaryList.length;
         const totalGames = rawObjectsList.length;
 
+        let gameCenter = 0;
         let fruitCutting = 0;
         let fruitStore = 0;
         let cardGacha = 0;
         let cardAlbum = 0;
         let eBao = 0;
+        let totalDuration = 0;
 
         rawObjectsList.forEach(it => {
-            if (it.gameCode === 'fruit_cutting') fruitCutting++;
-            else if (it.gameCode === 'fruit_store') fruitStore++;
-            else if (it.gameCode === 'card_gacha') cardGacha++;
-            else if (it.gameCode === 'card_album') cardAlbum++;
-            else if (it.gameCode === 'e_bao') eBao++;
+            totalDuration += (it.durationSec || 0);
+            if (it.gameCode === 'game_center_page') gameCenter++;
+            else if (it.gameCode === 'fruit_cutting_page') fruitCutting++;
+            else if (it.gameCode === 'fruit_store_page') fruitStore++;
+            else if (it.gameCode === 'gacha_page') cardGacha++;
+            else if (it.gameCode === 'card_album_page') cardAlbum++;
+            else if (it.gameCode === 'e_bao_page') eBao++;
         });
 
         const fruitSystem = fruitCutting + fruitStore;
         const cardSystem = cardGacha + cardAlbum;
 
-        activePlayersCountEl.textContent = activePlayers.toLocaleString();
-        totalGamesCountEl.textContent = totalGames.toLocaleString();
+        if (activePlayersCountEl) activePlayersCountEl.textContent = activePlayers.toLocaleString();
+        if (totalGamesCountEl) totalGamesCountEl.textContent = totalGames.toLocaleString();
 
-        fruitSystemCountEl.textContent = fruitSystem.toLocaleString();
-        fruitStoreCountEl.textContent = `${fruitStore}次`;
-        fruitCuttingCountEl.textContent = `${fruitCutting}次`;
+        const totalDurationEl = document.getElementById('totalDurationVal');
+        if (totalDurationEl) {
+            totalDurationEl.textContent = totalDuration > 0 ? formatDuration(totalDuration) : '-';
+        }
 
-        cardSystemCountEl.textContent = cardSystem.toLocaleString();
-        cardAlbumCountEl.textContent = `${cardAlbum}次`;
-        cardGachaCountEl.textContent = `${cardGacha}次`;
+        const gameCenterCountEl = document.getElementById('gameCenterCount');
+        if (gameCenterCountEl) gameCenterCountEl.textContent = `${gameCenter}次`;
 
-        eBaoCountEl.textContent = eBao.toLocaleString();
+        if (fruitSystemCountEl) fruitSystemCountEl.textContent = fruitSystem.toLocaleString();
+        if (fruitStoreCountEl) fruitStoreCountEl.textContent = `${fruitStore}次`;
+        if (fruitCuttingCountEl) fruitCuttingCountEl.textContent = `${fruitCutting}次`;
+
+        if (cardSystemCountEl) cardSystemCountEl.textContent = cardSystem.toLocaleString();
+        if (cardAlbumCountEl) cardAlbumCountEl.textContent = `${cardAlbum}次`;
+        if (cardGachaCountEl) cardGachaCountEl.textContent = `${cardGacha}次`;
+
+        if (eBaoCountEl) eBaoCountEl.textContent = eBao.toLocaleString();
     }
 
     // 8. Render Visual Charts & Time Slot Schedule
@@ -1095,13 +1220,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const matchQuery = !query ||
                     s.username.toLowerCase().includes(query) ||
                     (s.studentName && s.studentName.toLowerCase().includes(query)) ||
-                    (s.schoolName && s.schoolName.toLowerCase().includes(query));
+                    (s.schoolName && s.schoolName.toLowerCase().includes(query)) ||
+                    (s.teacherName && s.teacherName.toLowerCase().includes(query)) ||
+                    (s.userNo && s.userNo.toLowerCase().includes(query));
 
                 let matchGame = true;
                 if (selectedGame === 'group_fruit') {
-                    matchGame = (s.gameCounts.fruit_cutting + s.gameCounts.fruit_store) > 0;
+                    matchGame = ((s.gameCounts.fruit_cutting_page || 0) + (s.gameCounts.fruit_store_page || 0)) > 0;
                 } else if (selectedGame === 'group_card') {
-                    matchGame = (s.gameCounts.card_gacha + s.gameCounts.card_album) > 0;
+                    matchGame = ((s.gameCounts.gacha_page || 0) + (s.gameCounts.card_album_page || 0)) > 0;
                 } else if (selectedGame !== 'all') {
                     matchGame = (s.gameCounts[selectedGame] || 0) > 0;
                 }
@@ -1110,20 +1237,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             renderSummaryTable(filteredSummary);
-            tableInfo.textContent = `共 ${filteredSummary.length} 位学生参与游戏`;
+            tableInfo.textContent = `共 ${filteredSummary.length} 位学生参与游戏与页面访问`;
         } else {
             // Filter event logs
             const filteredLogs = rawObjectsList.filter(it => {
                 const matchQuery = !query ||
                     it.username.toLowerCase().includes(query) ||
                     (it.studentName && it.studentName.toLowerCase().includes(query)) ||
-                    (it.schoolName && it.schoolName.toLowerCase().includes(query));
+                    (it.schoolName && it.schoolName.toLowerCase().includes(query)) ||
+                    (it.teacherName && it.teacherName.toLowerCase().includes(query)) ||
+                    (it.pageTitle && it.pageTitle.toLowerCase().includes(query));
 
                 let matchGame = true;
                 if (selectedGame === 'group_fruit') {
-                    matchGame = it.gameCfg.systemCode === 'fruit';
+                    matchGame = it.gameCfg.systemCode === 'fruit' || it.gameCode === 'fruit_store_page' || it.gameCode === 'fruit_cutting_page';
                 } else if (selectedGame === 'group_card') {
-                    matchGame = it.gameCfg.systemCode === 'card';
+                    matchGame = it.gameCfg.systemCode === 'card' || it.gameCode === 'gacha_page' || it.gameCode === 'card_album_page';
                 } else if (selectedGame !== 'all') {
                     matchGame = it.gameCode === selectedGame;
                 }
@@ -1132,51 +1261,77 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             renderLogsTable(filteredLogs);
-            tableInfo.textContent = `共 ${filteredLogs.length} 条游戏行为流水记录`;
+            tableInfo.textContent = `共 ${filteredLogs.length} 条页面行为流水记录`;
         }
     }
 
-    // Render Summary Table
+    // Render Summary Table (Table 1: 11 Columns)
     function renderSummaryTable(list) {
         if (!summaryTableBody) return;
 
         if (list.length === 0) {
-            summaryTableBody.innerHTML = `<tr><td colspan="9" class="loading-cell">暂无符合条件的学生游戏数据</td></tr>`;
+            summaryTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">暂无符合条件的学生行为数据</td></tr>`;
             return;
         }
 
         summaryTableBody.innerHTML = list.map((s, idx) => {
-            const fruitCount = (s.gameCounts.fruit_cutting || 0) + (s.gameCounts.fruit_store || 0);
-            const cardCount = (s.gameCounts.card_gacha || 0) + (s.gameCounts.card_album || 0);
-            const ebaoCount = s.gameCounts.e_bao || 0;
-
             let pillsHtml = '';
-            if (s.gameCounts.fruit_cutting > 0) pillsHtml += `<span class="pill fruit">切水果: ${s.gameCounts.fruit_cutting}</span>`;
-            if (s.gameCounts.fruit_store > 0) pillsHtml += `<span class="pill fruit">水果商店: ${s.gameCounts.fruit_store}</span>`;
-            if (s.gameCounts.card_gacha > 0) pillsHtml += `<span class="pill card">抽卡: ${s.gameCounts.card_gacha}</span>`;
-            if (s.gameCounts.card_album > 0) pillsHtml += `<span class="pill card">卡册: ${s.gameCounts.card_album}</span>`;
-            if (ebaoCount > 0) pillsHtml += `<span class="pill ebao">E宝: ${ebaoCount}</span>`;
+            if (s.gameCounts.game_center_page > 0) {
+                pillsHtml += `<span class="pill game-center">🕹️ 游戏中心: ${s.gameCounts.game_center_page}</span>`;
+            }
+            if (s.gameCounts.fruit_store_page > 0) {
+                pillsHtml += `<span class="pill fruit">🏪 水果商店: ${s.gameCounts.fruit_store_page}</span>`;
+            }
+            if (s.gameCounts.fruit_cutting_page > 0) {
+                pillsHtml += `<span class="pill fruit">🍉 切水果: ${s.gameCounts.fruit_cutting_page}</span>`;
+            }
+            if (s.gameCounts.card_album_page > 0) {
+                pillsHtml += `<span class="pill card">📖 卡册: ${s.gameCounts.card_album_page}</span>`;
+            }
+            if (s.gameCounts.gacha_page > 0) {
+                pillsHtml += `<span class="pill card">🎴 抽卡: ${s.gameCounts.gacha_page}</span>`;
+            }
+            if (s.gameCounts.e_bao_page > 0) {
+                pillsHtml += `<span class="pill ebao">🤖 E宝: ${s.gameCounts.e_bao_page}</span>`;
+            }
 
-            // 扩展显示其他行为/页面
+            // 其他页面扩展标签
             Object.keys(s.gameCounts || {}).forEach(k => {
-                if (!['fruit_cutting', 'fruit_store', 'card_gacha', 'card_album', 'e_bao'].includes(k) && s.gameCounts[k] > 0) {
+                if (!['game_center_page', 'fruit_store_page', 'fruit_cutting_page', 'card_album_page', 'gacha_page', 'e_bao_page'].includes(k) && s.gameCounts[k] > 0) {
                     const cfg = getGameConfig(k);
                     pillsHtml += `<span class="pill other">${cfg.name}: ${s.gameCounts[k]}</span>`;
                 }
             });
 
             const isSelected = (selectedSummaryUsername && s.username === selectedSummaryUsername);
+            const gradeName = formatGradeName(s.grade);
+            const gradeHtml = gradeName !== '-' ? `<span class="grade-tag">${escapeHtml(gradeName)}</span>` : '';
+            const userNoHtml = s.userNo && s.userNo !== '-' ? `<span class="user-no-tag">No.${escapeHtml(s.userNo)}</span>` : '';
+
+            // 资产与会员
+            let assetHtml = [];
+            if (s.coin !== null && s.coin !== undefined) assetHtml.push(`<span class="asset-chip coin">🪙 ${s.coin}</span>`);
+            if (s.diamondNum !== null && s.diamondNum !== undefined) assetHtml.push(`<span class="asset-chip diamond">💎 ${s.diamondNum}</span>`);
+            if (s.serviceName && s.serviceName !== '-') assetHtml.push(`<span class="asset-chip card-type">💳 ${escapeHtml(s.serviceName)}</span>`);
+            const assetContent = assetHtml.length > 0 ? assetHtml.join(' ') : '<span style="color:#9ca3af;">-</span>';
+
+            const durationText = s.totalDurationSec > 0 ? `<div style="font-size:11px; color:#10b981; margin-top:2px; white-space:nowrap;">⏱️ ${formatDuration(s.totalDurationSec)}</div>` : '';
 
             return `
                 <tr data-username="${s.username}" class="${isSelected ? 'selected-row' : ''}">
                     <td style="color: #9ca3af; font-weight: 500;">${idx + 1}</td>
-                    <td><strong>${s.username}</strong></td>
-                    <td class="student-name-val">${s.studentName || '-'}</td>
-                    <td class="school-name-val">${s.schoolName || '-'}</td>
-                    <td class="teacher-name-val">${s.teacherName || '-'}</td>
-                    <td style="text-align: center;"><span class="count-badge">${s.totalCount} 次</span></td>
+                    <td><strong class="mono-font">${s.username}</strong></td>
+                    <td class="student-name-val">${s.studentName !== '-' ? escapeHtml(s.studentName) : '<span style="color:#9ca3af;">-</span>'}</td>
+                    <td class="school-name-val">${s.schoolName !== '-' ? escapeHtml(s.schoolName) : '<span style="color:#9ca3af;">-</span>'}</td>
+                    <td class="teacher-name-val">${s.teacherName !== '-' ? escapeHtml(s.teacherName) : '<span style="color:#9ca3af;">-</span>'}</td>
+                    <td class="grade-cell">${gradeHtml} ${userNoHtml}</td>
+                    <td class="assets-cell">${assetContent}</td>
+                    <td style="text-align: center;">
+                        <span class="count-badge">${s.totalCount} 次</span>
+                        ${durationText}
+                    </td>
                     <td><div class="game-distribution-pills">${pillsHtml}</div></td>
-                    <td style="color: #6b7280;">${s.lastTime || '-'}</td>
+                    <td style="color: #6b7280; font-family: monospace; font-size: 12px;">${s.lastTime || '-'}</td>
                     <td style="text-align: center;">
                         <button class="action-link view-student-logs-btn" data-username="${s.username}">查看明细</button>
                     </td>
@@ -1196,6 +1351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Bind view student detail and flowchart
         summaryTableBody.querySelectorAll('.view-student-logs-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const tr = btn.closest('tr');
                 if (tr) {
                     summaryTableBody.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
@@ -1208,12 +1364,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Render Logs Table
+    // Render Logs Table (Table 2: 10 Columns)
     function renderLogsTable(list) {
         if (!logsTableBody) return;
 
         if (list.length === 0) {
-            logsTableBody.innerHTML = `<tr><td colspan="9" class="loading-cell">暂无符合条件的游戏流水记录</td></tr>`;
+            logsTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">暂无符合条件的行为流水记录</td></tr>`;
             return;
         }
 
@@ -1225,26 +1381,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         logsTableBody.innerHTML = displayList.map(it => {
-            const subLabel = it.gameCfg.isSub ? ` (${it.gameCfg.name})` : '';
             const isSelected = (selectedLogKey && it.key === selectedLogKey);
             const verHtml = window.createVersionBadgeHtml ? window.createVersionBadgeHtml(it.platformVersion) : (it.platformVersion || '-');
+            const durationBadge = (it.durationSec > 0)
+                ? `<span class="duration-badge ${it.durationSec >= 60 ? 'high' : ''}">⏱️ ${formatDuration(it.durationSec)}</span>`
+                : (it.durationText && it.durationText !== '-' ? `<span class="duration-badge">${it.durationText}</span>` : '<span style="color:#9ca3af;">-</span>');
+
+            const subNote = it.gameCfg.isSub ? `<span style="font-size:11px; color:#6b7280; margin-left:4px;">(子页面)</span>` : '';
 
             return `
                 <tr data-key="${it.key}" class="${isSelected ? 'selected-row' : ''}">
                     <td style="color: #4b5563; font-weight: 500; font-family: monospace; white-space: nowrap;">${it.fullCnTime || it.timeStr}</td>
-                    <td><strong>${it.username}</strong></td>
-                    <td class="student-name-val">${it.studentName || '-'}</td>
-                    <td class="school-name-val">${it.schoolName || '-'}</td>
+                    <td style="text-align: center; white-space: nowrap;">${durationBadge}</td>
+                    <td><strong class="mono-font">${it.username}</strong></td>
+                    <td class="student-name-val">${it.studentName !== '-' ? escapeHtml(it.studentName) : '<span style="color:#9ca3af;">-</span>'}</td>
+                    <td class="school-name-val">${it.schoolName !== '-' ? escapeHtml(it.schoolName) : '<span style="color:#9ca3af;">-</span>'}</td>
                     <td><span class="system-label">${it.gameCfg.systemName}</span></td>
                     <td>
                         <span class="game-tag ${it.gameCfg.tagClass}">
-                            ${it.gameCfg.name} ${it.gameCfg.isSub ? '· 子页面' : ''}
+                            ${it.gameCfg.name}
                         </span>
+                        ${subNote}
                     </td>
                     <td class="device-val">${it.deviceName || '-'}</td>
                     <td class="platform-val" style="text-align: center;">${verHtml}</td>
                     <td style="text-align: center;">
-                        <button class="action-link open-detail-btn" data-key="${it.key}">查看详情</button>
+                        <button class="action-link open-detail-btn" data-key="${it.key}">详情</button>
                     </td>
                 </tr>
             `;
@@ -1262,6 +1424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Bind open detail modal
         logsTableBody.querySelectorAll('.open-detail-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const tr = btn.closest('tr');
                 if (tr) {
                     logsTableBody.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
@@ -1279,7 +1442,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderTimeSlotSummaryBar() {
         if (!timeSlotSummaryBar) return;
 
-        // Calculate count for each time slot
         const slotCounts = {
             all: dauUsersList.length,
             morning_early: 0,
@@ -1332,7 +1494,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         timeSlotSummaryBar.innerHTML = cardsHtml;
 
-        // Bind click on cards
         timeSlotSummaryBar.querySelectorAll('.slot-summary-card').forEach(card => {
             card.addEventListener('click', () => {
                 const slot = card.dataset.slot;
@@ -1374,9 +1535,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
                 <tr data-username="${item.username}" class="${isSelected ? 'selected-row' : ''}">
                     <td style="color: #9ca3af; font-weight: 500;">${idx + 1}</td>
-                    <td><strong>${item.username}</strong></td>
-                    <td class="student-name-val">${item.studentName || '-'}</td>
-                    <td class="school-name-val">${item.schoolName || '-'}</td>
+                    <td><strong class="mono-font">${item.username}</strong></td>
+                    <td class="student-name-val">${item.studentName !== '-' ? escapeHtml(item.studentName) : '<span style="color:#9ca3af;">-</span>'}</td>
+                    <td class="school-name-val">${item.schoolName !== '-' ? escapeHtml(item.schoolName) : '<span style="color:#9ca3af;">-</span>'}</td>
                     <td>
                         <div class="slot-badge-group">
                             <span class="slot-badge ${item.timeSlot ? item.timeSlot.cssClass : 'slot-afternoon'}">
@@ -1402,7 +1563,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }).join('');
 
-        // Bind row click for selection highlighting
         dauTimeSlotTableBody.querySelectorAll('tr[data-username]').forEach(tr => {
             tr.addEventListener('click', () => {
                 dauTimeSlotTableBody.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
@@ -1411,7 +1571,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Bind view detail
         dauTimeSlotTableBody.querySelectorAll('.view-student-detail-btn, .game-participate-pill.played').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -1433,10 +1592,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        const usersToFetch = Object.keys(userFirstObjectMap).filter(u => !userToInfoCache[u]);
+        const usersToFetch = Object.keys(userFirstObjectMap).filter(u => !userToInfoCache[u] || !userToInfoCache[u].grade);
         if (usersToFetch.length === 0) return;
 
-        const concurrency = 10;
+        const concurrency = 12;
         let index = 0;
 
         async function worker() {
@@ -1451,31 +1610,46 @@ document.addEventListener('DOMContentLoaded', () => {
                         sampleItem.parsedData = parsed;
                         const data = Array.isArray(parsed) ? (parsed[0] || {}) : parsed;
 
-                        // Parse reportTime if available inside json
-                        if (data.reportTime) {
-                            const tInfo = parseReportTime(data.reportTime);
-                            sampleItem.fullCnTime = tInfo.fullCnTime;
-                            sampleItem.shortCnTime = tInfo.shortCnTime;
-                            sampleItem.timeStr = tInfo.timeStr;
-                            sampleItem.hour = tInfo.hour;
-                            sampleItem.sortKey = tInfo.sortKey;
-                            sampleItem.reportTime = tInfo.fullCnTime;
-                        }
-
+                        // 提取学生上报内容中的具体行为与学生信息
                         const studentInfo = data.studentInfo || {};
+                        const pageTrack = data.pageTrack || {};
+
+                        // 更新 sampleItem 自身字段
+                        if (pageTrack.durationSec !== undefined) {
+                            sampleItem.durationSec = Number(pageTrack.durationSec) || 0;
+                            sampleItem.durationText = formatDuration(sampleItem.durationSec);
+                        }
+                        if (pageTrack.pageTitle) sampleItem.pageTitle = pageTrack.pageTitle;
+                        if (pageTrack.action) sampleItem.action = pageTrack.action;
+                        if (pageTrack.enterTime) sampleItem.enterTime = pageTrack.enterTime;
+                        if (pageTrack.leaveTime) sampleItem.leaveTime = pageTrack.leaveTime;
 
                         const name = studentInfo.nickName || data.nickName || studentInfo.name || data.userName || studentInfo.userName || '';
                         const school = studentInfo.shopName || data.shopName || studentInfo.schoolName || data.schoolName || '';
                         const teacher = studentInfo.teacherName || data.teacherName || '';
+                        const grade = studentInfo.grade || data.grade || '';
+                        const userNo = studentInfo.userNo || data.userNo || '';
+                        const coin = studentInfo.coin !== undefined ? studentInfo.coin : (data.coin !== undefined ? data.coin : null);
+                        const diamondNum = studentInfo.diamondNum !== undefined ? studentInfo.diamondNum : (data.diamondNum !== undefined ? data.diamondNum : null);
+                        const serviceName = studentInfo.serviceName || data.serviceName || '';
+                        const deviceName = data.deviceName || studentInfo.deviceName || '-';
+                        const platformVersion = data.phonePlatformVersion || data.versionName || studentInfo.phonePlatformVersion || '-';
 
-                        if (name || school || teacher) {
-                            userToInfoCache[u] = {
-                                studentName: name || '-',
-                                schoolName: school || '-',
-                                teacherName: teacher || '-'
-                            };
-                            updateUserCells(u, userToInfoCache[u]);
-                        }
+                        const info = {
+                            studentName: name || '-',
+                            schoolName: school || '-',
+                            teacherName: teacher || '-',
+                            grade: grade || '-',
+                            userNo: userNo || '-',
+                            coin: coin,
+                            diamondNum: diamondNum,
+                            serviceName: serviceName || '-',
+                            deviceName: deviceName,
+                            platformVersion: platformVersion
+                        };
+
+                        userToInfoCache[u] = info;
+                        updateUserCells(u, info);
                     }
                 } catch (e) {
                     // Ignore single read errors
@@ -1491,64 +1665,101 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update charts top students with parsed names
         renderTopStudentsBar();
+        renderStats();
     }
 
     function updateUserCells(username, info) {
         // Update rawObjectsList
         rawObjectsList.forEach(it => {
             if (it.username === username) {
-                it.studentName = info.studentName;
-                it.schoolName = info.schoolName;
-                it.teacherName = info.teacherName;
+                if (info.studentName && info.studentName !== '-') it.studentName = info.studentName;
+                if (info.schoolName && info.schoolName !== '-') it.schoolName = info.schoolName;
+                if (info.teacherName && info.teacherName !== '-') it.teacherName = info.teacherName;
+                if (info.grade && info.grade !== '-') it.grade = info.grade;
+                if (info.userNo && info.userNo !== '-') it.userNo = info.userNo;
+                if (info.coin !== null && info.coin !== undefined) it.coin = info.coin;
+                if (info.diamondNum !== null && info.diamondNum !== undefined) it.diamondNum = info.diamondNum;
+                if (info.serviceName && info.serviceName !== '-') it.serviceName = info.serviceName;
+                if (info.deviceName && info.deviceName !== '-') it.deviceName = info.deviceName;
+                if (info.platformVersion && info.platformVersion !== '-') it.platformVersion = info.platformVersion;
             }
         });
 
         // Update studentSummaryList
         studentSummaryList.forEach(s => {
             if (s.username === username) {
-                s.studentName = info.studentName;
-                s.schoolName = info.schoolName;
-                s.teacherName = info.teacherName;
+                if (info.studentName && info.studentName !== '-') s.studentName = info.studentName;
+                if (info.schoolName && info.schoolName !== '-') s.schoolName = info.schoolName;
+                if (info.teacherName && info.teacherName !== '-') s.teacherName = info.teacherName;
+                if (info.grade && info.grade !== '-') s.grade = info.grade;
+                if (info.userNo && info.userNo !== '-') s.userNo = info.userNo;
+                if (info.coin !== null && info.coin !== undefined) s.coin = info.coin;
+                if (info.diamondNum !== null && info.diamondNum !== undefined) s.diamondNum = info.diamondNum;
+                if (info.serviceName && info.serviceName !== '-') s.serviceName = info.serviceName;
             }
         });
 
         // Update dauUsersList
         dauUsersList.forEach(u => {
             if (u.username === username) {
-                u.studentName = info.studentName;
-                u.schoolName = info.schoolName;
+                if (info.studentName && info.studentName !== '-') u.studentName = info.studentName;
+                if (info.schoolName && info.schoolName !== '-') u.schoolName = info.schoolName;
+                if (info.deviceName && info.deviceName !== '-') u.deviceName = info.deviceName;
+                if (info.platformVersion && info.platformVersion !== '-') u.platformVersion = info.platformVersion;
             }
         });
 
-        // Live update DOM cells
+        // Live update DOM cells in Summary Table
         const summaryRows = summaryTableBody.querySelectorAll(`tr[data-username="${username}"]`);
         summaryRows.forEach(row => {
             const nameCell = row.querySelector('.student-name-val');
             const schoolCell = row.querySelector('.school-name-val');
             const teacherCell = row.querySelector('.teacher-name-val');
-            if (nameCell && info.studentName) nameCell.textContent = info.studentName;
-            if (schoolCell && info.schoolName) schoolCell.textContent = info.schoolName;
-            if (teacherCell && info.teacherName) teacherCell.textContent = info.teacherName;
+            const gradeCell = row.querySelector('.grade-cell');
+            const assetsCell = row.querySelector('.assets-cell');
+
+            if (nameCell && info.studentName && info.studentName !== '-') nameCell.textContent = info.studentName;
+            if (schoolCell && info.schoolName && info.schoolName !== '-') schoolCell.textContent = info.schoolName;
+            if (teacherCell && info.teacherName && info.teacherName !== '-') teacherCell.textContent = info.teacherName;
+
+            if (gradeCell) {
+                const gradeName = formatGradeName(info.grade);
+                const gTag = gradeName !== '-' ? `<span class="grade-tag">${escapeHtml(gradeName)}</span>` : '';
+                const uTag = info.userNo && info.userNo !== '-' ? `<span class="user-no-tag">No.${escapeHtml(info.userNo)}</span>` : '';
+                gradeCell.innerHTML = `${gTag} ${uTag}`;
+            }
+
+            if (assetsCell) {
+                let assetHtml = [];
+                if (info.coin !== null && info.coin !== undefined) assetHtml.push(`<span class="asset-chip coin">🪙 ${info.coin}</span>`);
+                if (info.diamondNum !== null && info.diamondNum !== undefined) assetHtml.push(`<span class="asset-chip diamond">💎 ${info.diamondNum}</span>`);
+                if (info.serviceName && info.serviceName !== '-') assetHtml.push(`<span class="asset-chip card-type">💳 ${escapeHtml(info.serviceName)}</span>`);
+                assetsCell.innerHTML = assetHtml.length > 0 ? assetHtml.join(' ') : '<span style="color:#9ca3af;">-</span>';
+            }
         });
 
+        // Live update DOM cells in Logs Table
         const logRows = logsTableBody.querySelectorAll('tr');
         logRows.forEach(row => {
             const k = row.dataset.key;
             if (k && k.includes(`/${username}/`)) {
                 const nameCell = row.querySelector('.student-name-val');
                 const schoolCell = row.querySelector('.school-name-val');
-                if (nameCell && info.studentName) nameCell.textContent = info.studentName;
-                if (schoolCell && info.schoolName) schoolCell.textContent = info.schoolName;
+                const deviceCell = row.querySelector('.device-val');
+                if (nameCell && info.studentName && info.studentName !== '-') nameCell.textContent = info.studentName;
+                if (schoolCell && info.schoolName && info.schoolName !== '-') schoolCell.textContent = info.schoolName;
+                if (deviceCell && info.deviceName && info.deviceName !== '-') deviceCell.textContent = info.deviceName;
             }
         });
 
+        // Live update DOM cells in DAU Table
         if (dauTimeSlotTableBody) {
             const dauRows = dauTimeSlotTableBody.querySelectorAll(`tr[data-username="${username}"]`);
             dauRows.forEach(row => {
                 const nameCell = row.querySelector('.student-name-val');
                 const schoolCell = row.querySelector('.school-name-val');
-                if (nameCell && info.studentName) nameCell.textContent = info.studentName;
-                if (schoolCell && info.schoolName) schoolCell.textContent = info.schoolName;
+                if (nameCell && info.studentName && info.studentName !== '-') nameCell.textContent = info.studentName;
+                if (schoolCell && info.schoolName && info.schoolName !== '-') schoolCell.textContent = info.schoolName;
             });
         }
     }
@@ -1571,7 +1782,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 marker = res.isTruncated ? res.nextMarker : null;
             } while (marker);
 
-            objs = objs.filter(o => o.name && !o.name.endsWith('/'));
+            objs = objs.filter(o => {
+                if (!o.name || o.name.endsWith('/')) return false;
+                const lower = o.name.toLowerCase();
+                // 排除 anonymous
+                return !lower.includes('/anonymous/') && !lower.endsWith('/anonymous.json');
+            });
 
             // Fallback scan if subfolder structure is used
             if (objs.length === 0) {
@@ -1580,7 +1796,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     'max-keys': 1000
                 });
                 const fullObjs = fullRes.objects || [];
-                objs = fullObjs.filter(obj => obj.name && obj.name.includes('/user_activity/') && !obj.name.endsWith('/'));
+                objs = fullObjs.filter(obj => {
+                    if (!obj.name || !obj.name.includes('/user_activity/') || obj.name.endsWith('/')) return false;
+                    const lower = obj.name.toLowerCase();
+                    return !lower.includes('/anonymous/') && !lower.endsWith('/anonymous.json');
+                });
             }
 
             if (objs.length === 0) {
@@ -1616,7 +1836,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fullStr = formatFullDateTime(lastDate);
                 const relInfo = getRelativeTimeDesc(lastDate);
 
-                // Cross-reference with game behavior records
+                // 关联当前学生的行为统计
                 const gameSummary = studentSummaryList.find(s => s.username === fallbackUsername);
 
                 return {
@@ -1635,7 +1855,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     relativeTime: relInfo,
                     gameSummary: gameSummary || null
                 };
-            });
+            }).filter(u => u && u.username && u.username.toLowerCase() !== 'anonymous');
 
             // Initial sort: latest first
             dauUsersList.sort((a, b) => {
@@ -1724,10 +1944,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function showUserGameDetail(username) {
+    async function showUserGameDetail(username) {
         if (!userDetailContainer || !dashboardContainer) return;
 
-        // Switch container views
         dashboardContainer.style.display = 'none';
         userDetailContainer.style.display = 'flex';
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1745,26 +1964,83 @@ document.addEventListener('DOMContentLoaded', () => {
             studentName: userToInfoCache[username]?.studentName || '-',
             schoolName: userToInfoCache[username]?.schoolName || '-',
             teacherName: userToInfoCache[username]?.teacherName || '-',
+            grade: userToInfoCache[username]?.grade || '-',
+            userNo: userToInfoCache[username]?.userNo || '-',
+            coin: userToInfoCache[username]?.coin || null,
+            diamondNum: userToInfoCache[username]?.diamondNum || null,
+            serviceName: userToInfoCache[username]?.serviceName || '-',
             totalCount: userItems.length,
-            gameCounts: { fruit_cutting: 0, fruit_store: 0, card_gacha: 0, card_album: 0, e_bao: 0 }
+            totalDurationSec: 0,
+            gameCounts: {
+                game_center_page: 0,
+                fruit_store_page: 0,
+                fruit_cutting_page: 0,
+                card_album_page: 0,
+                gacha_page: 0,
+                e_bao_page: 0
+            }
         };
 
         const info = userToInfoCache[username] || {};
         const displayName = info.studentName || userSummary.studentName || username;
-        if (detailStudentName) detailStudentName.textContent = displayName;
+        if (detailStudentName) detailStudentName.textContent = displayName !== '-' ? displayName : username;
         if (detailUsername) detailUsername.textContent = `@${username}`;
-        if (detailAvatar) detailAvatar.textContent = displayName !== '-' ? displayName.slice(0, 1) : '学';
+        if (detailAvatar) detailAvatar.textContent = (displayName !== '-' && displayName.length > 0) ? displayName.slice(0, 1) : '学';
+
+        const detailUserNo = document.getElementById('detailUserNo');
+        if (detailUserNo) {
+            detailUserNo.textContent = info.userNo && info.userNo !== '-' ? `No.${info.userNo}` : 'No.-';
+        }
+
+        const detailGrade = document.getElementById('detailGrade');
+        if (detailGrade) {
+            detailGrade.textContent = formatGradeName(info.grade || userSummary.grade);
+        }
+
         if (detailSchoolName) detailSchoolName.textContent = info.schoolName || userSummary.schoolName || '-';
         if (detailTeacherName) detailTeacherName.textContent = info.teacherName || userSummary.teacherName || '-';
 
+        const detailServiceName = document.getElementById('detailServiceName');
+        if (detailServiceName) {
+            detailServiceName.textContent = info.serviceName || userSummary.serviceName || '普通学员';
+        }
+
+        const detailCoin = document.getElementById('detailCoin');
+        if (detailCoin) {
+            detailCoin.textContent = (info.coin !== null && info.coin !== undefined) ? info.coin : (userSummary.coin !== null && userSummary.coin !== undefined ? userSummary.coin : '-');
+        }
+
+        const detailDiamond = document.getElementById('detailDiamond');
+        if (detailDiamond) {
+            detailDiamond.textContent = (info.diamondNum !== null && info.diamondNum !== undefined) ? info.diamondNum : (userSummary.diamondNum !== null && userSummary.diamondNum !== undefined ? userSummary.diamondNum : '-');
+        }
+
         // Count totals
-        const fruitTotal = (userSummary.gameCounts.fruit_cutting || 0) + (userSummary.gameCounts.fruit_store || 0);
-        const cardTotal = (userSummary.gameCounts.card_gacha || 0) + (userSummary.gameCounts.card_album || 0);
-        const ebaoTotal = userSummary.gameCounts.e_bao || 0;
+        const gameCenterTotal = userSummary.gameCounts.game_center_page || 0;
+        const fruitTotal = (userSummary.gameCounts.fruit_store_page || 0) + (userSummary.gameCounts.fruit_cutting_page || 0);
+        const cardTotal = (userSummary.gameCounts.card_album_page || 0) + (userSummary.gameCounts.gacha_page || 0);
+        const ebaoTotal = userSummary.gameCounts.e_bao_page || 0;
 
         if (detailTotalCount) detailTotalCount.textContent = userSummary.totalCount || userItems.length;
-        if (detailFruitCount) detailFruitCount.textContent = `${fruitTotal}次 (切水果:${userSummary.gameCounts.fruit_cutting || 0} / 商店:${userSummary.gameCounts.fruit_store || 0})`;
-        if (detailCardCount) detailCardCount.textContent = `${cardTotal}次 (抽卡:${userSummary.gameCounts.card_gacha || 0} / 卡册:${userSummary.gameCounts.card_album || 0})`;
+
+        // 核心规则：学生行为详情页面中时长通过计算所有游戏中心(game_center_page)的数据中durationSec这个值来统计
+        let gameCenterDuration = 0;
+        userItems.forEach(it => {
+            if (it.gameCode === 'game_center_page') {
+                gameCenterDuration += (it.durationSec || 0);
+            }
+        });
+
+        const detailTotalDuration = document.getElementById('detailTotalDuration');
+        if (detailTotalDuration) {
+            detailTotalDuration.textContent = gameCenterDuration > 0 ? formatDuration(gameCenterDuration) : '0秒';
+        }
+
+        const detailGameCenterCount = document.getElementById('detailGameCenterCount');
+        if (detailGameCenterCount) detailGameCenterCount.textContent = `${gameCenterTotal}次`;
+
+        if (detailFruitCount) detailFruitCount.textContent = `${fruitTotal}次 (商店:${userSummary.gameCounts.fruit_store_page || 0} / 切水果:${userSummary.gameCounts.fruit_cutting_page || 0})`;
+        if (detailCardCount) detailCardCount.textContent = `${cardTotal}次 (卡册:${userSummary.gameCounts.card_album_page || 0} / 抽卡:${userSummary.gameCounts.gacha_page || 0})`;
         if (detailEbaoCount) detailEbaoCount.textContent = `${ebaoTotal}次`;
 
         // 1. Render Flowchart (sorted ascending: earliest to latest)
@@ -1774,62 +2050,151 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Render Single User Game Logs Table (sorted descending: latest first)
         const descItems = [...userItems].sort((a, b) => (b.sortKey || b.timeStr || '').localeCompare(a.sortKey || a.timeStr || ''));
         renderUserLogsTable(descItems);
+
+        // 3. 异步补充拉取该学生所有的未解析详情文件，以补齐停留时长与具体上报信息
+        resolveUserSpecificLogsAsync(username, userItems);
     }
 
+    // 为单学生详情异步拉取剩余文件内容
+    async function resolveUserSpecificLogsAsync(username, userItems) {
+        if (!ossClient) return;
+        const pendingItems = userItems.filter(it => !it.parsedData);
+
+        if (pendingItems.length > 0) {
+            // 优先并发读取游戏中心(game_center_page)的文件
+            pendingItems.sort((a, b) => (b.gameCode === 'game_center_page' ? 1 : 0) - (a.gameCode === 'game_center_page' ? 1 : 0));
+
+            const concurrency = 8;
+            let index = 0;
+
+            async function worker() {
+                while (index < pendingItems.length) {
+                    const item = pendingItems[index++];
+                    try {
+                        const res = await ossClient.get(item.key);
+                        const contentStr = res.content ? res.content.toString() : '';
+                        if (contentStr) {
+                            const parsed = JSON.parse(contentStr);
+                            item.parsedData = parsed;
+                            const data = Array.isArray(parsed) ? (parsed[0] || {}) : parsed;
+                            const pageTrack = data.pageTrack || {};
+                            if (pageTrack.durationSec !== undefined) {
+                                item.durationSec = Number(pageTrack.durationSec) || 0;
+                                item.durationText = formatDuration(item.durationSec);
+                            }
+                            if (pageTrack.pageTitle) item.pageTitle = pageTrack.pageTitle;
+                            if (pageTrack.action) item.action = pageTrack.action;
+                            if (pageTrack.enterTime) item.enterTime = pageTrack.enterTime;
+                            if (pageTrack.leaveTime) item.leaveTime = pageTrack.leaveTime;
+
+                            const studentInfo = data.studentInfo || {};
+                            if (studentInfo.coin !== undefined) item.coin = studentInfo.coin;
+                            if (studentInfo.diamondNum !== undefined) item.diamondNum = studentInfo.diamondNum;
+                            if (studentInfo.serviceName) item.serviceName = studentInfo.serviceName;
+                            if (studentInfo.grade) item.grade = studentInfo.grade;
+                            if (studentInfo.userNo) item.userNo = studentInfo.userNo;
+                            if (data.deviceName) item.deviceName = data.deviceName;
+                            if (data.phonePlatformVersion) item.platformVersion = data.phonePlatformVersion;
+                        }
+                    } catch (e) {
+                        // Ignore single item error
+                    }
+                }
+            }
+
+            const workers = [];
+            for (let i = 0; i < Math.min(concurrency, pendingItems.length); i++) {
+                workers.push(worker());
+            }
+            await Promise.all(workers);
+        }
+
+        // 核心规则：学生行为详情页面中时长通过计算所有游戏中心(game_center_page)的数据中durationSec这个值来统计
+        let gameCenterDuration = 0;
+        let totalDuration = 0;
+        userItems.forEach(it => {
+            totalDuration += (it.durationSec || 0);
+            if (it.gameCode === 'game_center_page') {
+                gameCenterDuration += (it.durationSec || 0);
+            }
+        });
+
+        const userSummary = studentSummaryList.find(s => s.username === username);
+        if (userSummary) {
+            userSummary.totalDurationSec = totalDuration;
+            userSummary.gameCenterDurationSec = gameCenterDuration;
+        }
+
+        const detailTotalDuration = document.getElementById('detailTotalDuration');
+        if (detailTotalDuration) {
+            detailTotalDuration.textContent = gameCenterDuration > 0 ? formatDuration(gameCenterDuration) : '0秒';
+        }
+
+        const sortedItems = [...userItems].sort((a, b) => (a.sortKey || a.timeStr || '').localeCompare(b.sortKey || b.timeStr || ''));
+        renderFlowchart(sortedItems);
+        const descItems = [...userItems].sort((a, b) => (b.sortKey || b.timeStr || '').localeCompare(a.sortKey || a.timeStr || ''));
+        renderUserLogsTable(descItems);
+    }
+
+    // 渲染时序流程图 (4条线路：游戏中心、水果商店、卡册系统、E宝/其他)
     function renderFlowchart(items) {
         if (!flowchartTracks) return;
 
         if (items.length === 0) {
-            flowchartTracks.innerHTML = `<div style="padding: 30px; text-align: center; color: #9ca3af; font-size: 13px; background: #fafafa; border-radius: 8px;">该学生在所选日期暂无游戏行为记录</div>`;
+            flowchartTracks.innerHTML = `<div style="padding: 30px; text-align: center; color: #9ca3af; font-size: 13px; background: #fafafa; border-radius: 8px;">该学生在所选日期暂无行为记录</div>`;
             return;
         }
 
-        // 分组为三大独立游戏及通用行为线路：
-        // 1. 水果商店系统 (含水果商店主页及切水果子玩法)
-        const fruitItems = items.filter(it => it.gameCfg.systemCode === 'fruit');
-        // 2. 卡册系统 (含卡册主页及抽卡子玩法)
-        const cardItems = items.filter(it => it.gameCfg.systemCode === 'card');
-        // 3. E宝游戏 (独立游戏)
-        const ebaoItems = items.filter(it => it.gameCfg.systemCode === 'ebao');
-        // 4. 其他页面行为轨迹
-        const otherItems = items.filter(it => it.gameCfg.systemCode !== 'fruit' && it.gameCfg.systemCode !== 'card' && it.gameCfg.systemCode !== 'ebao');
+        // 分组为四大独立业务线路：
+        // 0. 游戏中心主入口
+        const gameCenterItems = items.filter(it => it.gameCode === 'game_center_page' || it.gameCfg.systemCode === 'game_center');
+        // 1. 水果商店系统 (含水果商店主页及切水果核心玩法)
+        const fruitItems = items.filter(it => it.gameCfg.systemCode === 'fruit' || it.gameCode === 'fruit_store_page' || it.gameCode === 'fruit_cutting_page');
+        // 2. 卡册系统 (含卡册主页及抽卡玩法)
+        const cardItems = items.filter(it => it.gameCfg.systemCode === 'card' || it.gameCode === 'card_album_page' || it.gameCode === 'gacha_page');
+        // 3. E宝与其他游戏
+        const otherItems = items.filter(it =>
+            it.gameCode !== 'game_center_page' &&
+            it.gameCfg.systemCode !== 'fruit' && it.gameCode !== 'fruit_store_page' && it.gameCode !== 'fruit_cutting_page' &&
+            it.gameCfg.systemCode !== 'card' && it.gameCode !== 'card_album_page' && it.gameCode !== 'gacha_page'
+        );
 
         const trackConfigs = [
             {
+                code: 'game_center',
+                title: '🕹️ 线路一：游戏中心入口',
+                subtag: '包含：游戏中心主页导航与模块选择',
+                cssClass: 'game-center-track',
+                items: gameCenterItems
+            },
+            {
                 code: 'fruit',
-                title: '🍎 线路一：水果商店系统',
-                subtag: '包含：水果商店主页、切水果 (子玩法)',
+                title: '🍎 线路二：水果商店系统',
+                subtag: '包含：水果商店主页、切水果 (核心玩法)',
                 cssClass: 'fruit-track',
                 items: fruitItems
             },
             {
                 code: 'card',
-                title: '🎴 线路二：卡册系统',
-                subtag: '包含：卡册主页、抽卡 (子玩法)',
+                title: '🎴 线路三：卡册系统',
+                subtag: '包含：卡册中心主页、抽卡页面 (抽卡玩法)',
                 cssClass: 'card-track',
                 items: cardItems
             },
             {
-                code: 'ebao',
-                title: '🤖 线路三：E宝游戏',
-                subtag: '独立关卡互动与答题',
-                cssClass: 'ebao-track',
-                items: ebaoItems
-            },
-            {
                 code: 'other',
-                title: '🌐 线路四：其他页面轨迹',
-                subtag: '包含：页面浏览与通用交互记录',
-                cssClass: 'other-track',
+                title: '🤖 线路四：E宝与其它游戏',
+                subtag: '包含：E宝独立答题与拓展页面',
+                cssClass: 'ebao-track',
                 items: otherItems
             }
         ];
 
-        // 核心规则：三个游戏按照三条线路，没有就不显示，有就显示
+        // 核心规则：有记录才显示，无记录不显示
         const visibleTracks = trackConfigs.filter(t => t.items.length > 0);
 
         if (visibleTracks.length === 0) {
-            flowchartTracks.innerHTML = `<div style="padding: 30px; text-align: center; color: #9ca3af; font-size: 13px; background: #fafafa; border-radius: 8px;">该学生在所选日期暂无任何游戏行为记录</div>`;
+            flowchartTracks.innerHTML = `<div style="padding: 30px; text-align: center; color: #9ca3af; font-size: 13px; background: #fafafa; border-radius: 8px;">该学生在所选日期暂无任何行为记录</div>`;
             return;
         }
 
@@ -1856,15 +2221,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
 
-                let actionIcon = '';
-                if (it.gameCode === 'fruit_cutting') actionIcon = '🍉';
-                else if (it.gameCode === 'fruit_store') actionIcon = '🍎';
-                else if (it.gameCode === 'card_gacha') actionIcon = '✨';
-                else if (it.gameCode === 'card_album') actionIcon = '📖';
-                else if (it.gameCode === 'e_bao') actionIcon = '🤖';
-                else actionIcon = '🎮';
+                let actionIcon = '🎮';
+                if (it.gameCode === 'game_center_page') actionIcon = '🕹️';
+                else if (it.gameCode === 'fruit_cutting_page') actionIcon = '🍉';
+                else if (it.gameCode === 'fruit_store_page') actionIcon = '🏪';
+                else if (it.gameCode === 'gacha_page') actionIcon = '🎴';
+                else if (it.gameCode === 'card_album_page') actionIcon = '📖';
+                else if (it.gameCode === 'e_bao_page') actionIcon = '🤖';
 
                 const subBadge = it.gameCfg.isSub ? `<span style="font-size: 11px; background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: normal;">子页面</span>` : '';
+                const durationPill = (it.durationSec > 0)
+                    ? `<div style="font-size:11px; font-weight:600; color:#10b981; margin-top:2px;">⏱️ 停留: ${formatDuration(it.durationSec)}</div>`
+                    : '';
 
                 const isSelected = (selectedUserLogKey && it.key === selectedUserLogKey);
                 nodesHtml += `
@@ -1878,6 +2246,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span>${actionIcon} ${it.gameCfg.name}</span>
                             ${subBadge}
                         </div>
+                        ${durationPill}
                         <div class="step-card-footer">
                             <span>归属: ${it.gameCfg.systemName}</span>
                             <span class="step-view-hint">详情 &gt;</span>
@@ -1953,6 +2322,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return `+${hours}小时${remMins > 0 ? remMins + '分' : ''}`;
     }
 
+    // Render User Logs Table (Table in Profile View: 9 Columns)
     function renderUserLogsTable(items) {
         if (!userLogsTableBody) return;
 
@@ -1961,7 +2331,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (items.length === 0) {
-            userLogsTableBody.innerHTML = `<tr><td colspan="8" class="loading-cell">暂无记录</td></tr>`;
+            userLogsTableBody.innerHTML = `<tr><td colspan="9" class="loading-cell">暂无记录</td></tr>`;
             return;
         }
 
@@ -1973,10 +2343,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const subNote = it.gameCfg.isSub ? `属于【${it.gameCfg.parentName}】子页面` : '系统主入口';
             const isSelected = (selectedUserLogKey && it.key === selectedUserLogKey);
             const verHtml = window.createVersionBadgeHtml ? window.createVersionBadgeHtml(it.platformVersion) : (it.platformVersion || '-');
+            const durationBadge = (it.durationSec > 0)
+                ? `<span class="duration-badge ${it.durationSec >= 60 ? 'high' : ''}">⏱️ ${formatDuration(it.durationSec)}</span>`
+                : (it.durationText && it.durationText !== '-' ? `<span class="duration-badge">${it.durationText}</span>` : '<span style="color:#9ca3af;">-</span>');
+
             return `
                 <tr data-key="${it.key}" class="${isSelected ? 'selected-row' : ''}">
                     <td style="color: #9ca3af; font-weight: 500;">${idx + 1}</td>
                     <td style="color: #1f2937; font-weight: 600; font-family: monospace; white-space: nowrap;">${it.fullCnTime || it.timeStr}</td>
+                    <td style="text-align: center; white-space: nowrap;">${durationBadge}</td>
                     <td><span class="system-label">${it.gameCfg.systemName}</span></td>
                     <td>
                         <span class="game-tag ${it.gameCfg.tagClass}">
@@ -1987,7 +2362,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${it.deviceName || '-'}</td>
                     <td style="text-align: center;">${verHtml}</td>
                     <td style="text-align: center;">
-                        <button class="action-link user-log-detail-btn" data-key="${it.key}">查看详情</button>
+                        <button class="action-link user-log-detail-btn" data-key="${it.key}">详情</button>
                     </td>
                 </tr>
             `;
@@ -2016,6 +2391,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         userLogsTableBody.querySelectorAll('.user-log-detail-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const tr = btn.closest('tr');
                 if (tr) {
                     userLogsTableBody.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
@@ -2045,16 +2421,25 @@ document.addEventListener('DOMContentLoaded', () => {
         modalGameBadge.textContent = `${item.gameCfg.name}${item.gameCfg.isSub ? ' (子页面)' : ''}`;
         modalGameBadge.className = `modal-game-badge ${item.gameCfg.tagClass}`;
 
+        const enterStr = item.enterTime ? item.enterTime.replace('T', ' ') : '-';
+        const leaveStr = item.leaveTime ? item.leaveTime.replace('T', ' ') : '-';
+
         modalMetaGrid.innerHTML = `
-            <div class="meta-item"><span class="meta-label">学生账号</span><span class="meta-val">${item.username}</span></div>
+            <div class="meta-item"><span class="meta-label">学生账号</span><span class="meta-val mono-font">${item.username}</span></div>
             <div class="meta-item"><span class="meta-label">学生姓名</span><span class="meta-val">${item.studentName || '-'}</span></div>
             <div class="meta-item"><span class="meta-label">所属学校</span><span class="meta-val">${item.schoolName || '-'}</span></div>
+            <div class="meta-item"><span class="meta-label">所属年级</span><span class="meta-val">${formatGradeName(item.grade)}</span></div>
+            <div class="meta-item"><span class="meta-label">学员编号</span><span class="meta-val">${item.userNo !== '-' ? item.userNo : '-'}</span></div>
+            <div class="meta-item"><span class="meta-label">指导老师</span><span class="meta-val">${item.teacherName || '-'}</span></div>
             <div class="meta-item"><span class="meta-label">归属系统</span><span class="meta-val">${item.gameCfg.systemName}</span></div>
-            <div class="meta-item"><span class="meta-label">发生时间</span><span class="meta-val">${item.fullCnTime || item.timeStr}</span></div>
-            <div class="meta-item"><span class="meta-label">文件路径</span><span class="meta-val" style="word-break: break-all; font-size: 11px;">${item.key}</span></div>
+            <div class="meta-item"><span class="meta-label">页面名称</span><span class="meta-val">${item.pageTitle || item.gameCfg.name}</span></div>
+            <div class="meta-item"><span class="meta-label">停留时长</span><span class="meta-val" style="color: #10b981; font-weight: bold;">${item.durationSec > 0 ? formatDuration(item.durationSec) : (item.durationText || '-')}</span></div>
+            <div class="meta-item"><span class="meta-label">进入时间</span><span class="meta-val" style="font-size: 11px;">${enterStr}</span></div>
+            <div class="meta-item"><span class="meta-label">离开时间</span><span class="meta-val" style="font-size: 11px;">${leaveStr}</span></div>
+            <div class="meta-item"><span class="meta-label">设备/版本</span><span class="meta-val">${item.deviceName || '-'} (${item.platformVersion || '-'})</span></div>
+            <div class="meta-item" style="grid-column: 1 / -1;"><span class="meta-label">文件路径</span><span class="meta-val mono-font" style="word-break: break-all; font-size: 11px;">${item.key}</span></div>
         `;
 
-        // JSON Syntax Highlight Helper
         function syntaxHighlightJson(jsonStr) {
             const escaped = jsonStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             return escaped.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
@@ -2100,6 +2485,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await ossClient.get(item.key);
                 const str = res.content ? res.content.toString() : '';
                 item.parsedData = JSON.parse(str);
+                const data = Array.isArray(item.parsedData) ? (item.parsedData[0] || {}) : item.parsedData;
+                const pageTrack = data.pageTrack || {};
+                if (pageTrack.durationSec !== undefined) {
+                    item.durationSec = Number(pageTrack.durationSec) || 0;
+                    item.durationText = formatDuration(item.durationSec);
+                }
+                if (pageTrack.enterTime) item.enterTime = pageTrack.enterTime;
+                if (pageTrack.leaveTime) item.leaveTime = pageTrack.leaveTime;
                 renderJsonContent(item.parsedData);
             } catch (e) {
                 modalJsonPre.textContent = `读取失败: ${e.message}`;
@@ -2160,99 +2553,116 @@ document.addEventListener('DOMContentLoaded', () => {
                 '序号': idx + 1,
                 '学生账号': s.username,
                 '学生姓名': s.studentName,
-                '学校': s.schoolName,
-                '老师': s.teacherName,
-                '总游玩次数': s.totalCount,
-                '切水果次数': s.gameCounts.fruit_cutting,
-                '水果商店次数': s.gameCounts.fruit_store,
-                '抽卡次数': s.gameCounts.card_gacha,
-                '卡册次数': s.gameCounts.card_album,
-                'E宝游戏次数': s.gameCounts.e_bao,
+                '年级': formatGradeName(s.grade),
+                '学员编号': s.userNo,
+                '学校/校区': s.schoolName,
+                '教学老师': s.teacherName,
+                '会员卡类型': s.serviceName,
+                '金币': s.coin !== null && s.coin !== undefined ? s.coin : '-',
+                '钻石': s.diamondNum !== null && s.diamondNum !== undefined ? s.diamondNum : '-',
+                '总行为次数': s.totalCount,
+                '累计停留时长': s.totalDurationSec > 0 ? formatDuration(s.totalDurationSec) : '0秒',
+                '游戏中心次数': s.gameCounts.game_center_page || 0,
+                '水果商店次数': s.gameCounts.fruit_store_page || 0,
+                '切水果次数': s.gameCounts.fruit_cutting_page || 0,
+                '卡册中心次数': s.gameCounts.card_album_page || 0,
+                '抽卡次数': s.gameCounts.gacha_page || 0,
+                'E宝游戏次数': s.gameCounts.e_bao_page || 0,
                 '最后活动时间': s.lastTime
             }));
 
             const ws = XLSX.utils.json_to_sheet(dataToExport);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, '学生游戏行为汇总');
-            XLSX.writeFile(wb, `学生游戏汇总_${dateStr}.xlsx`);
+            XLSX.utils.book_append_sheet(wb, ws, '学生行为汇总');
+            XLSX.writeFile(wb, `学生行为汇总_${dateStr}.xlsx`);
         } else {
             const dataToExport = rawObjectsList.map(it => ({
                 '发生时间': it.fullCnTime || it.timeStr,
+                '停留时长': it.durationSec > 0 ? formatDuration(it.durationSec) : (it.durationText || '-'),
                 '学生账号': it.username,
                 '学生姓名': it.studentName,
-                '学校': it.schoolName,
-                '游戏主系统': it.gameCfg.systemName,
-                '具体游戏': it.gameCfg.name,
-                '是否子页面': it.gameCfg.isSub ? '是' : '否',
+                '所属学校': it.schoolName,
+                '归属系统': it.gameCfg.systemName,
+                '具体页面': it.gameCfg.name,
+                '动作': it.action || 'page_view',
                 '设备型号': it.deviceName || '-',
                 '系统版本': it.platformVersion || '-'
             }));
 
             const ws = XLSX.utils.json_to_sheet(dataToExport);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, '游戏行为流水明细');
-            XLSX.writeFile(wb, `游戏行为流水_${dateStr}.xlsx`);
+            XLSX.utils.book_append_sheet(wb, ws, '页面行为流水明细');
+            XLSX.writeFile(wb, `页面行为流水_${dateStr}.xlsx`);
         }
     });
 
     // 13. High-Quality Static Mock Data
     function useStaticMockData() {
         const mockUsers = [
-            { username: '13107342492', name: '李明轩', school: '光明实验外国语小学', teacher: '王老师' },
-            { username: '13987654321', name: '张子萱', school: '汇文第一寄宿学校', teacher: '张老师' },
-            { username: '13700112233', name: '陈梓涵', school: '育才实验示范学校', teacher: '刘老师' },
-            { username: '13611223344', name: '王子涵', school: '南开实验学校本部', teacher: '赵老师' },
-            { username: '13599887766', name: '赵俊熙', school: '朝阳外国语小学分校', teacher: '王老师' },
-            { username: '13455667788', name: '孙语桐', school: '光明实验外国语小学', teacher: '孙老师' },
-            { username: '13311224455', name: '杨皓轩', school: '汇文第一寄宿学校', teacher: '李老师' },
-            { username: '13122334455', name: '周雨诺', school: '育才实验示范学校', teacher: '周老师' }
+            { username: '13755188999', name: '刘俊熙', school: '青园梓枫小学', teacher: '徐老师', grade: 'fourGrade', userNo: 'S20260401', coin: 120, diamondNum: 15, serviceName: '会员年卡' },
+            { username: '13107342492', name: '李明轩', school: '光明实验外国语小学', teacher: '王老师', grade: 'threeGrade', userNo: 'S20260312', coin: 85, diamondNum: 6, serviceName: '会员半年卡' },
+            { username: '13987654321', name: '张子萱', school: '汇文第一寄宿学校', teacher: '张老师', grade: 'fiveGrade', userNo: 'S20260588', coin: 240, diamondNum: 30, serviceName: '会员年卡' },
+            { username: '13700112233', name: '陈梓涵', school: '育才实验示范学校', teacher: '刘老师', grade: 'twoGrade', userNo: 'S20260210', coin: 50, diamondNum: 2, serviceName: '月卡会员' },
+            { username: '13611223344', name: '王子涵', school: '南开实验学校本部', teacher: '赵老师', grade: 'sixGrade', userNo: 'S20260677', coin: 310, diamondNum: 45, serviceName: '尊享年卡' },
+            { username: '13599887766', name: '赵俊熙', school: '朝阳外国语小学分校', teacher: '王老师', grade: 'fourGrade', userNo: 'S20260419', coin: 110, diamondNum: 10, serviceName: '会员年卡' },
+            { username: '13455667788', name: '孙语桐', school: '光明实验外国语小学', teacher: '孙老师', grade: 'threeGrade', userNo: 'S20260345', coin: 75, diamondNum: 5, serviceName: '普通学员' },
+            { username: '13311224455', name: '杨皓轩', school: '汇文第一寄宿学校', teacher: '李老师', grade: 'fiveGrade', userNo: 'S20260533', coin: 195, diamondNum: 20, serviceName: '会员年卡' }
         ];
 
         mockUsers.forEach(u => {
             userToInfoCache[u.username] = {
                 studentName: u.name,
                 schoolName: u.school,
-                teacherName: u.teacher
+                teacherName: u.teacher,
+                grade: u.grade,
+                userNo: u.userNo,
+                coin: u.coin,
+                diamondNum: u.diamondNum,
+                serviceName: u.serviceName,
+                deviceName: 'vivo-PA2511',
+                platformVersion: '15'
             };
         });
 
-        const gameKeys = ['fruit_cutting', 'fruit_store', 'card_gacha', 'card_album', 'e_bao'];
-        const pageCodeMap = {
-            'fruit_cutting': 'fruit_cutting_page',
-            'fruit_store': 'fruit_store_page',
-            'card_gacha': 'card_gacha_page',
-            'card_album': 'card_album_page',
-            'e_bao': 'e_bao_page'
-        };
+        // 覆盖用户指定的5大核心页面 + E宝页面
+        const gamePages = [
+            'game_center_page',
+            'fruit_store_page',
+            'fruit_cutting_page',
+            'card_album_page',
+            'gacha_page',
+            'e_bao_page'
+        ];
+
         const mockObjects = [];
-        const dateStr = reportDateInput.value || '2026-10-08';
+        const dateStr = reportDateInput.value || '2026-10-10';
         const formattedDate = dateStr.replace(/-/g, '_');
 
-        // Generate ~86 realistic game events
-        for (let i = 0; i < 86; i++) {
+        for (let i = 0; i < 90; i++) {
             const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-            // Weighted game choice (fruit cutting and gacha are more popular)
             const rand = Math.random();
-            let g = 'fruit_cutting';
-            if (rand < 0.35) g = 'fruit_cutting';
-            else if (rand < 0.50) g = 'fruit_store';
-            else if (rand < 0.75) g = 'card_gacha';
-            else if (rand < 0.88) g = 'card_album';
-            else g = 'e_bao';
+            let pageName = 'game_center_page';
+            if (rand < 0.20) pageName = 'game_center_page';
+            else if (rand < 0.38) pageName = 'fruit_store_page';
+            else if (rand < 0.58) pageName = 'fruit_cutting_page';
+            else if (rand < 0.75) pageName = 'card_album_page';
+            else if (rand < 0.90) pageName = 'gacha_page';
+            else pageName = 'e_bao_page';
 
-            const pageName = pageCodeMap[g] || `${g}_page`;
             const hour = Math.floor(Math.random() * 14) + 8; // 08:00 - 22:00
             const min = Math.floor(Math.random() * 60);
             const sec = Math.floor(Math.random() * 60);
+            const ms = Math.floor(Math.random() * 900) + 100;
             const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-            const timeSuffix = `${String(hour).padStart(2, '0')}${String(min).padStart(2, '0')}${String(sec).padStart(2, '0')}`;
-            // 路径结构: usertemp/xuelianxitong/{date}/page_track/{username}/{pageName}_{date}_{timeSuffix}.json
+            const timeSuffix = `${String(hour).padStart(2, '0')}${String(min).padStart(2, '0')}${String(sec).padStart(2, '0')}_${ms}`;
+
+            // 符合用户提供的规范文件名: usertemp/xuelianxitong/{date}/page_track/{username}/{pageName}_{date}_{timeSuffix}.json
             const key = `usertemp/xuelianxitong/${formattedDate}/page_track/${user.username}/${pageName}_${formattedDate}_${timeSuffix}.json`;
 
             mockObjects.push({
                 name: key,
                 size: Math.floor(Math.random() * 2048) + 1024,
-                lastModified: new Date(`${dateStr}T${timeStr}Z`).toISOString()
+                lastModified: new Date(`${dateStr}T${timeStr}.${ms}Z`).toISOString()
             });
         }
 
@@ -2261,7 +2671,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         parseAndAnalyzeObjects(mockObjects, dateStr);
 
-        // Generate comprehensive Mock DAU records covering all 6 time slots
+        // 为 mock 的对象注入合理的停留时长
+        rawObjectsList.forEach(item => {
+            const dur = Math.floor(Math.random() * 120) + 5;
+            item.durationSec = dur;
+            item.durationText = formatDuration(dur);
+            const uInfo = userToInfoCache[item.username];
+            if (uInfo) {
+                item.studentName = uInfo.studentName;
+                item.schoolName = uInfo.schoolName;
+                item.teacherName = uInfo.teacherName;
+                item.grade = uInfo.grade;
+                item.userNo = uInfo.userNo;
+                item.coin = uInfo.coin;
+                item.diamondNum = uInfo.diamondNum;
+                item.serviceName = uInfo.serviceName;
+                item.deviceName = uInfo.deviceName;
+                item.platformVersion = uInfo.platformVersion;
+            }
+        });
+
+        // 重新聚合汇总中的总时长
+        aggregateStudentSummary();
+        renderStats();
+        applyFiltersAndRender();
+
+        // 生成 Mock DAU
         const allMockDauUsers = [
             ...mockUsers,
             { username: '13866554433', name: '黄子涵', school: '光明实验外国语小学', teacher: '王老师' },
@@ -2288,7 +2723,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Specific hours across slots: early (7, 8), morning (9, 10, 11), noon (12, 13), afternoon (14, 15, 16, 17), evening (18, 19, 20, 21), night (22, 23)
         const mockHours = [
             7, 8,
             9, 9, 10, 10, 11, 11,
@@ -2299,11 +2733,11 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
         const mockDevices = [
+            { dev: 'vivo-PA2511', ver: '15' },
             { dev: 'iPad (第9代)', ver: 'iPadOS 16.6' },
             { dev: '华为 MatePad 11', ver: 'HarmonyOS 3.1' },
             { dev: '小米平板 6 Pro', ver: 'Android 13' },
             { dev: 'iPad Air 5', ver: 'iPadOS 17.2' },
-            { dev: '联想小新 Pad Pro', ver: 'Android 12' },
             { dev: '荣耀平板 V8', ver: 'MagicOS 7.0' }
         ];
 
@@ -2345,10 +2779,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderLoadingState() {
         if (summaryTableBody) {
-            summaryTableBody.innerHTML = `<tr><td colspan="9" class="loading-cell">⏳ 正在从 OSS 检索游戏日志数据并汇总分析...</td></tr>`;
+            summaryTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">⏳ 正在从 OSS 检索页面行为日志并汇总分析...</td></tr>`;
         }
         if (logsTableBody) {
-            logsTableBody.innerHTML = `<tr><td colspan="9" class="loading-cell">⏳ 正在从 OSS 检索游戏流水记录...</td></tr>`;
+            logsTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">⏳ 正在从 OSS 检索行为流水记录...</td></tr>`;
         }
         if (dauTimeSlotTableBody) {
             dauTimeSlotTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">⏳ 正在从 OSS 检索日活数据并生成时间段报表...</td></tr>`;
@@ -2358,19 +2792,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderEmptyState() {
         activePlayersCountEl.textContent = '0';
         totalGamesCountEl.textContent = '0';
-        fruitSystemCountEl.textContent = '0';
-        fruitStoreCountEl.textContent = '0次';
-        fruitCuttingCountEl.textContent = '0次';
-        cardSystemCountEl.textContent = '0';
-        cardAlbumCountEl.textContent = '0次';
-        cardGachaCountEl.textContent = '0次';
-        eBaoCountEl.textContent = '0';
+        if (totalDurationValEl) totalDurationValEl.textContent = '-';
+        if (gameCenterCountEl) gameCenterCountEl.textContent = '0次';
+        if (fruitSystemCountEl) fruitSystemCountEl.textContent = '0';
+        if (fruitStoreCountEl) fruitStoreCountEl.textContent = '0次';
+        if (fruitCuttingCountEl) fruitCuttingCountEl.textContent = '0次';
+        if (cardSystemCountEl) cardSystemCountEl.textContent = '0';
+        if (cardAlbumCountEl) cardAlbumCountEl.textContent = '0次';
+        if (cardGachaCountEl) cardGachaCountEl.textContent = '0次';
+        if (eBaoCountEl) eBaoCountEl.textContent = '0';
 
         if (summaryTableBody) {
-            summaryTableBody.innerHTML = `<tr><td colspan="9" class="loading-cell">所选日期暂无任何学生游戏行为记录</td></tr>`;
+            summaryTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">所选日期暂无任何学生行为记录</td></tr>`;
         }
         if (logsTableBody) {
-            logsTableBody.innerHTML = `<tr><td colspan="9" class="loading-cell">所选日期暂无任何学生游戏行为记录</td></tr>`;
+            logsTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">所选日期暂无任何学生行为记录</td></tr>`;
         }
         if (dauTimeSlotTableBody) {
             dauTimeSlotTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">所选日期暂无日活活跃记录</td></tr>`;

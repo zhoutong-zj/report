@@ -294,7 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 'max-keys': 1000
             });
             let objs = res.objects || [];
-            objs = objs.filter(obj => obj.name && !obj.name.endsWith('/'));
+            objs = objs.filter(obj => {
+                if (!obj.name || obj.name.endsWith('/')) return false;
+                const lower = obj.name.toLowerCase();
+                return !lower.includes('/anonymous/') && !lower.endsWith('/anonymous.json');
+            });
 
             // Fallback scan if subfolder structure is used
             if (objs.length === 0) {
@@ -303,7 +307,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     'max-keys': 1000
                 });
                 const fullObjs = fullRes.objects || [];
-                objs = fullObjs.filter(obj => obj.name && obj.name.includes('/user_activity/') && !obj.name.endsWith('/'));
+                objs = fullObjs.filter(obj => {
+                    if (!obj.name || !obj.name.includes('/user_activity/') || obj.name.endsWith('/')) return false;
+                    const lower = obj.name.toLowerCase();
+                    return !lower.includes('/anonymous/') && !lower.endsWith('/anonymous.json');
+                });
             }
 
             if (objs.length === 0) {
@@ -400,7 +408,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             });
 
-            return await Promise.all(itemPromises);
+            const allItems = await Promise.all(itemPromises);
+            return allItems.filter(item => item && item.loginName && item.loginName.toLowerCase() !== 'anonymous' && item.username && item.username.toLowerCase() !== 'anonymous');
         } catch (err) {
             console.warn('OSS list failed for DAU details:', err);
             return generateMockDauList(dateStr);

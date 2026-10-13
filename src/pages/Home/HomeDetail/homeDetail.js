@@ -4,7 +4,8 @@ const exceptionTypeNames = {
     'otherException': '其他异常',
     'evaluationException': '评测异常',
     'audioVideoException': '音视频异常',
-    'audioVideoTest': '音视频测试'
+    'audioVideoTest': '音视频测试',
+    'networkException': '网络异常'
 };
 
 const exceptionTypeColors = {
@@ -13,7 +14,8 @@ const exceptionTypeColors = {
     'otherException': '#909090',
     'evaluationException': '#48e59e',
     'audioVideoException': '#ab47bc',
-    'audioVideoTest': '#2196f3'
+    'audioVideoTest': '#2196f3',
+    'networkException': '#00bcd4'
 };
 
 const typeToClass = {
@@ -22,12 +24,14 @@ const typeToClass = {
     'platformException': 'platform',
     'audioVideoException': 'av',
     'audioVideoTest': 'av-test',
+    'networkException': 'network',
     'otherException': 'other',
     'evaluation_error': 'eval',
     'data_error': 'data',
     'platform_error': 'platform',
     'audio_video_error': 'av',
     'audio_video_test': 'av-test',
+    'network_error': 'network',
     'other_error': 'other'
 };
 
@@ -38,7 +42,8 @@ const reportTypeMapping = {
     3: 'evaluationException',
     4: 'audioVideoException',
     5: 'audioVideoException',
-    6: 'audioVideoTest'
+    6: 'audioVideoTest',
+    7: 'networkException'
 };
 
 // HTML 转义工具函数

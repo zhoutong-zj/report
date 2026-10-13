@@ -241,8 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render horizontal bar chart for exception type distribution with ECharts
     let errorBarChart = null;
-    function renderPieChart(evalCount, dataCount, platformCount, otherCount, audioVideoCount = 0, audioVideoTestCount = 0) {
-        lastPieChartParams = { evalCount, dataCount, platformCount, otherCount, audioVideoCount, audioVideoTestCount };
+    function renderPieChart(evalCount, dataCount, platformCount, otherCount, audioVideoCount = 0, audioVideoTestCount = 0, networkCount = 0) {
+        lastPieChartParams = { evalCount, dataCount, platformCount, otherCount, audioVideoCount, audioVideoTestCount, networkCount };
         const dom = document.getElementById('errorTypePieChart');
         if (!dom || typeof echarts === 'undefined') return;
 
@@ -254,12 +254,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         errorBarChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
 
-        const total = evalCount + dataCount + platformCount + otherCount + audioVideoCount + audioVideoTestCount;
-        const categories = ['其他异常', '音视频测试', '音视频异常', '平台异常', '数据异常', '评测异常'];
-        const values = [otherCount, audioVideoTestCount, audioVideoCount, platformCount, dataCount, evalCount];
+        const total = evalCount + dataCount + platformCount + otherCount + audioVideoCount + audioVideoTestCount + networkCount;
+        const categories = ['其他异常', '网络异常', '音视频测试', '音视频异常', '平台异常', '数据异常', '评测异常'];
+        const values = [otherCount, networkCount, audioVideoTestCount, audioVideoCount, platformCount, dataCount, evalCount];
 
         const colorGradients = [
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#6a85b6' }, { offset: 1, color: '#bac8e0' }]),
+            new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#00b4db' }, { offset: 1, color: '#0083b0' }]),
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#1976d2' }, { offset: 1, color: '#42a5f5' }]),
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#8e44ad' }, { offset: 1, color: '#bb86fc' }]),
             new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#f7971e' }, { offset: 1, color: '#ffd200' }]),
@@ -589,12 +590,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let otherCount = 0;
         let audioVideoCount = 0;
         let audioVideoTestCount = 0;
+        let networkCount = 0;
         const uniqueUsers = new Set();
         const userErrorCounts = {};
         const userLastTime = {}; // username -> latest time string
 
         // Only count files within the designated error folders
-        const validFolders = new Set(['data_error', 'platform_error', 'other_error', 'evaluation_error', 'audio_video_error', 'audio_video_test']);
+        const validFolders = new Set(['data_error', 'platform_error', 'other_error', 'evaluation_error', 'audio_video_error', 'audio_video_test', 'network_error']);
 
         objects.forEach(obj => {
             const key = obj.name;
@@ -643,6 +645,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         audioVideoCount++;
                     } else if (folder === 'audio_video_test') {
                         audioVideoTestCount++;
+                    } else if (folder === 'network_error') {
+                        networkCount++;
                     } else if (folder === 'other_error') {
                         otherCount++;
                     }
@@ -650,7 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        const total = evalCount + dataCount + platformCount + otherCount + audioVideoCount + audioVideoTestCount;
+        const total = evalCount + dataCount + platformCount + otherCount + audioVideoCount + audioVideoTestCount + networkCount;
 
         // Set metrics card
         todayErrorCountEl.textContent = total;
@@ -661,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const getPercent = (count) => total === 0 ? 0 : parseFloat(((count / total) * 100).toFixed(1));
 
         // Update charts UI (Render Pie Chart)
-        renderPieChart(evalCount, dataCount, platformCount, otherCount, audioVideoCount, audioVideoTestCount);
+        renderPieChart(evalCount, dataCount, platformCount, otherCount, audioVideoCount, audioVideoTestCount, networkCount);
 
         // Aggregate error counts per user
         const sortedUserEntries = Object.entries(userErrorCounts).sort((a, b) => b[1] - a[1]);
@@ -705,6 +709,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (audioVideoTestCount > 0) {
                     suggestionsHTML += `<li><strong>音视频测试报告 (${audioVideoTestCount} 次)</strong>：记录音视频播放或录制专项测试日志，可排查专项测试参数与指标。</li>`;
+                }
+                if (networkCount > 0) {
+                    suggestionsHTML += `<li><strong>网络异常报告 (${networkCount} 次)</strong>：记录网络连接超时、DNS解析或弱网请求失败，可排查网络环境与接口网关连通性。</li>`;
                 }
                 if (suggestionsHTML === '') {
                     suggestionsHTML = `<li>当前系统异常主要由其他偶发性错误组成，错误频率在合理区间，无需立即处理。</li>`;
@@ -923,7 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 10. Theme Change Adaptations for Charts
     function syncAllChartsTheme(theme) {
         if (lastLineChartParams) renderLineChart(lastLineChartParams.labels, lastLineChartParams.data);
-        if (lastPieChartParams) renderPieChart(lastPieChartParams.evalCount, lastPieChartParams.dataCount, lastPieChartParams.platformCount, lastPieChartParams.otherCount, lastPieChartParams.audioVideoCount, lastPieChartParams.audioVideoTestCount);
+        if (lastPieChartParams) renderPieChart(lastPieChartParams.evalCount, lastPieChartParams.dataCount, lastPieChartParams.platformCount, lastPieChartParams.otherCount, lastPieChartParams.audioVideoCount, lastPieChartParams.audioVideoTestCount, lastPieChartParams.networkCount);
         if (lastDauChartParams) renderDauChart(lastDauChartParams.labels, lastDauChartParams.data);
     }
 

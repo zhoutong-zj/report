@@ -316,6 +316,7 @@ body.modal-open {
 .color-dot.platform { background-color: #f5a623; }
 .color-dot.av { background-color: #ab47bc; }
 .color-dot.av-test { background-color: #2196f3; }
+.color-dot.network { background-color: #00bcd4; }
 .color-dot.other { background-color: #909090; }
 
 /* Table styling */
@@ -384,6 +385,7 @@ body.modal-open {
 .type-badge.platform { background-color: #f5a623; }
 .type-badge.av { background-color: #ab47bc; }
 .type-badge.av-test { background-color: #2196f3; }
+.type-badge.network { background-color: #00bcd4; }
 .type-badge.other { background-color: #909090; }
 
 .version-badge {
@@ -1181,6 +1183,12 @@ body.modal-open {
     color: #60a5fa !important;
     background-color: rgba(59, 130, 246, 0.15) !important;
     border: 1px solid rgba(59, 130, 246, 0.35) !important;
+}
+
+[data-theme="dark"] .type-badge.network {
+    color: #22d3ee !important;
+    background-color: rgba(6, 182, 212, 0.15) !important;
+    border: 1px solid rgba(6, 182, 212, 0.35) !important;
 }
 
 [data-theme="dark"] .type-badge.other {

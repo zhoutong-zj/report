@@ -7,7 +7,8 @@ const exceptionTypeMapping = {
     'otherException': 'other_error',       // 其他异常
     'evaluationException': 'evaluation_error', // 评测异常
     'audioVideoException': 'audio_video_error', // 音视频异常
-    'audioVideoTest': 'audio_video_test'   // 音视频测试
+    'audioVideoTest': 'audio_video_test',  // 音视频测试
+    'networkException': 'network_error'    // 网络异常
 };
 
 /**
@@ -19,7 +20,8 @@ const exceptionTypeNames = {
     'otherException': '其他异常',
     'evaluationException': '评测异常',
     'audioVideoException': '音视频异常',
-    'audioVideoTest': '音视频测试'
+    'audioVideoTest': '音视频测试',
+    'networkException': '网络异常'
 };
 
 /**
@@ -31,7 +33,8 @@ const exceptionTypeColors = {
     'otherException': '#909090',       // 灰色系
     'evaluationException': '#48e59e',   // 绿色系
     'audioVideoException': '#ab47bc',   // 紫色系
-    'audioVideoTest': '#2196f3'        // 蓝色系
+    'audioVideoTest': '#2196f3',       // 蓝色系
+    'networkException': '#00bcd4'      // 青色系
 };
 
 /**
@@ -44,13 +47,14 @@ const reportTypeMapping = {
     3: 'evaluationException',
     4: 'audioVideoException',
     5: 'audioVideoException',
-    6: 'audioVideoTest'
+    6: 'audioVideoTest',
+    7: 'networkException'
 };
 
 /**
  * 所有合法的异常类型数组
  */
-const allExceptionTypes = ['dataException', 'platformException', 'otherException', 'evaluationException', 'audioVideoException', 'audioVideoTest'];
+const allExceptionTypes = ['dataException', 'platformException', 'otherException', 'evaluationException', 'audioVideoException', 'audioVideoTest', 'networkException'];
 
 // HTML 转义工具方法
 function escapeHtml(str) {

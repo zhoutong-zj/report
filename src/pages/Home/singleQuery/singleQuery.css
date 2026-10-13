@@ -809,6 +809,12 @@ body {
     border: 1px solid rgba(59, 130, 246, 0.35) !important;
 }
 
+[data-theme="dark"] .exception-tag-networkException {
+    color: #22d3ee !important;
+    background-color: rgba(6, 182, 212, 0.15) !important;
+    border: 1px solid rgba(6, 182, 212, 0.35) !important;
+}
+
 [data-theme="dark"] .exception-tag-otherException {
     color: #94a3b8 !important;
     background-color: rgba(148, 163, 184, 0.15) !important;
