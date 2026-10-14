@@ -597,25 +597,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * 直接从文件名解析页面代码与发生时间
-     * 文件名格式如: gacha_page_2026_10_10_163323_288.json
+     * 直接从文件名解析页面代码、发生时间与停留时长
+     * 新文件名规范: usertemp/xuelianxitong/{date}/page_track/{username}/{pageName}_{YYYY_MM_DD_HHmmss}_{ms}_{durationSec}.json
+     * 例如: game_center_page_2026_10_14_145658_472_32.json (时长为 32 秒)
+     * 历史文件名规范: gacha_page_2026_10_10_163323_288.json
      */
     function extractPageAndReportTimeFromFileName(fileName, lastModified) {
-        if (!fileName) return { rawGameCode: 'page_track', timeInfo: parseReportTime(lastModified) };
+        if (!fileName) return { rawGameCode: 'page_track', timeInfo: parseReportTime(lastModified), durationSec: 0 };
         const clean = fileName.replace(/\.json$/i, '');
-        // 匹配: {pageName}_{YYYY}_{MM}_{DD}_{HH}{mm}{ss}_{SSS}
+
+        // 1. 新格式带停留时长: {pageName}_{YYYY}_{MM}_{DD}_{HHmmss}_{ms}_{durationSec}
+        // 例如: game_center_page_2026_10_14_145658_472_32.json -> 提取最后数字 32 为 durationSec
+        const mWithDuration = clean.match(/^(.*?)_(\d{4}_\d{2}_\d{2}(?:_\d{6}|\d{2}_\d{2}_\d{2}))_(\d+)_(\d+)$/);
+        if (mWithDuration) {
+            return {
+                rawGameCode: mWithDuration[1],
+                timeInfo: parseReportTime(`${mWithDuration[2]}_${mWithDuration[3]}`),
+                durationSec: parseInt(mWithDuration[4], 10) || 0
+            };
+        }
+
+        // 2. 原格式: {pageName}_{YYYY}_{MM}_{DD}_{HHmmss}_{ms} 或无毫秒
         const m = clean.match(/^(.*?)_(\d{4}_\d{2}_\d{2}(?:_\d{6}|\d{2}_\d{2}_\d{2})?(?:_\d+)?)$/);
         if (m) {
             return {
                 rawGameCode: m[1],
-                timeInfo: parseReportTime(m[2])
+                timeInfo: parseReportTime(m[2]),
+                durationSec: 0
             };
         }
-        // Fallback: 剔除日期后缀
+
+        // 3. Fallback: 尝试提取末尾数字作为时长
+        let durationSec = 0;
+        const lastNumMatch = clean.match(/_(\d+)$/);
+        if (lastNumMatch) {
+            durationSec = parseInt(lastNumMatch[1], 10) || 0;
+        }
         const base = clean.replace(/_\d{4}_\d{2}_\d{2}.*$/, '');
         return {
             rawGameCode: base || 'page_track',
-            timeInfo: parseReportTime(clean || lastModified)
+            timeInfo: parseReportTime(clean || lastModified),
+            durationSec: durationSec
         };
     }
 
@@ -638,8 +660,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!username || username.toLowerCase() === 'anonymous') return;
             const fileName = parts[trackIdx + 2] || '';
 
-            // 直接通过文件名识别具体页面及时间
-            const { rawGameCode, timeInfo } = extractPageAndReportTimeFromFileName(fileName, obj.lastModified);
+            // 直接通过文件名识别具体页面、时间及停留时长
+            const { rawGameCode, timeInfo, durationSec } = extractPageAndReportTimeFromFileName(fileName, obj.lastModified);
             const gameCode = resolveGameCode(rawGameCode);
             const gameCfg = getGameConfig(gameCode, rawGameCode);
             const userInfo = userToInfoCache[username] || {};
@@ -666,8 +688,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 hour: timeInfo.hour,
                 sortKey: timeInfo.sortKey,
                 reportTime: timeInfo.fullCnTime,
-                durationSec: 0,
-                durationText: '-',
+                durationSec: durationSec || 0,
+                durationText: (durationSec && durationSec > 0) ? formatDuration(durationSec) : '-',
                 enterTime: null,
                 leaveTime: null,
                 action: 'page_view',
@@ -743,7 +765,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        studentSummaryList = Object.values(studentMap).sort((a, b) => b.totalCount - a.totalCount);
+        studentSummaryList = Object.values(studentMap).sort((a, b) => {
+            const durDiff = (b.gameCenterDurationSec || 0) - (a.gameCenterDurationSec || 0);
+            if (durDiff !== 0) return durDiff;
+            return (b.totalCount || 0) - (a.totalCount || 0);
+        });
     }
 
     // 7. Render Core Stats Cards
@@ -1112,13 +1138,25 @@ document.addEventListener('DOMContentLoaded', () => {
         hourlyTrendChart.setOption(option);
     }
 
-    // Bar Chart: Top Students with ECharts
+    // Bar Chart: Top Students by Game Center Duration with ECharts
     function renderTopStudentsBar() {
         if (!topStudentsCanvas || typeof echarts === 'undefined') return;
 
-        const top8 = studentSummaryList.slice(0, 8);
+        // 按游戏中心累计时长降序取 Top 8
+        const top8 = [...studentSummaryList]
+            .sort((a, b) => {
+                const durDiff = (b.gameCenterDurationSec || 0) - (a.gameCenterDurationSec || 0);
+                if (durDiff !== 0) return durDiff;
+                return (b.totalCount || 0) - (a.totalCount || 0);
+            })
+            .slice(0, 8);
+
         const labels = top8.map(s => s.studentName !== '-' ? s.studentName : s.username);
-        const data = top8.map(s => s.totalCount);
+        // 时长显示成分钟 (秒 / 60，保留1位小数)
+        const data = top8.map(s => {
+            const sec = s.gameCenterDurationSec || 0;
+            return Math.round((sec / 60) * 10) / 10;
+        });
 
         if (topStudentsChart && !topStudentsChart.isDisposed()) {
             topStudentsChart.dispose();
@@ -1136,21 +1174,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 axisPointer: { type: 'shadow' },
                 formatter: (p) => {
                     const item = p[0];
+                    const student = top8[item.dataIndex];
+                    const sec = student ? (student.gameCenterDurationSec || 0) : 0;
+                    const count = student && student.gameCounts ? (student.gameCounts.game_center_page || 0) : 0;
                     return `<div style="font-weight: 600; margin-bottom: 4px;">${item.name}</div>
-                            <div>游玩: <span style="font-weight: bold; color: #3b82f6;">${item.value}</span> 次 (点击查看详情)</div>`;
+                            <div>游戏中心时长: <span style="font-weight: bold; color: #10b981;">${item.value}</span> 分钟 <span style="color:#9ca3af; font-size:11px;">(${sec}秒)</span></div>
+                            <div style="font-size: 11px; color: #9ca3af; margin-top: 3px;">游戏中心频次: ${count} 次 (点击查看详情)</div>`;
                 }
             },
             grid: {
-                top: 15,
+                top: 20,
                 left: 75,
-                right: 30,
+                right: 70,
                 bottom: 25
             },
             xAxis: {
                 type: 'value',
-                minInterval: 1,
+                name: '分钟',
+                nameTextStyle: { color: colors.textColor || '#909399', fontSize: 10 },
                 splitLine: { lineStyle: { color: colors.gridColor || '#f3f4f6' } },
-                axisLabel: { color: colors.textColor || '#909399', fontSize: 10 }
+                axisLabel: { 
+                    color: colors.textColor || '#909399', 
+                    fontSize: 10,
+                    formatter: '{value} 分'
+                }
             },
             yAxis: {
                 type: 'category',
@@ -1160,15 +1207,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 axisLabel: { color: colors.textColor || '#606266', fontSize: 11 }
             },
             series: [{
-                name: '玩游戏总次数',
+                name: '游戏时长(分钟)',
                 type: 'bar',
                 barWidth: 16,
                 itemStyle: {
                     borderRadius: [0, 4, 4, 0],
-                    color: '#3b82f6'
+                    color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                        { offset: 0, color: '#34d399' },
+                        { offset: 1, color: '#10b981' }
+                    ])
                 },
                 emphasis: {
-                    itemStyle: { color: '#2563eb' }
+                    itemStyle: { color: '#059669' }
+                },
+                label: {
+                    show: true,
+                    position: 'right',
+                    formatter: (p) => `${p.value} 分钟`,
+                    color: colors.textColor || '#606266',
+                    fontSize: 11
                 },
                 data: data
             }]
@@ -2050,11 +2107,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (detailTotalCount) detailTotalCount.textContent = userSummary.totalCount || userItems.length;
 
-        // 核心规则：学生行为详情页面中时长通过计算所有游戏中心(game_center_page)的数据中durationSec这个值来统计
+        // 核心规则：学生行为详情页面中时长通过计算各模块数据中 durationSec 这个值来统计
         let gameCenterDuration = 0;
+        let fruitStoreDuration = 0;
+        let cardAlbumDuration = 0;
+        let ebaoDuration = 0;
+
         userItems.forEach(it => {
             if (it.gameCode === 'game_center_page') {
                 gameCenterDuration += (it.durationSec || 0);
+            } else if (it.gameCode === 'fruit_store_page') {
+                fruitStoreDuration += (it.durationSec || 0);
+            } else if (it.gameCode === 'card_album_page') {
+                cardAlbumDuration += (it.durationSec || 0);
+            } else if (it.gameCode === 'e_bao_page') {
+                ebaoDuration += (it.durationSec || 0);
             }
         });
 
@@ -2066,9 +2133,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const detailGameCenterCount = document.getElementById('detailGameCenterCount');
         if (detailGameCenterCount) detailGameCenterCount.textContent = `${gameCenterTotal}次`;
 
-        if (detailFruitCount) detailFruitCount.textContent = `${fruitTotal}次 (商店:${userSummary.gameCounts.fruit_store_page || 0} / 切水果:${userSummary.gameCounts.fruit_cutting_page || 0})`;
-        if (detailCardCount) detailCardCount.textContent = `${cardTotal}次 (卡册:${userSummary.gameCounts.card_album_page || 0} / 抽卡:${userSummary.gameCounts.gacha_page || 0})`;
-        if (detailEbaoCount) detailEbaoCount.textContent = `${ebaoTotal}次`;
+        if (detailFruitCount) {
+            const fruitDurText = fruitStoreDuration > 0 ? ` · ⏱️${formatDuration(fruitStoreDuration)}` : '';
+            detailFruitCount.innerHTML = `${fruitTotal}次 <span style="font-size:12px; font-weight:normal; color:#6b7280;">(商店:${userSummary.gameCounts.fruit_store_page || 0} / 切水果:${userSummary.gameCounts.fruit_cutting_page || 0}${fruitDurText})</span>`;
+        }
+        if (detailCardCount) {
+            const cardDurText = cardAlbumDuration > 0 ? ` · ⏱️${formatDuration(cardAlbumDuration)}` : '';
+            detailCardCount.innerHTML = `${cardTotal}次 <span style="font-size:12px; font-weight:normal; color:#6b7280;">(卡册:${userSummary.gameCounts.card_album_page || 0} / 抽卡:${userSummary.gameCounts.gacha_page || 0}${cardDurText})</span>`;
+        }
+        if (detailEbaoCount) {
+            const ebaoDurText = ebaoDuration > 0 ? ` · ⏱️${formatDuration(ebaoDuration)}` : '';
+            detailEbaoCount.innerHTML = `${ebaoTotal}次 <span style="font-size:12px; font-weight:normal; color:#6b7280;">${ebaoDurText}</span>`;
+        }
 
         // 1. Render Flowchart (sorted ascending: earliest to latest)
         const sortedItems = [...userItems].sort((a, b) => (a.sortKey || a.timeStr || '').localeCompare(b.sortKey || b.timeStr || ''));
@@ -2136,13 +2212,23 @@ document.addEventListener('DOMContentLoaded', () => {
             await Promise.all(workers);
         }
 
-        // 核心规则：学生行为详情页面中时长通过计算所有游戏中心(game_center_page)的数据中durationSec这个值来统计
+        // 核心规则：学生行为详情页面中时长统计更新
         let gameCenterDuration = 0;
+        let fruitStoreDuration = 0;
+        let cardAlbumDuration = 0;
+        let ebaoDuration = 0;
         let totalDuration = 0;
+
         userItems.forEach(it => {
             totalDuration += (it.durationSec || 0);
             if (it.gameCode === 'game_center_page') {
                 gameCenterDuration += (it.durationSec || 0);
+            } else if (it.gameCode === 'fruit_store_page') {
+                fruitStoreDuration += (it.durationSec || 0);
+            } else if (it.gameCode === 'card_album_page') {
+                cardAlbumDuration += (it.durationSec || 0);
+            } else if (it.gameCode === 'e_bao_page') {
+                ebaoDuration += (it.durationSec || 0);
             }
         });
 
@@ -2155,6 +2241,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const detailTotalDuration = document.getElementById('detailTotalDuration');
         if (detailTotalDuration) {
             detailTotalDuration.textContent = gameCenterDuration > 0 ? formatDuration(gameCenterDuration) : '0秒';
+        }
+
+        if (detailFruitCount && userSummary) {
+            const fruitDurText = fruitStoreDuration > 0 ? ` · ⏱️${formatDuration(fruitStoreDuration)}` : '';
+            detailFruitCount.innerHTML = `${(userSummary.gameCounts.fruit_store_page || 0) + (userSummary.gameCounts.fruit_cutting_page || 0)}次 <span style="font-size:12px; font-weight:normal; color:#6b7280;">(商店:${userSummary.gameCounts.fruit_store_page || 0} / 切水果:${userSummary.gameCounts.fruit_cutting_page || 0}${fruitDurText})</span>`;
+        }
+        if (detailCardCount && userSummary) {
+            const cardDurText = cardAlbumDuration > 0 ? ` · ⏱️${formatDuration(cardAlbumDuration)}` : '';
+            detailCardCount.innerHTML = `${(userSummary.gameCounts.card_album_page || 0) + (userSummary.gameCounts.gacha_page || 0)}次 <span style="font-size:12px; font-weight:normal; color:#6b7280;">(卡册:${userSummary.gameCounts.card_album_page || 0} / 抽卡:${userSummary.gameCounts.gacha_page || 0}${cardDurText})</span>`;
+        }
+        if (detailEbaoCount && userSummary) {
+            const ebaoDurText = ebaoDuration > 0 ? ` · ⏱️${formatDuration(ebaoDuration)}` : '';
+            detailEbaoCount.innerHTML = `${userSummary.gameCounts.e_bao_page || 0}次 <span style="font-size:12px; font-weight:normal; color:#6b7280;">${ebaoDurText}</span>`;
         }
 
         const sortedItems = [...userItems].sort((a, b) => (a.sortKey || a.timeStr || '').localeCompare(b.sortKey || b.timeStr || ''));
@@ -2186,34 +2285,73 @@ document.addEventListener('DOMContentLoaded', () => {
             it.gameCfg.systemCode !== 'card' && it.gameCode !== 'card_album_page' && it.gameCode !== 'gacha_page'
         );
 
+        // 各线路时长统计规则：
+        // 0. 游戏中心主入口：累加所有 game_center_page 文件的时长
+        let gameCenterDuration = 0;
+        gameCenterItems.forEach(it => {
+            if (it.gameCode === 'game_center_page') {
+                gameCenterDuration += (it.durationSec || 0);
+            }
+        });
+
+        // 1. 水果商店系统：统计水果商店 (fruit_store_page) 文件的时长加起来
+        let fruitStoreDuration = 0;
+        fruitItems.forEach(it => {
+            if (it.gameCode === 'fruit_store_page') {
+                fruitStoreDuration += (it.durationSec || 0);
+            }
+        });
+
+        // 2. 卡册系统：统计卡册中心 (card_album_page) 文件的时长加起来
+        let cardAlbumDuration = 0;
+        cardItems.forEach(it => {
+            if (it.gameCode === 'card_album_page') {
+                cardAlbumDuration += (it.durationSec || 0);
+            }
+        });
+
+        // 3. E宝与其它游戏：直接统计该线路下所有页面的时长
+        let otherDuration = 0;
+        otherItems.forEach(it => {
+            otherDuration += (it.durationSec || 0);
+        });
+
         const trackConfigs = [
             {
                 code: 'game_center',
                 title: '🕹️ 线路一：游戏中心入口',
                 subtag: '包含：游戏中心主页导航与模块选择',
                 cssClass: 'game-center-track',
-                items: gameCenterItems
+                items: gameCenterItems,
+                durationSec: gameCenterDuration,
+                durationLabel: '游戏中心时长'
             },
             {
                 code: 'fruit',
                 title: '🍎 线路二：水果商店系统',
                 subtag: '包含：水果商店主页、切水果 (核心玩法)',
                 cssClass: 'fruit-track',
-                items: fruitItems
+                items: fruitItems,
+                durationSec: fruitStoreDuration,
+                durationLabel: '水果商店时长'
             },
             {
                 code: 'card',
                 title: '🎴 线路三：卡册系统',
                 subtag: '包含：卡册中心主页、抽卡页面 (抽卡玩法)',
                 cssClass: 'card-track',
-                items: cardItems
+                items: cardItems,
+                durationSec: cardAlbumDuration,
+                durationLabel: '卡册中心时长'
             },
             {
                 code: 'other',
                 title: '🤖 线路四：E宝与其它游戏',
                 subtag: '包含：E宝独立答题与拓展页面',
                 cssClass: 'ebao-track',
-                items: otherItems
+                items: otherItems,
+                durationSec: otherDuration,
+                durationLabel: 'E宝游戏时长'
             }
         ];
 
@@ -2288,6 +2426,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="track-title-wrap">
                             <span class="track-title">${track.title}</span>
                             <span class="track-subtag">${track.subtag}</span>
+                            <span class="track-duration-pill" title="${track.durationLabel}">⏱️ ${track.durationLabel}: <strong>${formatDuration(track.durationSec)}</strong></span>
                         </div>
                         <div class="track-meta">
                             <span>该线路累计: <strong>${track.items.length} 次</strong></span>
@@ -2680,10 +2819,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const min = Math.floor(Math.random() * 60);
             const sec = Math.floor(Math.random() * 60);
             const ms = Math.floor(Math.random() * 900) + 100;
+            const dur = Math.floor(Math.random() * 180) + 15;
             const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-            const timeSuffix = `${String(hour).padStart(2, '0')}${String(min).padStart(2, '0')}${String(sec).padStart(2, '0')}_${ms}`;
+            const timeSuffix = `${String(hour).padStart(2, '0')}${String(min).padStart(2, '0')}${String(sec).padStart(2, '0')}_${ms}_${dur}`;
 
-            // 符合用户提供的规范文件名: usertemp/xuelianxitong/{date}/page_track/{username}/{pageName}_{date}_{timeSuffix}.json
+            // 符合规范文件名: usertemp/xuelianxitong/{date}/page_track/{username}/{pageName}_{date}_{timeSuffix}.json
             const key = `usertemp/xuelianxitong/${formattedDate}/page_track/${user.username}/${pageName}_${formattedDate}_${timeSuffix}.json`;
 
             mockObjects.push({

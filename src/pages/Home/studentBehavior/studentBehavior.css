@@ -1193,6 +1193,7 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .track-title {
@@ -1211,6 +1212,36 @@ body {
     border-radius: 4px;
     background: #f3f4f6;
     color: #4b5563;
+}
+
+.track-duration-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 12px;
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+    box-shadow: 0 1px 2px rgba(16, 185, 129, 0.06);
+    white-space: nowrap;
+}
+
+.track-duration-pill strong {
+    font-weight: 700;
+    color: #065f46;
+}
+
+[data-theme="dark"] .track-duration-pill {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border-color: rgba(52, 211, 153, 0.3);
+}
+
+[data-theme="dark"] .track-duration-pill strong {
+    color: #6ee7b7;
 }
 
 .game-center-track .track-subtag { background: #e0f2fe; color: #0284c7; }
