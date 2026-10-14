@@ -1934,18 +1934,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 11. Student Game Detail & Flowchart View Logic
+    function hideUserGameDetailView() {
+        if (userDetailContainer && dashboardContainer) {
+            userDetailContainer.style.display = 'none';
+            dashboardContainer.style.display = 'flex';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
     if (backToListBtn) {
         backToListBtn.addEventListener('click', () => {
-            if (userDetailContainer && dashboardContainer) {
-                userDetailContainer.style.display = 'none';
-                dashboardContainer.style.display = 'flex';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (history.state && history.state.studentBehaviorView === 'detail') {
+                history.back();
+            } else {
+                hideUserGameDetailView();
             }
         });
     }
 
-    async function showUserGameDetail(username) {
+    // 监听浏览器后退/前进按钮，实现学生详情与列表视图无缝切换
+    window.addEventListener('popstate', (e) => {
+        if (e.state && e.state.studentBehaviorView === 'detail' && e.state.username) {
+            showUserGameDetail(e.state.username, true);
+        } else {
+            hideUserGameDetailView();
+        }
+    });
+
+    async function showUserGameDetail(username, skipPushState = false) {
         if (!userDetailContainer || !dashboardContainer) return;
+
+        if (!skipPushState) {
+            try {
+                history.pushState(
+                    { studentBehaviorView: 'detail', username: username },
+                    '',
+                    '#student=' + encodeURIComponent(username)
+                );
+            } catch (_) { }
+        }
 
         dashboardContainer.style.display = 'none';
         userDetailContainer.style.display = 'flex';
@@ -2829,11 +2856,21 @@ document.addEventListener('DOMContentLoaded', () => {
         syncBehaviorChartsTheme();
     });
 
-    window.addEventListener('resize', () => {
-        if (distributionChart && !distributionChart.isDisposed()) distributionChart.resize();
-        if (hourlyTrendChart && !hourlyTrendChart.isDisposed()) hourlyTrendChart.resize();
-        if (topStudentsChart && !topStudentsChart.isDisposed()) topStudentsChart.resize();
-    });
+    // 同步父级框架菜单为“学生行为”
+    function notifyParentMenu() {
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ action: 'syncMenu', activeMenu: 'studentBehavior/studentBehavior.html' }, '*');
+            }
+        } catch (_) { }
+        try {
+            if (window.parent && window.parent !== window && typeof window.parent.updateActiveMenu === 'function') {
+                window.parent.updateActiveMenu('studentBehavior/studentBehavior.html');
+            }
+        } catch (_) { }
+    }
+    notifyParentMenu();
+    window.addEventListener('pageshow', notifyParentMenu);
 });
 
 

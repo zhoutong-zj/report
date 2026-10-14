@@ -513,6 +513,12 @@ class UserListApp {
             backToDauBtn.addEventListener('click', () => this.handleBackToDau());
         }
 
+        // 绑定返回日志报表按钮事件
+        const backToLogReportBtn = document.getElementById('backToLogReportBtn');
+        if (backToLogReportBtn) {
+            backToLogReportBtn.addEventListener('click', () => this.handleBackToLogReport());
+        }
+
         // 绑定返回异常分类详情页按钮事件
         const backToExceptionBtn = document.getElementById('backToExceptionBtn');
         if (backToExceptionBtn) {
@@ -521,15 +527,20 @@ class UserListApp {
     }
 
     /**
-     * 根据是否从日活详情页或异常分类详情页排查跳转而来，控制返回按钮的显隐
+     * 根据是否从日活详情页、异常分类详情页或日志报表排查跳转而来，控制返回按钮的显隐
      */
     checkBackBtnVisibility() {
+        const backToLogReportBtn = document.getElementById('backToLogReportBtn');
         const backToDauBtn = document.getElementById('backToDauBtn');
         const backToExceptionBtn = document.getElementById('backToExceptionBtn');
 
+        const fromLogReport = sessionStorage.getItem('fromLogReport');
         const fromDau = sessionStorage.getItem('fromDauDetail');
         const fromException = sessionStorage.getItem('fromExceptionDetail');
 
+        if (backToLogReportBtn) {
+            backToLogReportBtn.style.display = (fromLogReport === 'true') ? 'inline-flex' : 'none';
+        }
         if (backToDauBtn) {
             backToDauBtn.style.display = (fromDau === 'true') ? 'inline-flex' : 'none';
         }
@@ -539,11 +550,51 @@ class UserListApp {
     }
 
     /**
+     * 返回日志报表处理逻辑
+     */
+    handleBackToLogReport() {
+        sessionStorage.removeItem('fromLogReport');
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ action: 'syncMenu', activeMenu: 'logReport/logReport.html' }, '*');
+            }
+        } catch (_) { }
+        try {
+            if (window.parent && window.parent !== window && typeof window.parent.updateActiveMenu === 'function') {
+                window.parent.updateActiveMenu('logReport/logReport.html');
+            }
+        } catch (_) { }
+        if (window.history.length > 1) {
+            window.history.back();
+        } else if (window.self !== window.parent) {
+            window.parent.postMessage({
+                action: 'navigate',
+                page: 'logReport/logReport.html',
+                activeMenu: 'logReport/logReport.html'
+            }, '*');
+        } else {
+            window.location.href = '../logReport/logReport.html';
+        }
+    }
+
+    /**
      * 返回日活详情页处理逻辑
      */
     handleBackToDau() {
         sessionStorage.removeItem('fromDauDetail');
-        if (window.self !== window.parent) {
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ action: 'syncMenu', activeMenu: 'logReport/logReport.html' }, '*');
+            }
+        } catch (_) { }
+        try {
+            if (window.parent && window.parent !== window && typeof window.parent.updateActiveMenu === 'function') {
+                window.parent.updateActiveMenu('logReport/logReport.html');
+            }
+        } catch (_) { }
+        if (window.history.length > 1) {
+            window.history.back();
+        } else if (window.self !== window.parent) {
             window.parent.postMessage({
                 action: 'navigate',
                 page: 'dauDetail/dauDetail.html',
@@ -560,7 +611,19 @@ class UserListApp {
     handleBackToException() {
         sessionStorage.removeItem('fromExceptionDetail');
         sessionStorage.setItem('fromExceptionDetail_back', 'true');
-        if (window.self !== window.parent) {
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ action: 'syncMenu', activeMenu: 'logReport/logReport.html' }, '*');
+            }
+        } catch (_) { }
+        try {
+            if (window.parent && window.parent !== window && typeof window.parent.updateActiveMenu === 'function') {
+                window.parent.updateActiveMenu('logReport/logReport.html');
+            }
+        } catch (_) { }
+        if (window.history.length > 1) {
+            window.history.back();
+        } else if (window.self !== window.parent) {
             window.parent.postMessage({
                 action: 'navigate',
                 page: 'exceptionDetail/exceptionDetail.html',
@@ -1760,6 +1823,48 @@ class UserListApp {
 }
 
 // 页面 DOM 加载完毕后，实例化用户列表应用
+function notifySingleQueryMenu() {
+    try {
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ action: 'syncMenu', activeMenu: 'singleQuery/singleQuery.html' }, '*');
+        }
+    } catch (_) { }
+    try {
+        if (window.parent && window.parent !== window && typeof window.parent.updateActiveMenu === 'function') {
+            window.parent.updateActiveMenu('singleQuery/singleQuery.html');
+        }
+    } catch (_) { }
+}
+
+let singleQueryAppInstance = null;
 document.addEventListener('DOMContentLoaded', () => {
-    new UserListApp();
+    notifySingleQueryMenu();
+    singleQueryAppInstance = new UserListApp();
+});
+
+window.addEventListener('pageshow', () => {
+    notifySingleQueryMenu();
+    if (singleQueryAppInstance) {
+        singleQueryAppInstance.checkBackBtnVisibility();
+    }
+});
+
+// 当用户使用浏览器返回按钮离开单查询页时，提前通知父级高亮原发起模块菜单
+window.addEventListener('pagehide', () => {
+    const fromLog = sessionStorage.getItem('fromLogReport') === 'true';
+    const fromDau = sessionStorage.getItem('fromDauDetail') === 'true';
+    const fromExp = sessionStorage.getItem('fromExceptionDetail') === 'true';
+
+    if (fromLog || fromDau || fromExp) {
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ action: 'syncMenu', activeMenu: 'logReport/logReport.html' }, '*');
+            }
+        } catch (_) { }
+        try {
+            if (window.parent && window.parent !== window && typeof window.parent.updateActiveMenu === 'function') {
+                window.parent.updateActiveMenu('logReport/logReport.html');
+            }
+        } catch (_) { }
+    }
 });

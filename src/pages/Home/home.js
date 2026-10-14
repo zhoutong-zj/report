@@ -34,21 +34,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 监听来自子 iframe 的跨域/本地文件协议导航请求
+    // 统一设置左侧菜单激活状态
+    function setActiveMenu(menuPage) {
+        if (!menuPage) return;
+        const targetMenu = Array.from(menuItems).find(item => {
+            const dp = item.getAttribute('data-page') || '';
+            const dpFile = dp.split('/').pop();
+            return dp === menuPage ||
+                dp.endsWith(menuPage) ||
+                menuPage.endsWith(dpFile) ||
+                menuPage.includes(dp) ||
+                ((menuPage.includes('dauDetail') || menuPage.includes('exceptionDetail')) && dp.includes('logReport')) ||
+                ((menuPage.includes('HomeDetail') || menuPage.includes('homeDetail')) && dp.includes('singleQuery'));
+        });
+        if (targetMenu && !targetMenu.classList.contains('active')) {
+            menuItems.forEach(el => el.classList.remove('active'));
+            targetMenu.classList.add('active');
+        }
+    }
+    window.updateActiveMenu = setActiveMenu;
+
+    // 自动根据 iframe 当前页面路径同步左侧侧边栏高亮
+    function syncMenuWithIframe() {
+        try {
+            let currentPath = '';
+            if (contentFrame && contentFrame.contentWindow) {
+                try {
+                    currentPath = contentFrame.contentWindow.location.pathname || contentFrame.contentWindow.location.href || '';
+                } catch (_) { }
+            }
+            if (currentPath) {
+                setActiveMenu(currentPath.split('?')[0].split('#')[0]);
+            }
+        } catch (e) {
+            console.warn('syncMenuWithIframe failed:', e);
+        }
+    }
+
+    if (contentFrame) {
+        contentFrame.addEventListener('load', syncMenuWithIframe);
+    }
+    window.addEventListener('popstate', syncMenuWithIframe);
+    setInterval(syncMenuWithIframe, 300);
+
+    // 监听来自子 iframe 的菜单同步与导航请求
     window.addEventListener('message', (event) => {
-        if (event.data && event.data.action === 'navigate') {
+        if (!event.data) return;
+        if (event.data.action === 'syncMenu' && event.data.activeMenu) {
+            setActiveMenu(event.data.activeMenu);
+        } else if (event.data.action === 'navigate') {
             const page = event.data.page;
             const menuPage = event.data.activeMenu || page;
-            const targetMenu = Array.from(menuItems).find(item => {
-                const dp = item.getAttribute('data-page');
-                return dp === menuPage || dp.endsWith(menuPage) ||
-                    (menuPage.includes('dauDetail') && dp.includes('logReport')) ||
-                    (menuPage.includes('exceptionDetail') && dp.includes('logReport'));
-            });
-            if (targetMenu) {
-                menuItems.forEach(el => el.classList.remove('active'));
-                targetMenu.classList.add('active');
-            }
+            setActiveMenu(menuPage);
             if (page) {
                 contentFrame.src = page;
             }

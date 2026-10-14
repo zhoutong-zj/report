@@ -1,3 +1,25 @@
+// 顶层立即执行菜单同步通知，不受 DOMContentLoaded 或 BFCache 阻滞
+(function notifyParentMenuEarly() {
+    function notify() {
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ action: 'syncMenu', activeMenu: 'logReport/logReport.html' }, '*');
+            }
+        } catch (_) { }
+        try {
+            if (window.parent && window.parent !== window && typeof window.parent.updateActiveMenu === 'function') {
+                window.parent.updateActiveMenu('logReport/logReport.html');
+            }
+        } catch (_) { }
+    }
+    notify();
+    window.addEventListener('pageshow', notify);
+    window.addEventListener('focus', notify);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) notify();
+    });
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
     // 1. DOM Elements
     const reportDateInput = document.getElementById('reportDate');
@@ -88,9 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const existingHistory = JSON.parse(sessionStorage.getItem('clickedAccountsHistory') || '[]');
         const updatedHistory = Array.from(new Set([...existingHistory, username]));
         sessionStorage.setItem('clickedAccountsHistory', JSON.stringify(updatedHistory));
+        sessionStorage.setItem('fromLogReport', 'true');
 
         if (window.self !== window.parent) {
-            window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html' }, '*');
+            window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html', fromLogReport: true }, '*');
         } else {
             window.location.href = '../singleQuery/singleQuery.html';
         }
@@ -875,8 +898,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.classList.add('visited');
 
                 // 解决本地文件协议/跨域导致的 window.parent 权限拒绝问题：使用 postMessage 通信
+                sessionStorage.setItem('fromLogReport', 'true');
                 if (window.self !== window.parent) {
-                    window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html' }, '*');
+                    window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html', fromLogReport: true }, '*');
                 } else {
                     window.location.href = '../singleQuery/singleQuery.html';
                 }
@@ -943,6 +967,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (errorBarChart && !errorBarChart.isDisposed()) errorBarChart.resize();
         if (dauLineChart && !dauLineChart.isDisposed()) dauLineChart.resize();
     });
+
+    // 同步父级框架菜单为“日志报表”
+    function notifyParentMenu() {
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ action: 'syncMenu', activeMenu: 'logReport/logReport.html' }, '*');
+            }
+        } catch (_) { }
+        try {
+            if (window.parent && window.parent !== window && typeof window.parent.updateActiveMenu === 'function') {
+                window.parent.updateActiveMenu('logReport/logReport.html');
+            }
+        } catch (_) { }
+    }
+    notifyParentMenu();
+    window.addEventListener('pageshow', notifyParentMenu);
 });
 
 

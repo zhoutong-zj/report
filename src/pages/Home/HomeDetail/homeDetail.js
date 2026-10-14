@@ -69,9 +69,31 @@ class DetailApp {
 
     bindEvents() {
         const backBtn = document.getElementById('backBtn');
-        backBtn.addEventListener('click', () => {
+        const handleBack = () => {
             sessionStorage.setItem('fromHomeDetail', 'true');
-            window.location.href = '../singleQuery/singleQuery.html';
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ action: 'syncMenu', activeMenu: 'singleQuery/singleQuery.html' }, '*');
+                }
+            } catch (_) { }
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.updateActiveMenu === 'function') {
+                    window.parent.updateActiveMenu('singleQuery/singleQuery.html');
+                }
+            } catch (_) { }
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '../singleQuery/singleQuery.html';
+            }
+        };
+        if (backBtn) {
+            backBtn.addEventListener('click', handleBack);
+        }
+
+        // 无论用户是点击返回按钮还是点击浏览器返回按钮离开详情页，都自动标记来自详情页以保持单查询列表现场
+        window.addEventListener('pagehide', () => {
+            sessionStorage.setItem('fromHomeDetail', 'true');
         });
 
         // 绑定折叠按钮点击事件
@@ -607,12 +629,28 @@ class DetailApp {
         document.body.innerHTML = `
             <div class="container" style="text-align: center; padding: 50px;">
                 <h2 style="color: #f56c6c;">${message}</h2>
-                <button onclick="sessionStorage.setItem('fromHomeDetail', 'true'); window.location.href='../singleQuery/singleQuery.html'" style="margin-top: 20px; padding: 10px 20px; background: #409eff; color: #fff; border: none; border-radius: 4px; cursor: pointer;">返回</button>
+                <button onclick="sessionStorage.setItem('fromHomeDetail', 'true'); if (window.history.length > 1) { window.history.back(); } else { window.location.href='../singleQuery/singleQuery.html'; }" style="margin-top: 20px; padding: 10px 20px; background: #409eff; color: #fff; border: none; border-radius: 4px; cursor: pointer;">返回</button>
             </div>
         `;
     }
 }
 
+function notifySingleQueryMenu() {
+    try {
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ action: 'syncMenu', activeMenu: 'singleQuery/singleQuery.html' }, '*');
+        }
+    } catch (_) { }
+    try {
+        if (window.parent && window.parent !== window && typeof window.parent.updateActiveMenu === 'function') {
+            window.parent.updateActiveMenu('singleQuery/singleQuery.html');
+        }
+    } catch (_) { }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    notifySingleQueryMenu();
     new DetailApp();
 });
+
+window.addEventListener('pageshow', notifySingleQueryMenu);

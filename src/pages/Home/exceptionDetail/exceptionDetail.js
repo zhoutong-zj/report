@@ -119,6 +119,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 3. Back Button
+    // 同步父级框架菜单为“日志报表”
+    function notifyParentMenu() {
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ action: 'syncMenu', activeMenu: 'logReport/logReport.html' }, '*');
+            }
+        } catch (_) { }
+        try {
+            if (window.parent && window.parent !== window && typeof window.parent.updateActiveMenu === 'function') {
+                window.parent.updateActiveMenu('logReport/logReport.html');
+            }
+        } catch (_) { }
+    }
+    notifyParentMenu();
+    window.addEventListener('pageshow', notifyParentMenu);
+
     if (backBtn) {
         backBtn.addEventListener('click', () => {
             const selectedDate = exceptionDateInput ? exceptionDateInput.value : '';
@@ -126,9 +142,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 sessionStorage.setItem('reportDate', selectedDate);
             }
             sessionStorage.removeItem('exception_state_cache');
-            window.location.href = '../logReport/logReport.html';
+            notifyParentMenu();
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '../logReport/logReport.html';
+            }
         });
     }
+
+    // 页面隐藏/离开时自动同步选中的报表日期（兼容浏览器返回按钮）
+    window.addEventListener('pagehide', () => {
+        const selectedDate = exceptionDateInput ? exceptionDateInput.value : '';
+        if (selectedDate) {
+            sessionStorage.setItem('reportDate', selectedDate);
+        }
+    });
 
     // 缓存管理方法
     function getGlobalCache() {
