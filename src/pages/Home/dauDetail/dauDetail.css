@@ -1552,7 +1552,13 @@ body.modal-open {
     /* 学校名称柔和 */
 }
 
-[data-theme="dark"] .dau-table td:nth-child(7) {
+[data-theme="dark"] .dau-table td:nth-child(5),
+[data-theme="dark"] .dau-table td.dau-teacher-cell {
+    color: #cbd5e1 !important;
+    /* 老师名称柔和浅灰 */
+}
+
+[data-theme="dark"] .dau-table td:nth-child(8) {
     color: #cbd5e1 !important;
     /* 设备名称 */
 }

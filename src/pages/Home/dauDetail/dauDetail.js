@@ -402,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         deviceName = fileData.deviceName || studentInfo.deviceName || '-';
                         phonePlatformVersion = fileData.phonePlatformVersion || studentInfo.phonePlatformVersion || '-';
                         userId = fileData.userId || studentInfo.id || studentInfo.userId || ('U' + String(Math.abs(hashString(loginName))).slice(0, 8));
-                        teacherName = studentInfo.teacherName || fileData.teacherName || '-';
+                        teacherName = studentInfo.teacherName || fileData.teacherName || studentInfo.teacher || fileData.teacher || '-';
                         serviceName = studentInfo.serviceName || fileData.serviceName || '-';
                         identity = fileData.identity || studentInfo.identity || '普通学员';
                     }
@@ -752,6 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return (item.username && item.username.toLowerCase().includes(query)) ||
                 (item.loginName && item.loginName.toLowerCase().includes(query)) ||
                 (item.account && item.account.toLowerCase().includes(query)) ||
+                (item.teacherName && item.teacherName.toLowerCase().includes(query)) ||
                 (item.grade && item.grade.toLowerCase().includes(query)) ||
                 (item.shopName && item.shopName.toLowerCase().includes(query)) ||
                 (item.shopId && item.shopId.toLowerCase().includes(query)) ||
@@ -814,7 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filteredList.length === 0) {
             dauTableBody.innerHTML = `
                 <tr>
-                    <td colspan="10" style="text-align: center; padding: 40px; color: #909399;">
+                    <td colspan="11" style="text-align: center; padding: 40px; color: #909399;">
                         暂无相关日活数据
                     </td>
                 </tr>
@@ -835,6 +836,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const rawAppVersion = item.appVersion || '-';
                 const versionBadgeClass = getVersionBadgeClass(rawAppVersion);
+                const teacherDisplay = (item.teacherName && item.teacherName !== '-') ? escapeHtml(item.teacherName) : '<span style="color: #909399;">-</span>';
 
                 html += `
                     <tr class="${selectedClass}" data-index="${index}">
@@ -844,6 +846,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td style="font-weight: 600; color: #409eff;">${escapeHtml(item.loginName || item.account || '-')}</td>
                         <td style="font-weight: 600; color: #303133;">${escapeHtml(item.username || '-')}</td>
                         <td style="color: #606266;" title="${escapeHtml(item.schoolName || '')}">${escapeHtml(item.schoolName || '-')}</td>
+                        <td class="dau-teacher-cell" style="color: #606266;" title="${escapeHtml(item.teacherName || '')}">${teacherDisplay}</td>
                         <td style="text-align: center;">
                             ${item.grade && item.grade !== '-' ? `<span class="dau-grade-badge">${escapeHtml(item.grade)}</span>` : '<span style="color: #909399;">-</span>'}
                         </td>
@@ -1613,7 +1616,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dauTableBody) {
             dauTableBody.innerHTML = `
                 <tr>
-                    <td colspan="10" style="text-align: center; padding: 40px; color: #409eff;">
+                    <td colspan="11" style="text-align: center; padding: 40px; color: #409eff;">
                         ⏳ 正在获取 OSS 日活详细数据...
                     </td>
                 </tr>

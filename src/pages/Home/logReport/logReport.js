@@ -350,8 +350,8 @@ document.addEventListener('DOMContentLoaded', () => {
         errorBarChart.setOption(option);
     }
 
-    // Helper to calculate 10 dates ending on selectedDateStr (inclusive)
-    function getRecent10Dates(selectedDateStr) {
+    // Helper to calculate recent N dates ending on selectedDateStr (inclusive)
+    function getRecentDates(selectedDateStr, days = 10) {
         const list = [];
         if (!selectedDateStr) {
             selectedDateStr = new Date().toISOString().split('T')[0];
@@ -359,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const parts = selectedDateStr.split('-');
         const endDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
 
-        for (let i = 9; i >= 0; i--) {
+        for (let i = days - 1; i >= 0; i--) {
             const d = new Date(endDate);
             d.setDate(d.getDate() - i);
             const yyyy = d.getFullYear();
@@ -373,6 +373,196 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         return list;
+    }
+
+    function getRecent10Dates(selectedDateStr) {
+        return getRecentDates(selectedDateStr, 10);
+    }
+
+    // Helper to calculate all dates of a specific natural month (YYYY-MM)
+    function getDatesOfMonth(yearMonthStr, selectedDateStr) {
+        const parts = yearMonthStr.split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        const totalDays = new Date(year, month, 0).getDate();
+
+        let endDay = totalDays;
+        if (selectedDateStr) {
+            const selParts = selectedDateStr.split('-').map(v => parseInt(v, 10));
+            if (selParts[0] === year && selParts[1] === month) {
+                // If it's the current month, show up to current day
+                endDay = Math.min(selParts[2], totalDays);
+            }
+        }
+
+        const list = [];
+        for (let day = 1; day <= endDay; day++) {
+            const yyyy = String(year);
+            const mm = String(month).padStart(2, '0');
+            const dd = String(day).padStart(2, '0');
+            list.push({
+                dateStr: `${yyyy}-${mm}-${dd}`,
+                ossFolder: `${yyyy}_${mm}_${dd}`,
+                label: `${mm}-${dd}`
+            });
+        }
+        return list;
+    }
+
+    // Render Monthly Daily Active Users line chart in popup modal
+    let monthlyDauChart = null;
+    let lastMonthlyDauParams = null;
+    function renderMonthlyDauChart(dates, data) {
+        lastMonthlyDauParams = { dates, data };
+        const dom = document.getElementById('monthlyDauLineChart');
+        if (!dom || typeof echarts === 'undefined') return;
+
+        const theme = window.ThemeManager ? window.ThemeManager.getTheme() : 'light';
+        const colors = window.ThemeManager ? window.ThemeManager.getChartTheme(theme) : {};
+
+        if (monthlyDauChart && !monthlyDauChart.isDisposed()) {
+            monthlyDauChart.dispose();
+        }
+        monthlyDauChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
+
+        const labels = dates.map(d => d.label);
+        const fullDates = dates.map(d => d.dateStr);
+
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: theme === 'dark' ? '#1e293b' : '#ffffff',
+                borderColor: theme === 'dark' ? '#334155' : '#e2e8f0',
+                textStyle: { color: theme === 'dark' ? '#f8fafc' : '#1e293b' },
+                formatter: function (params) {
+                    const p = params[0];
+                    const fullDate = fullDates[p.dataIndex] || p.name;
+                    return `<div style="font-weight: 600; margin-bottom: 6px; font-size: 13px;">${fullDate} (${p.name})</div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0284c7;"></span>
+                                <span>日活账号数: <strong style="font-size: 14px; color: #0284c7;">${p.value}</strong> 个</span>
+                            </div>`;
+                }
+            },
+            grid: {
+                top: 30,
+                left: 45,
+                right: 20,
+                bottom: 40
+            },
+            dataZoom: [
+                {
+                    type: 'inside',
+                    start: 0,
+                    end: 100
+                },
+                {
+                    type: 'slider',
+                    show: true,
+                    bottom: 2,
+                    height: 16,
+                    borderColor: 'transparent',
+                    backgroundColor: theme === 'dark' ? '#1e293b' : '#f1f5f9',
+                    fillerColor: theme === 'dark' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(2, 132, 199, 0.15)',
+                    handleStyle: {
+                        color: '#0284c7',
+                        borderColor: '#0284c7'
+                    },
+                    textStyle: {
+                        color: theme === 'dark' ? '#94a3b8' : '#64748b',
+                        fontSize: 10
+                    }
+                }
+            ],
+            xAxis: {
+                type: 'category',
+                data: labels,
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
+                axisLabel: {
+                    color: colors.textColor || '#64748b',
+                    fontSize: 11,
+                    interval: labels.length > 20 ? 1 : 0,
+                    rotate: 35
+                }
+            },
+            yAxis: {
+                type: 'value',
+                minInterval: 1,
+                splitNumber: 4,
+                name: '活跃账号数 (个)',
+                nameTextStyle: {
+                    color: colors.textColor || '#64748b',
+                    fontSize: 11,
+                    padding: [0, 0, 6, 0]
+                },
+                max: function (value) {
+                    if (!value.max || value.max <= 0) return 20;
+                    // 增大 Y 轴最大值（上浮 35% 并向上取整到整十），给最高点和 markPoint 留出充分舒展的顶部空间
+                    const expanded = Math.ceil(value.max * 1.35);
+                    return Math.max(10, Math.ceil(expanded / 10) * 10);
+                },
+                splitLine: { lineStyle: { color: colors.gridColor || '#f0f2f5' } },
+                axisLabel: { color: colors.textColor || '#64748b', fontSize: 11 }
+            },
+            series: [{
+                name: '日活数量',
+                type: 'line',
+                smooth: 0.5,
+                smoothMonotone: 'x',
+                symbol: 'circle',
+                symbolSize: 3.5,
+                showSymbol: true,
+                emphasis: {
+                    scale: 2,
+                    itemStyle: {
+                        color: '#0284c7',
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }
+                },
+                itemStyle: {
+                    color: '#0284c7',
+                    borderWidth: 1.2,
+                    borderColor: '#ffffff'
+                },
+                lineStyle: { width: 2.2, color: '#0284c7' },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(2, 132, 199, 0.38)' },
+                        { offset: 1, color: 'rgba(2, 132, 199, 0.02)' }
+                    ])
+                },
+                markPoint: {
+                    data: [
+                        { type: 'max', name: '最高日活', itemStyle: { color: '#10b981' } },
+                        { type: 'min', name: '最低日活', itemStyle: { color: '#f59e0b' } }
+                    ],
+                    label: { fontSize: 10, color: '#ffffff', fontWeight: 'bold' }
+                },
+                markLine: {
+                    silent: true,
+                    symbol: 'none',
+                    lineStyle: {
+                        type: 'dashed',
+                        color: theme === 'dark' ? 'rgba(148, 163, 184, 0.55)' : 'rgba(100, 116, 139, 0.55)',
+                        width: 1.5
+                    },
+                    data: [
+                        { type: 'average', name: '平均线' }
+                    ],
+                    label: {
+                        formatter: '月日均: {c}',
+                        position: 'insideEndTop',
+                        color: theme === 'dark' ? '#94a3b8' : '#64748b',
+                        fontSize: 11
+                    }
+                },
+                data: data
+            }]
+        };
+        monthlyDauChart.setOption(option);
     }
 
     // Render 10-day Daily Active Users (DAU) line chart with ECharts
@@ -427,11 +617,11 @@ document.addEventListener('DOMContentLoaded', () => {
             series: [{
                 name: '日活数量',
                 type: 'line',
-                smooth: 0.35,
+                smooth: 0.45,
                 symbol: 'circle',
-                symbolSize: 6,
-                itemStyle: { color: '#409eff' },
-                lineStyle: { width: 2.5, color: '#409eff' },
+                symbolSize: 4,
+                itemStyle: { color: '#409eff', borderWidth: 1.5, borderColor: '#ffffff' },
+                lineStyle: { width: 2.2, color: '#409eff' },
                 areaStyle: {
                     color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                         { offset: 0, color: 'rgba(64, 158, 255, 0.35)' },
@@ -951,11 +1141,269 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 9.2 Monthly DAU Modal Controller & Month/Days Switchers
+    const openMonthlyDauBtn = document.getElementById('openMonthlyDauBtn');
+    const monthlyDauModal = document.getElementById('monthlyDauModal');
+    const closeMonthlyDauModalBtn = document.getElementById('closeMonthlyDauModalBtn');
+    const monthlyDauTitle = document.getElementById('monthlyDauTitle');
+    const monthlyDauSubtitle = document.getElementById('monthlyDauSubtitle');
+    const dauDaysSelector = document.getElementById('dauDaysSelector');
+    const dauMonthSelector = document.getElementById('dauMonthSelector');
+    const prevMonthBtn = document.getElementById('prevMonthBtn');
+    const nextMonthBtn = document.getElementById('nextMonthBtn');
+    const monthlyDauLoading = document.getElementById('monthlyDauLoading');
+    const monthlyDauKpiBar = document.getElementById('monthlyDauKpiBar');
+    const monthlyAvgDau = document.getElementById('monthlyAvgDau');
+    const monthlyMaxDau = document.getElementById('monthlyMaxDau');
+    const monthlyMinDau = document.getElementById('monthlyMinDau');
+
+    const monthlyDauCache = {};
+
+    function generateMockDauDataForDates(dates) {
+        const seedBase = [18, 22, 26, 25, 30, 38, 42, 39, 44, 48, 52, 50, 46, 55, 60, 58, 64, 70, 68, 72, 78, 75, 82, 80, 85, 79, 84, 88, 92, 95, 91];
+        return dates.map((_, idx) => {
+            const val = seedBase[idx % seedBase.length];
+            const jitter = ((idx * 7) % 9) - 4;
+            return Math.max(8, val + jitter);
+        });
+    }
+
+    // Populate month dropdown options (recent 30 days + recent 12 natural months)
+    function populateMonthSelectorOptions(baseDateStr) {
+        if (!dauMonthSelector) return;
+        const currentVal = dauMonthSelector.value;
+        dauMonthSelector.innerHTML = '';
+
+        // Option 1: Empty placeholder for custom days
+        const optDefault = document.createElement('option');
+        optDefault.value = '';
+        optDefault.textContent = '按月份查看';
+        dauMonthSelector.appendChild(optDefault);
+
+        // Option 2: Recent 30 Days
+        const optRecent = document.createElement('option');
+        optRecent.value = 'recent30';
+        optRecent.textContent = '最近 30 天';
+        dauMonthSelector.appendChild(optRecent);
+
+        // Options 3..N: Recent 12 Natural Months
+        const baseDate = baseDateStr ? new Date(baseDateStr) : new Date();
+        const curYear = baseDate.getFullYear();
+        const curMonth = baseDate.getMonth() + 1;
+
+        for (let i = 0; i < 12; i++) {
+            const d = new Date(curYear, curMonth - 1 - i, 1);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const key = `${yyyy}-${mm}`;
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = i === 0 ? `${yyyy}年${mm}月 (当月)` : `${yyyy}年${mm}月`;
+            dauMonthSelector.appendChild(opt);
+        }
+
+        if (currentVal && Array.from(dauMonthSelector.options).some(o => o.value === currentVal)) {
+            dauMonthSelector.value = currentVal;
+        } else {
+            dauMonthSelector.value = 'recent30';
+        }
+        updateMonthNavButtons();
+    }
+
+    function updateMonthNavButtons() {
+        if (!dauMonthSelector || !prevMonthBtn || !nextMonthBtn) return;
+        const idx = dauMonthSelector.selectedIndex;
+        const maxIdx = dauMonthSelector.options.length - 1;
+        // Option 0: placeholder, Option 1: recent30, Option 2: 当前月, Option max: 历史最早月
+        prevMonthBtn.disabled = (idx >= maxIdx || idx < 1);
+        nextMonthBtn.disabled = (idx <= 2);
+    }
+
+    function renderMonthlyDauData(dates, counts) {
+        if (!counts || counts.length === 0) return;
+
+        const total = counts.reduce((acc, v) => acc + v, 0);
+        const avg = Math.round(total / counts.length);
+        const max = Math.max(...counts);
+        const min = Math.min(...counts);
+
+        if (monthlyAvgDau) monthlyAvgDau.textContent = avg;
+        if (monthlyMaxDau) monthlyMaxDau.textContent = max;
+        if (monthlyMinDau) monthlyMinDau.textContent = min;
+        if (monthlyDauKpiBar) monthlyDauKpiBar.style.display = 'flex';
+
+        renderMonthlyDauChart(dates, counts);
+
+        setTimeout(() => {
+            if (monthlyDauChart && !monthlyDauChart.isDisposed()) {
+                monthlyDauChart.resize();
+            }
+        }, 50);
+    }
+
+    async function loadMonthlyDauByQuery(queryType, queryVal) {
+        const dateStr = reportDateInput ? reportDateInput.value : new Date().toISOString().split('T')[0];
+        let dates = [];
+        let cacheKey = '';
+
+        if (queryType === 'days') {
+            const daysCount = parseInt(queryVal, 10) || 30;
+            dates = getRecentDates(dateStr, daysCount);
+            cacheKey = `days_${daysCount}_${dateStr}`;
+
+            if (monthlyDauTitle) monthlyDauTitle.textContent = `近${daysCount}日日活统计折线图`;
+            if (monthlyDauSubtitle && dates.length > 0) {
+                monthlyDauSubtitle.textContent = `统计范围：${dates[0].dateStr} 至 ${dates[dates.length - 1].dateStr} (共 ${daysCount} 天)`;
+            }
+
+            if (dauDaysSelector) dauDaysSelector.value = String(daysCount);
+            if (dauMonthSelector) dauMonthSelector.value = daysCount === 30 ? 'recent30' : '';
+        } else {
+            // Month mode
+            const monthKey = queryVal;
+            if (monthKey === 'recent30') {
+                return loadMonthlyDauByQuery('days', 30);
+            }
+
+            dates = getDatesOfMonth(monthKey, dateStr);
+            cacheKey = `month_${monthKey}_${dateStr}`;
+            const parts = monthKey.split('-');
+
+            if (monthlyDauTitle) monthlyDauTitle.textContent = `${parts[0]}年${parts[1]}月日活统计折线图`;
+            if (monthlyDauSubtitle && dates.length > 0) {
+                monthlyDauSubtitle.textContent = `统计范围：${dates[0].dateStr} 至 ${dates[dates.length - 1].dateStr} (共 ${dates.length} 天)`;
+            }
+
+            if (dauMonthSelector) dauMonthSelector.value = monthKey;
+            if (dauDaysSelector) dauDaysSelector.value = '';
+        }
+
+        updateMonthNavButtons();
+
+        // Check cache
+        if (monthlyDauCache[cacheKey]) {
+            renderMonthlyDauData(dates, monthlyDauCache[cacheKey]);
+            return;
+        }
+
+        const savedConfig = localStorage.getItem('oss_tool_config');
+        if (!savedConfig || !ossClient) {
+            const mockData = generateMockDauDataForDates(dates);
+            monthlyDauCache[cacheKey] = mockData;
+            renderMonthlyDauData(dates, mockData);
+            return;
+        }
+
+        if (monthlyDauLoading) monthlyDauLoading.style.display = 'flex';
+        try {
+            const dauPromises = dates.map(item => {
+                const dauPrefix = `usertemp/xuelianxitong/${item.ossFolder}/user_activity/`;
+                return ossClient.list({
+                    prefix: dauPrefix,
+                    'max-keys': 1000
+                }).then(res => {
+                    const objs = res.objects || [];
+                    return objs.filter(obj => obj.name && !obj.name.endsWith('/')).length;
+                }).catch(err => {
+                    console.warn(`Monthly DAU fetch failed for ${dauPrefix}:`, err);
+                    return 0;
+                });
+            });
+
+            const dauCounts = await Promise.all(dauPromises);
+            monthlyDauCache[cacheKey] = dauCounts;
+            renderMonthlyDauData(dates, dauCounts);
+        } catch (err) {
+            console.error('Failed to load monthly DAU data:', err);
+            const mockData = generateMockDauDataForDates(dates);
+            renderMonthlyDauData(dates, mockData);
+        } finally {
+            if (monthlyDauLoading) monthlyDauLoading.style.display = 'none';
+        }
+    }
+
+    async function openMonthlyDauModal() {
+        if (!monthlyDauModal) return;
+        monthlyDauModal.style.display = 'flex';
+
+        const dateStr = reportDateInput ? reportDateInput.value : new Date().toISOString().split('T')[0];
+        populateMonthSelectorOptions(dateStr);
+
+        // 默认按选中的快速天数（默认30天）展示
+        const defaultDays = (dauDaysSelector && dauDaysSelector.value) ? parseInt(dauDaysSelector.value, 10) : 30;
+        loadMonthlyDauByQuery('days', defaultDays);
+    }
+
+    function closeMonthlyDauModal() {
+        if (monthlyDauModal) {
+            monthlyDauModal.style.display = 'none';
+        }
+    }
+
+    if (openMonthlyDauBtn) {
+        openMonthlyDauBtn.addEventListener('click', openMonthlyDauModal);
+    }
+    if (closeMonthlyDauModalBtn) {
+        closeMonthlyDauModalBtn.addEventListener('click', closeMonthlyDauModal);
+    }
+    if (monthlyDauModal) {
+        monthlyDauModal.addEventListener('click', (e) => {
+            if (e.target === monthlyDauModal) {
+                closeMonthlyDauModal();
+            }
+        });
+    }
+    if (dauDaysSelector) {
+        dauDaysSelector.addEventListener('change', () => {
+            const val = parseInt(dauDaysSelector.value, 10);
+            if (val) {
+                loadMonthlyDauByQuery('days', val);
+            }
+        });
+    }
+    if (dauMonthSelector) {
+        dauMonthSelector.addEventListener('change', () => {
+            if (dauMonthSelector.value) {
+                loadMonthlyDauByQuery('month', dauMonthSelector.value);
+            }
+        });
+    }
+    if (prevMonthBtn) {
+        prevMonthBtn.addEventListener('click', () => {
+            if (!dauMonthSelector) return;
+            const nextIdx = dauMonthSelector.selectedIndex + 1;
+            if (nextIdx < dauMonthSelector.options.length) {
+                dauMonthSelector.selectedIndex = nextIdx;
+                if (dauMonthSelector.value) {
+                    loadMonthlyDauByQuery('month', dauMonthSelector.value);
+                }
+            }
+        });
+    }
+    if (nextMonthBtn) {
+        nextMonthBtn.addEventListener('click', () => {
+            if (!dauMonthSelector) return;
+            const prevIdx = dauMonthSelector.selectedIndex - 1;
+            if (prevIdx >= 1) {
+                dauMonthSelector.selectedIndex = prevIdx;
+                if (dauMonthSelector.value) {
+                    loadMonthlyDauByQuery('month', dauMonthSelector.value);
+                }
+            }
+        });
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && monthlyDauModal && monthlyDauModal.style.display !== 'none') {
+            closeMonthlyDauModal();
+        }
+    });
+
     // 10. Theme Change Adaptations for Charts
     function syncAllChartsTheme(theme) {
         if (lastLineChartParams) renderLineChart(lastLineChartParams.labels, lastLineChartParams.data);
         if (lastPieChartParams) renderPieChart(lastPieChartParams.evalCount, lastPieChartParams.dataCount, lastPieChartParams.platformCount, lastPieChartParams.otherCount, lastPieChartParams.audioVideoCount, lastPieChartParams.audioVideoTestCount, lastPieChartParams.networkCount);
         if (lastDauChartParams) renderDauChart(lastDauChartParams.labels, lastDauChartParams.data);
+        if (lastMonthlyDauParams) renderMonthlyDauChart(lastMonthlyDauParams.dates, lastMonthlyDauParams.data);
     }
 
     window.addEventListener('themeChanged', (e) => {
@@ -966,6 +1414,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (errorLineChart && !errorLineChart.isDisposed()) errorLineChart.resize();
         if (errorBarChart && !errorBarChart.isDisposed()) errorBarChart.resize();
         if (dauLineChart && !dauLineChart.isDisposed()) dauLineChart.resize();
+        if (monthlyDauChart && !monthlyDauChart.isDisposed()) monthlyDauChart.resize();
     });
 
     // 同步父级框架菜单为“日志报表”
