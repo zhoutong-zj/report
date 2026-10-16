@@ -309,6 +309,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * 将半小时 slot 索引 (0 ~ 47) 格式化为时间区间文本
+     * 例如 0 -> '00:00 - 00:30', 1 -> '00:30 - 01:00' ... 47 -> '23:30 - 24:00'
+     */
+    function formatTimeSlotRange(slotIndex) {
+        if (slotIndex === null || slotIndex === undefined || isNaN(slotIndex)) return '';
+        const idx = Math.max(0, Math.min(47, Number(slotIndex)));
+        const startHour = Math.floor(idx / 2);
+        const startMin = (idx % 2) * 30;
+        const endSlot = idx + 1;
+        const endHour = Math.floor(endSlot / 2);
+        const endMin = (endSlot % 2) * 30;
+        const startText = `${String(startHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`;
+        const endText = endHour >= 24 ? '24:00' : `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+        return `${startText} - ${endText}`;
+    }
+
+    /**
+     * 根据 Date 对象计算对应的半小时 slot 索引 (0 ~ 47)
+     */
+    function getItemTimeSlot(dateObj) {
+        if (!dateObj || isNaN(dateObj.getTime())) return -1;
+        return dateObj.getHours() * 2 + (dateObj.getMinutes() >= 30 ? 1 : 0);
+    }
+
     // 6. Fetch DAU details from OSS (always fetch live real-time data)
     async function fetchDauDetails(dateStr) {
         const formattedDate = (dateStr || '').replace(/-/g, '_');
@@ -744,7 +769,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (selectedHourFilter !== null) {
                 const d = getItemDate(item);
-                if (!d || d.getHours() !== selectedHourFilter) {
+                if (!d || getItemTimeSlot(d) !== selectedHourFilter) {
                     return false;
                 }
             }
@@ -779,7 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const currentDate = dauDateInput ? dauDateInput.value : '';
         const uniqueUsers = new Set(filteredList.map(item => item.loginName || item.account || item.key)).size;
-        const hourFilterNotice = (selectedHourFilter !== null) ? ` · 【时段筛选: ${String(selectedHourFilter).padStart(2, '0')}:00 - ${String((selectedHourFilter + 1) % 24).padStart(2, '0')}:00】` : '';
+        const hourFilterNotice = (selectedHourFilter !== null) ? ` · 【时段筛选: ${formatTimeSlotRange(selectedHourFilter)}】` : '';
         if (dauPageSubtitle) {
             dauPageSubtitle.textContent = `报表日期：${currentDate} · 活跃用户：${uniqueUsers} 人 · 共 ${filteredList.length} 条记录${hourFilterNotice}`;
         }
@@ -802,8 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resetHourFilterBtn) {
             if (selectedHourFilter !== null) {
                 resetHourFilterBtn.style.display = 'inline-flex';
-                const nextHour = (selectedHourFilter + 1) % 24;
-                const hText = `${String(selectedHourFilter).padStart(2, '0')}:00 - ${String(nextHour).padStart(2, '0')}:00`;
+                const hText = formatTimeSlotRange(selectedHourFilter);
                 if (resetHourFilterText) {
                     resetHourFilterText.textContent = `取消时段筛选 (${hText})`;
                 }
@@ -1081,7 +1105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         schoolChart.setOption(option);
     }
 
-    // 8.2.2 Render ECharts Smooth Area Line Chart for Hourly Student Online Distribution (24h)
+    // 8.2.2 Render ECharts Smooth Area Line Chart for Half-Hourly Student Online Distribution (24h / 48 slots)
     let timelineChart = null;
     let lastTimelineChartParams = null;
     let lastTimelinePeakHour = null;
@@ -1100,46 +1124,51 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // 统计 24 个小时点 (00:00 ~ 23:00) 的在线学生集合 (按账号去重)
-        const hourlyBuckets = Array.from({ length: 24 }, () => new Set());
+        // 统计 48 个半小时点 (00:00 ~ 23:30, 每半小时一个区间) 的在线学生集合 (按账号去重)
+        const halfHourBuckets = Array.from({ length: 48 }, () => new Set());
         targetList.forEach(item => {
             const d = getItemDate(item);
             if (d) {
-                const hour = d.getHours();
+                const slot = getItemTimeSlot(d);
                 const userKey = item.userId || item.loginName || item.account || item.key;
-                if (userKey) {
-                    hourlyBuckets[hour].add(userKey);
+                if (userKey && slot >= 0 && slot < 48) {
+                    halfHourBuckets[slot].add(userKey);
                 }
             }
         });
 
         // 查找最高峰时段
-        let peakHour = 0;
+        let peakSlot = 0;
         let peakCount = 0;
-        hourlyBuckets.forEach((set, hour) => {
+        halfHourBuckets.forEach((set, slot) => {
             if (set.size > peakCount) {
                 peakCount = set.size;
-                peakHour = hour;
+                peakSlot = slot;
             }
         });
-        lastTimelinePeakHour = peakHour;
+        lastTimelinePeakHour = peakSlot;
 
         if (timelinePeakTime) {
-            const nextHour = (peakHour + 1) % 24;
             timelinePeakTime.textContent = peakCount > 0
-                ? `${String(peakHour).padStart(2, '0')}:00 - ${String(nextHour).padStart(2, '0')}:00`
+                ? formatTimeSlotRange(peakSlot)
                 : '-';
         }
         if (timelinePeakCount) {
             timelinePeakCount.textContent = peakCount;
         }
 
-        const hoursLabels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
-        const seriesData = hourlyBuckets.map((set, hour) => {
-            const isSelected = selectedHourFilter === hour;
+        const slotLabels = Array.from({ length: 48 }, (_, i) => {
+            const h = Math.floor(i / 2);
+            const m = (i % 2) * 30;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        });
+
+        const seriesData = halfHourBuckets.map((set, slot) => {
+            const isSelected = selectedHourFilter === slot;
             return {
                 value: set.size,
-                hour: hour,
+                slot: slot,
+                hour: slot,
                 itemStyle: isSelected ? {
                     color: '#ff9900',
                     borderColor: '#ffffff',
@@ -1161,16 +1190,16 @@ document.addEventListener('DOMContentLoaded', () => {
         timelineChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
 
         // 统一时段点击切换处理函数
-        function handleHourToggle(targetHour) {
-            if (targetHour === null || targetHour === undefined || isNaN(targetHour)) return;
-            const hour = Number(targetHour);
-            if (hour < 0 || hour > 23) return;
+        function handleHourToggle(targetSlot) {
+            if (targetSlot === null || targetSlot === undefined || isNaN(targetSlot)) return;
+            const slot = Number(targetSlot);
+            if (slot < 0 || slot >= 48) return;
 
-            if (selectedHourFilter === hour) {
+            if (selectedHourFilter === slot) {
                 // 再次点击同一时段 -> 取消时段筛选
                 selectedHourFilter = null;
             } else {
-                selectedHourFilter = hour;
+                selectedHourFilter = slot;
             }
             saveCurrentStateToCache();
             renderDauTable();
@@ -1182,18 +1211,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 1. 点击 markPoint（如最高峰数值气泡）
             if (params.componentType === 'markPoint') {
+                if (params.data && params.data.slot !== undefined) {
+                    return params.data.slot;
+                }
                 if (params.data && params.data.hour !== undefined) {
                     return params.data.hour;
                 }
-                return peakHour;
+                return peakSlot;
             }
 
             // 2. 点击 series 上的折线圆点或数值 label
             if (params.componentType === 'series') {
+                if (params.data && params.data.slot !== undefined) {
+                    return params.data.slot;
+                }
                 if (params.data && params.data.hour !== undefined) {
                     return params.data.hour;
                 }
-                if (typeof params.dataIndex === 'number' && params.dataIndex >= 0 && params.dataIndex < 24) {
+                if (typeof params.dataIndex === 'number' && params.dataIndex >= 0 && params.dataIndex < 48) {
                     return params.dataIndex;
                 }
             }
@@ -1201,12 +1236,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // 3. 点击 X 轴刻度文字 (xAxis)
             if (params.componentType === 'xAxis') {
                 const valStr = String(params.value || '');
+                const idx = slotLabels.indexOf(valStr);
+                if (idx !== -1) return idx;
                 const parsed = parseInt(valStr, 10);
-                if (!isNaN(parsed) && parsed >= 0 && parsed < 24) {
+                if (!isNaN(parsed) && parsed >= 0 && parsed < 48) {
                     return parsed;
                 }
-                const idx = hoursLabels.indexOf(valStr);
-                if (idx !== -1) return idx;
             }
 
             return null;
@@ -1228,9 +1263,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (timelineChart.containPixel('grid', pointInPixel)) {
                 const pointInGrid = timelineChart.convertFromPixel({ seriesIndex: 0 }, pointInPixel);
                 if (pointInGrid && !isNaN(pointInGrid[0])) {
-                    const roundedHour = Math.round(pointInGrid[0]);
-                    if (roundedHour >= 0 && roundedHour < 24) {
-                        handleHourToggle(roundedHour);
+                    const roundedSlot = Math.round(pointInGrid[0]);
+                    if (roundedSlot >= 0 && roundedSlot < 48) {
+                        handleHourToggle(roundedSlot);
                     }
                 }
             }
@@ -1255,14 +1290,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 formatter: function (params) {
                     const p = params[0];
                     if (!p) return '';
-                    const hour = (p.data && p.data.hour !== undefined) ? p.data.hour : p.dataIndex;
-                    const nextH = (hour + 1) % 24;
-                    const rangeText = `${String(hour).padStart(2, '0')}:00 ~ ${String(nextH).padStart(2, '0')}:00`;
-                    const isSelected = selectedHourFilter === hour;
+                    const slot = (p.data && p.data.slot !== undefined) ? p.data.slot : p.dataIndex;
+                    const rangeText = formatTimeSlotRange(slot);
+                    const isSelected = selectedHourFilter === slot;
                     return `<div style="font-weight: 600; margin-bottom: 4px;">${rangeText} 时段</div>
                             <div>在线学生人数: <span style="font-weight: bold; color: #722ed1;">${p.value}</span> 人</div>
                             <div style="font-size: 11px; color: ${isSelected ? '#ff9900' : '#909399'}; margin-top: 4px;">
-                                ${isSelected ? '✓ 已选中筛选该时段 (再次点击可取消)' : '💡 点击可按此时间段过滤学生列表'}
+                                ${isSelected ? '✓ 已选中筛选该时段 (再次点击可取消)' : '💡 点击可按此半小时时段过滤学生列表'}
                             </div>`;
                 }
             },
@@ -1274,20 +1308,23 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             xAxis: {
                 type: 'category',
-                data: hoursLabels,
+                data: slotLabels,
                 boundaryGap: false,
                 triggerEvent: true,
                 axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
                 axisLabel: {
-                    color: (value) => {
-                        const h = parseInt(value, 10);
-                        return h === selectedHourFilter ? '#ff9900' : (colors.textColor || '#606266');
+                    color: (value, index) => {
+                        return index === selectedHourFilter ? '#ff9900' : (colors.textColor || '#606266');
                     },
-                    fontWeight: (value) => {
-                        const h = parseInt(value, 10);
-                        return h === selectedHourFilter ? 'bold' : 'normal';
+                    fontWeight: (value, index) => {
+                        return index === selectedHourFilter ? 'bold' : 'normal';
                     },
-                    interval: 1, // 每隔2小时显示一个标签
+                    interval: (index) => {
+                        // 选中的时段强制显示标签
+                        if (index === selectedHourFilter) return true;
+                        // 偶数索引（整点 00:00, 01:00...）默认显示，防止 48 个标签拥挤重叠
+                        return index % 2 === 0;
+                    },
                     fontSize: 11
                 }
             },
@@ -1302,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'line',
                 smooth: true,
                 symbol: 'circle',
-                symbolSize: (val, params) => (params.dataIndex === selectedHourFilter ? 12 : (val > 0 ? 8 : 4)),
+                symbolSize: (val, params) => (params.dataIndex === selectedHourFilter ? 10 : (val > 0 ? 6 : 3)),
                 showSymbol: true,
                 itemStyle: {
                     color: primaryLineColor
@@ -1342,9 +1379,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     data: [
                         {
                             name: '最高峰',
-                            coord: [hoursLabels[peakHour], peakCount],
+                            coord: [slotLabels[peakSlot], peakCount],
                             value: peakCount,
-                            hour: peakHour,
+                            slot: peakSlot,
+                            hour: peakSlot,
                             label: {
                                 fontSize: 11,
                                 fontWeight: 'bold',
@@ -2119,7 +2157,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 chartTabTimeline.setAttribute('aria-selected', 'true');
             }
             if (chartSubtitle) {
-                chartSubtitle.textContent = '当天 24 小时各时间段活跃学生人数分布曲线（横轴：时段，纵轴：在线人数）';
+                chartSubtitle.textContent = '当天 24 小时每半小时活跃学生人数分布曲线（横轴：时段，纵轴：在线人数）';
             }
             if (schoolDauLineChartDom) schoolDauLineChartDom.style.display = 'none';
             if (timelineDauChartDom) timelineDauChartDom.style.display = 'block';

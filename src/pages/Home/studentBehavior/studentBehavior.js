@@ -141,6 +141,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return remMins > 0 ? `${hours}小时${remMins}分` : `${hours}小时`;
     }
 
+    // HTML 转义工具函数
+    function escapeHtml(str) {
+        if (!str && str !== 0) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+    window.escapeHtml = escapeHtml;
+
     /**
      * 规范化年级显示名称
      */
@@ -1142,18 +1154,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderTopStudentsBar() {
         if (!topStudentsCanvas || typeof echarts === 'undefined') return;
 
-        // 按游戏中心累计时长降序取 Top 8
-        const top8 = [...studentSummaryList]
+        // 按游戏中心累计时长降序取 Top 15
+        const top15 = [...studentSummaryList]
             .sort((a, b) => {
                 const durDiff = (b.gameCenterDurationSec || 0) - (a.gameCenterDurationSec || 0);
                 if (durDiff !== 0) return durDiff;
                 return (b.totalCount || 0) - (a.totalCount || 0);
             })
-            .slice(0, 8);
+            .slice(0, 15);
 
-        const labels = top8.map(s => s.studentName !== '-' ? s.studentName : s.username);
+        const labels = top15.map(s => s.studentName !== '-' ? s.studentName : s.username);
         // 时长显示成分钟 (秒 / 60，保留1位小数)
-        const data = top8.map(s => {
+        const data = top15.map(s => {
             const sec = s.gameCenterDurationSec || 0;
             return Math.round((sec / 60) * 10) / 10;
         });
@@ -1174,7 +1186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 axisPointer: { type: 'shadow' },
                 formatter: (p) => {
                     const item = p[0];
-                    const student = top8[item.dataIndex];
+                    const student = top15[item.dataIndex];
                     const sec = student ? (student.gameCenterDurationSec || 0) : 0;
                     const count = student && student.gameCounts ? (student.gameCounts.game_center_page || 0) : 0;
                     return `<div style="font-weight: 600; margin-bottom: 4px;">${item.name}</div>
@@ -1183,10 +1195,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             },
             grid: {
-                top: 20,
-                left: 75,
+                top: 15,
+                left: 70,
                 right: 70,
-                bottom: 25
+                bottom: 20
             },
             xAxis: {
                 type: 'value',
@@ -1204,12 +1216,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 data: labels,
                 inverse: true,
                 axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
-                axisLabel: { color: colors.textColor || '#606266', fontSize: 11 }
+                axisLabel: { 
+                    color: colors.textColor || '#606266', 
+                    fontSize: 10.5,
+                    interval: 0
+                }
             },
             series: [{
                 name: '游戏时长(分钟)',
                 type: 'bar',
-                barWidth: 16,
+                barWidth: 12,
                 itemStyle: {
                     borderRadius: [0, 4, 4, 0],
                     color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
@@ -1223,9 +1239,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 label: {
                     show: true,
                     position: 'right',
-                    formatter: (p) => `${p.value} 分钟`,
+                    formatter: (p) => `${p.value} 分`,
                     color: colors.textColor || '#606266',
-                    fontSize: 11
+                    fontSize: 10.5
                 },
                 data: data
             }]
@@ -1233,8 +1249,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         topStudentsChart.setOption(option);
         topStudentsChart.on('click', (params) => {
-            if (params.dataIndex >= 0 && params.dataIndex < top8.length) {
-                const student = top8[params.dataIndex];
+            if (params.dataIndex >= 0 && params.dataIndex < top15.length) {
+                const student = top15[params.dataIndex];
                 if (student && student.username) {
                     showUserGameDetail(student.username);
                 }
@@ -2772,7 +2788,14 @@ document.addEventListener('DOMContentLoaded', () => {
             { username: '13611223344', name: '王子涵', school: '南开实验学校本部', teacher: '赵老师', grade: 'sixGrade', userNo: 'S20260677', coin: 310, diamondNum: 45, serviceName: '尊享年卡' },
             { username: '13599887766', name: '赵俊熙', school: '朝阳外国语小学分校', teacher: '王老师', grade: 'fourGrade', userNo: 'S20260419', coin: 110, diamondNum: 10, serviceName: '会员年卡' },
             { username: '13455667788', name: '孙语桐', school: '光明实验外国语小学', teacher: '孙老师', grade: 'threeGrade', userNo: 'S20260345', coin: 75, diamondNum: 5, serviceName: '普通学员' },
-            { username: '13311224455', name: '杨皓轩', school: '汇文第一寄宿学校', teacher: '李老师', grade: 'fiveGrade', userNo: 'S20260533', coin: 195, diamondNum: 20, serviceName: '会员年卡' }
+            { username: '13311224455', name: '杨皓轩', school: '汇文第一寄宿学校', teacher: '李老师', grade: 'fiveGrade', userNo: 'S20260533', coin: 195, diamondNum: 20, serviceName: '会员年卡' },
+            { username: '13866554433', name: '黄子涵', school: '光明实验外国语小学', teacher: '王老师', grade: 'fourGrade', userNo: 'S20260422', coin: 160, diamondNum: 18, serviceName: '会员年卡' },
+            { username: '13799881122', name: '林浩宇', school: '育才实验示范学校', teacher: '刘老师', grade: 'threeGrade', userNo: 'S20260366', coin: 95, diamondNum: 8, serviceName: '会员半年卡' },
+            { username: '13677889900', name: '徐佳欣', school: '南开实验学校本部', teacher: '赵老师', grade: 'fiveGrade', userNo: 'S20260512', coin: 220, diamondNum: 25, serviceName: '尊享年卡' },
+            { username: '13566778899', name: '刘梓萱', school: '朝阳外国语小学分校', teacher: '王老师', grade: 'twoGrade', userNo: 'S20260288', coin: 60, diamondNum: 4, serviceName: '月卡会员' },
+            { username: '13411223344', name: '郭雨泽', school: '光明实验外国语小学', teacher: '孙老师', grade: 'sixGrade', userNo: 'S20260630', coin: 280, diamondNum: 35, serviceName: '会员年卡' },
+            { username: '13388990011', name: '马博文', school: '汇文第一寄宿学校', teacher: '李老师', grade: 'threeGrade', userNo: 'S20260399', coin: 105, diamondNum: 12, serviceName: '会员半年卡' },
+            { username: '13244556677', name: '宋嘉怡', school: '育才实验示范学校', teacher: '周老师', grade: 'fourGrade', userNo: 'S20260477', coin: 140, diamondNum: 16, serviceName: '会员年卡' }
         ];
 
         mockUsers.forEach(u => {
@@ -2804,7 +2827,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const dateStr = reportDateInput.value || '2026-10-10';
         const formattedDate = dateStr.replace(/-/g, '_');
 
-        for (let i = 0; i < 90; i++) {
+        // 保证全部15个学生都有明确的游戏中心游玩记录，并呈现自然的阶梯时长排行 (从约52分钟递减至约9分钟)
+        mockUsers.forEach((user, idx) => {
+            const baseMinutes = Math.max(9, Math.round(52 - idx * 2.8));
+            const totalSec = baseMinutes * 60;
+            const segments = Math.floor(Math.random() * 2) + 2; // 分2-3次进入游戏中心
+            let remSec = totalSec;
+
+            for (let s = 0; s < segments; s++) {
+                const segDur = (s === segments - 1) ? remSec : Math.floor(remSec / (segments - s));
+                remSec -= segDur;
+                const hour = 8 + ((idx * 2 + s * 3) % 14);
+                const min = (idx * 4 + s * 17) % 60;
+                const sec = (idx * 6 + s * 19) % 60;
+                const ms = 100 + idx * 20 + s * 30;
+                const timeSuffix = `${String(hour).padStart(2, '0')}${String(min).padStart(2, '0')}${String(sec).padStart(2, '0')}_${ms}_${segDur}`;
+                const key = `usertemp/xuelianxitong/${formattedDate}/page_track/${user.username}/game_center_page_${formattedDate}_${timeSuffix}.json`;
+                mockObjects.push({
+                    name: key,
+                    size: 2048,
+                    lastModified: new Date(`${dateStr}T${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${ms}Z`).toISOString()
+                });
+            }
+        });
+
+        // 随机生成更多交互记录，丰富统计数据
+        for (let i = 0; i < 120; i++) {
             const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
             const rand = Math.random();
             let pageName = 'game_center_page';
@@ -2838,11 +2886,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         parseAndAnalyzeObjects(mockObjects, dateStr);
 
-        // 为 mock 的对象注入合理的停留时长
+        // 为 mock 的对象注入合理的停留时长 (保留已设置的游玩时长)
         rawObjectsList.forEach(item => {
-            const dur = Math.floor(Math.random() * 120) + 5;
-            item.durationSec = dur;
-            item.durationText = formatDuration(dur);
+            if (!item.durationSec || item.durationSec <= 0) {
+                const dur = Math.floor(Math.random() * 120) + 5;
+                item.durationSec = dur;
+                item.durationText = formatDuration(dur);
+            }
             const uInfo = userToInfoCache[item.username];
             if (uInfo) {
                 item.studentName = uInfo.studentName;
@@ -2866,13 +2916,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // 生成 Mock DAU
         const allMockDauUsers = [
             ...mockUsers,
-            { username: '13866554433', name: '黄子涵', school: '光明实验外国语小学', teacher: '王老师' },
-            { username: '13799881122', name: '林浩宇', school: '育才实验示范学校', teacher: '刘老师' },
-            { username: '13677889900', name: '徐佳欣', school: '南开实验学校本部', teacher: '赵老师' },
-            { username: '13566778899', name: '刘梓萱', school: '朝阳外国语小学分校', teacher: '王老师' },
-            { username: '13411223344', name: '郭雨泽', school: '光明实验外国语小学', teacher: '孙老师' },
-            { username: '13388990011', name: '马博文', school: '汇文第一寄宿学校', teacher: '李老师' },
-            { username: '13244556677', name: '宋嘉怡', school: '育才实验示范学校', teacher: '周老师' },
             { username: '13199001122', name: '郑宇航', school: '南开实验学校本部', teacher: '刘老师' },
             { username: '13022334455', name: '谢依晨', school: '朝阳外国语小学分校', teacher: '张老师' },
             { username: '13911335577', name: '潘梓航', school: '光明实验外国语小学', teacher: '王老师' },
@@ -2994,6 +3037,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('themeChanged', () => {
         syncBehaviorChartsTheme();
+    });
+
+    window.addEventListener('resize', () => {
+        if (topStudentsChart && !topStudentsChart.isDisposed()) topStudentsChart.resize();
+        if (hourlyTrendChart && !hourlyTrendChart.isDisposed()) hourlyTrendChart.resize();
+        if (distributionChart && !distributionChart.isDisposed()) distributionChart.resize();
     });
 
     // 同步父级框架菜单为“学生行为”

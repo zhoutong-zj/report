@@ -828,14 +828,23 @@ class UserListApp {
                     const data = JSON.parse(text);
                     if (data && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
                         const items = Array.isArray(data) ? data : [data];
+                        const pathParts = obj.name.split('/');
+                        const currentUserName = pathParts[3] || this.currentFilters.username || '';
+                        const currentFileName = pathParts[pathParts.length - 1] || '';
                         items.forEach(item => {
                             let itemTime = item.errorTime || item.happenTime || item.time || '';
                             if (!itemTime && item.reportTime) {
                                 itemTime = item.reportTime;
                             }
                             const formattedTime = this.formatReportTime(itemTime);
+                            const studentInfo = item.studentInfo || {};
+                            const resolvedLogin = item.loginName || studentInfo.loginName || item.userId || currentUserName;
                             this.allData.push({
                                 ...item,
+                                loginName: resolvedLogin,
+                                userId: item.userId || studentInfo.id || studentInfo.userId || currentUserName,
+                                fileName: item.fileName || currentFileName,
+                                searchUsername: currentUserName,
                                 sourceExceptionType: exceptionType,
                                 index: index,
                                 fileSize: fileSize || text.length,
@@ -940,14 +949,23 @@ class UserListApp {
                     const calcSize = fileObj.size || fileText.length;
                     if (data && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
                         const items = Array.isArray(data) ? data : [data];
+                        const pathParts = fileObj.key.split('/');
+                        const currentUserName = pathParts[3] || this.currentFilters.username || '';
+                        const currentFileName = pathParts[pathParts.length - 1] || '';
                         items.forEach(item => {
                             let itemTime = item.errorTime || item.happenTime || item.time || '';
                             if (!itemTime && item.reportTime) {
                                 itemTime = item.reportTime;
                             }
                             const formattedTime = this.formatReportTime(itemTime);
+                            const studentInfo = item.studentInfo || {};
+                            const resolvedLogin = item.loginName || studentInfo.loginName || item.userId || currentUserName;
                             this.allData.push({
                                 ...item,
+                                loginName: resolvedLogin,
+                                userId: item.userId || studentInfo.id || studentInfo.userId || currentUserName,
+                                fileName: item.fileName || currentFileName,
+                                searchUsername: currentUserName,
                                 sourceExceptionType: exceptionType,
                                 index: index,
                                 fileSize: calcSize,
@@ -1366,7 +1384,17 @@ class UserListApp {
                 sessionStorage.setItem('singleQuery_selectedItemKey', itemKey);
                 this.hideErrorPopover();
 
-                const itemWithIndex = { ...item, index: index + 1 };
+                const studentInfo = item.studentInfo || {};
+                const resolvedLoginName = item.loginName || studentInfo.loginName || item.userId || this.currentFilters.username || '';
+                const resolvedUserId = item.userId || studentInfo.id || studentInfo.userId || this.currentFilters.username || '';
+                const itemWithIndex = {
+                    ...item,
+                    loginName: resolvedLoginName,
+                    userId: resolvedUserId,
+                    searchUsername: this.currentFilters.username || '',
+                    searchDate: this.currentFilters.date || '',
+                    index: index + 1
+                };
                 // 标记进入详情页，确保返回时能够识别并保持列表状态
                 sessionStorage.setItem('fromHomeDetail', 'true');
                 try {

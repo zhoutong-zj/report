@@ -282,6 +282,45 @@ class DetailApp {
         }
     }
 
+    /**
+     * 获取 OSS 客户端实例（若用户在系统内配置了凭证）
+     */
+    getOssClient() {
+        const savedConfig = localStorage.getItem('oss_tool_config');
+        if (!savedConfig) {
+            return null;
+        }
+        try {
+            const config = JSON.parse(savedConfig);
+            const { accessKeyId, accessKeySecret, endpoint, bucket } = config;
+            if (!accessKeyId || !accessKeySecret || !endpoint || !bucket) {
+                return null;
+            }
+
+            let region = 'oss-cn-shanghai';
+            if (endpoint.includes('.aliyuncs.com')) {
+                region = endpoint.split('.aliyuncs.com')[0];
+            } else {
+                region = endpoint;
+            }
+
+            if (typeof OSS === 'undefined') {
+                return null;
+            }
+
+            return new OSS({
+                region: region,
+                accessKeyId: accessKeyId,
+                accessKeySecret: accessKeySecret,
+                bucket: bucket,
+                secure: true
+            });
+        } catch (e) {
+            console.error('初始化 OSS 客户端失败:', e);
+            return null;
+        }
+    }
+
     async loadData() {
         const dataStr = sessionStorage.getItem('detailData');
 
@@ -398,9 +437,10 @@ class DetailApp {
         const typeName = exceptionTypeNames[exceptionType] || '-';
 
         const studentInfo = data.studentInfo || {};
+        const userAccount = data.loginName || studentInfo.loginName || data.userId || studentInfo.id || studentInfo.userId || data.searchUsername || sessionStorage.getItem('autoSearchUsername') || '';
 
-        document.getElementById('loginName').textContent = data.loginName || studentInfo.loginName || '-';
-        document.getElementById('userId').textContent = data.userId || studentInfo.id || studentInfo.userId || '-';
+        document.getElementById('loginName').textContent = data.loginName || studentInfo.loginName || data.userId || userAccount || '-';
+        document.getElementById('userId').textContent = data.userId || studentInfo.id || studentInfo.userId || data.loginName || userAccount || '-';
         document.getElementById('nickName').textContent = data.nickName || studentInfo.nickName || '-';
         document.getElementById('schoolName').textContent = studentInfo.shopName || data.shopName || studentInfo.schoolName || data.schoolName || '-';
         document.getElementById('schoolId').textContent = studentInfo.shopId || data.shopId || studentInfo.schoolId || data.schoolId || '-';
@@ -552,6 +592,10 @@ class DetailApp {
             operationItem.style.display = 'flex';
             downloadBtn.style.display = 'inline-block';
 
+            // 1. 获取账号/用户名 (多重回退，彻底解决 undefined 问题)
+            const userAccount = data.loginName || studentInfo.loginName || data.userId || studentInfo.id || studentInfo.userId || data.searchUsername || sessionStorage.getItem('autoSearchUsername') || '';
+
+            // 2. 获取格式化日期 (如 2026_10_16)
             const timeStr = data.reportTime || data.errorTime;
             let formattedDate = '';
             if (timeStr) {
@@ -567,8 +611,17 @@ class DetailApp {
                     }
                 }
             }
+            if (!formattedDate && data.searchDate) {
+                formattedDate = data.searchDate.replace(/-/g, '_');
+            }
+            if (!formattedDate) {
+                const fallbackDate = sessionStorage.getItem('autoSearchDate') || sessionStorage.getItem('exceptionReportDate') || sessionStorage.getItem('reportDate');
+                if (fallbackDate) {
+                    formattedDate = fallbackDate.replace(/-/g, '_');
+                }
+            }
 
-            if (formattedDate) {
+            if (formattedDate && userAccount) {
                 let timestamp = '';
                 if (data.fileName) {
                     const match = data.fileName.match(/_(\d{4}_\d{2}_\d{2}_\d+)(?:\.json)?$/);
@@ -580,47 +633,128 @@ class DetailApp {
                     timestamp = data.reportTime;
                 }
 
-                let crashFileName = `crash_${data.index}.txt`;
+                let expectedFileName = `crash_${data.index}.txt`;
                 if (timestamp) {
-                    crashFileName = `crash_${timestamp}.txt`;
+                    expectedFileName = `crash_${timestamp}.txt`;
                 }
-                const crashUrl = `https://zhongtai-prod.oss-cn-shanghai.aliyuncs.com/usertemp/xuelianxitong/${formattedDate}/${data.loginName}/evaluation_crash/${crashFileName}`;
-                console.log('crash请求URL:', crashUrl);
 
-                // Set up event listener immediately so that it works as a fallback even if fetch fails/CORS blocks
-                downloadBtn.addEventListener('click', () => {
-                    if (downloadBtn.dataset.crashData) {
-                        const blob = new Blob([downloadBtn.dataset.crashData], { type: 'text/plain' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = crashFileName;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                    } else {
-                        const a = document.createElement('a');
-                        a.href = crashUrl;
-                        a.target = '_blank';
-                        a.download = crashFileName;
-                        a.click();
+                const crashPrefix = `usertemp/xuelianxitong/${formattedDate}/${userAccount}/evaluation_crash/`;
+                let targetKey = `${crashPrefix}${expectedFileName}`;
+                let actualFileName = expectedFileName;
+                let targetDownloadUrl = `https://zhongtai-prod.oss-cn-shanghai.aliyuncs.com/${targetKey}`;
+
+                const client = this.getOssClient();
+                if (client) {
+                    try {
+                        const listResult = await client.list({
+                            prefix: crashPrefix,
+                            'max-keys': 50
+                        });
+                        const objects = listResult.objects || [];
+                        if (objects.length > 0) {
+                            let matchedObj = objects.find(obj => obj.name.endsWith(expectedFileName));
+                            if (!matchedObj && timestamp) {
+                                matchedObj = objects.find(obj => obj.name.includes(timestamp));
+                            }
+                            if (!matchedObj) {
+                                matchedObj = objects[0];
+                            }
+                            if (matchedObj) {
+                                targetKey = matchedObj.name;
+                                actualFileName = targetKey.split('/').pop() || expectedFileName;
+                            }
+                        }
+                        targetDownloadUrl = client.signatureUrl(targetKey, { expires: 3600 });
+                    } catch (listErr) {
+                        console.warn('列出 OSS crash 文件异常，尝试直接签名:', listErr);
+                        try {
+                            targetDownloadUrl = client.signatureUrl(targetKey, { expires: 3600 });
+                        } catch (_) {}
                     }
-                });
+                }
 
-                try {
-                    const response = await fetch(crashUrl);
-                    if (response.ok) {
-                        const crashData = await response.text();
-                        this.renderCodeBlock('crashData', crashData);
-                        downloadBtn.dataset.crashData = crashData;
+                console.log('crash目标Key:', targetKey, '下载URL:', targetDownloadUrl);
+
+                // 绑定点击下载事件：同时下载一份并在浏览器新窗口打开浏览
+                downloadBtn.onclick = () => {
+                    const crashData = downloadBtn.dataset.crashData;
+                    let previewUrl = targetDownloadUrl;
+                    let viewBlobUrl = null;
+
+                    if (!previewUrl && crashData) {
+                        viewBlobUrl = URL.createObjectURL(new Blob([crashData], { type: 'text/plain;charset=utf-8' }));
+                        previewUrl = viewBlobUrl;
+                    }
+
+                    // 1. 在浏览器新标签页中打开浏览
+                    if (previewUrl) {
+                        window.open(previewUrl, '_blank');
+                    }
+
+                    // 2. 同时在本地下载一份文件
+                    if (crashData) {
+                        const downloadBlob = new Blob([crashData], { type: 'text/plain;charset=utf-8' });
+                        const downloadUrl = URL.createObjectURL(downloadBlob);
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = actualFileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(() => {
+                            URL.revokeObjectURL(downloadUrl);
+                            if (viewBlobUrl) URL.revokeObjectURL(viewBlobUrl);
+                        }, 60000);
+                        this.showToast('已在新标签页打开预览，并同时下载: ' + actualFileName);
+                    } else if (targetDownloadUrl) {
+                        const a = document.createElement('a');
+                        a.href = targetDownloadUrl;
+                        a.download = actualFileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        this.showToast('已在新标签页打开预览，并开始下载: ' + actualFileName);
                     } else {
-                        document.getElementById('crashData').textContent = '无数据';
+                        alert('暂无可用的评测 crash 文件地址');
+                    }
+                };
+
+                // 获取 crash 内容展示
+                try {
+                    let crashContent = '';
+                    if (client) {
+                        try {
+                            const res = await client.get(targetKey);
+                            if (res && res.content) {
+                                crashContent = res.content.toString();
+                            }
+                        } catch (getErr) {
+                            console.warn('client.get 获取失败，尝试 fetch:', getErr);
+                        }
+                    }
+
+                    if (!crashContent && targetDownloadUrl) {
+                        const response = await fetch(targetDownloadUrl);
+                        if (response.ok) {
+                            crashContent = await response.text();
+                        }
+                    }
+
+                    if (crashContent) {
+                        this.renderCodeBlock('crashData', crashContent);
+                        downloadBtn.dataset.crashData = crashContent;
+                    } else {
+                        document.getElementById('crashData').textContent = '未检索到该时间段的评测 crash 数据文件';
                     }
                 } catch (error) {
                     console.error('获取crash数据失败:', error);
-                    document.getElementById('crashData').textContent = '获取失败';
+                    document.getElementById('crashData').textContent = '获取失败: ' + (error.message || error);
                 }
             } else {
-                document.getElementById('crashData').textContent = '无有效时间数据';
+                document.getElementById('crashData').textContent = '无有效账号或日期信息，无法定位评测crash文件';
+                downloadBtn.onclick = () => {
+                    alert('缺少账号或日期信息，无法下载评测 crash 文件');
+                };
             }
         }
     }
