@@ -111,6 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const updatedHistory = Array.from(new Set([...existingHistory, username]));
         sessionStorage.setItem('clickedAccountsHistory', JSON.stringify(updatedHistory));
         sessionStorage.setItem('fromLogReport', 'true');
+        sessionStorage.removeItem('fromDauDetail');
+        sessionStorage.removeItem('fromExceptionDetail');
 
         if (window.self !== window.parent) {
             window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html', fromLogReport: true }, '*');
@@ -1089,6 +1091,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 解决本地文件协议/跨域导致的 window.parent 权限拒绝问题：使用 postMessage 通信
                 sessionStorage.setItem('fromLogReport', 'true');
+                sessionStorage.removeItem('fromDauDetail');
+                sessionStorage.removeItem('fromExceptionDetail');
                 if (window.self !== window.parent) {
                     window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html', fromLogReport: true }, '*');
                 } else {

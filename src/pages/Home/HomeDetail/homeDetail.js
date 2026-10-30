@@ -46,6 +46,16 @@ const reportTypeMapping = {
     7: 'networkException'
 };
 
+const exceptionTypeMapping = {
+    'dataException': 'data_error',
+    'platformException': 'platform_error',
+    'otherException': 'other_error',
+    'evaluationException': 'evaluation_error',
+    'audioVideoException': 'audio_video_error',
+    'audioVideoTest': 'audio_video_test',
+    'networkException': 'network_error'
+};
+
 // HTML 转义工具函数
 function escapeHtml(str) {
     if (!str && str !== 0) return '';
@@ -89,6 +99,13 @@ class DetailApp {
         };
         if (backBtn) {
             backBtn.addEventListener('click', handleBack);
+        }
+
+        const viewJsonBtn = document.getElementById('viewJsonBtn') || document.getElementById('downloadJsonBtn');
+        if (viewJsonBtn) {
+            viewJsonBtn.addEventListener('click', () => {
+                this.viewRawJson();
+            });
         }
 
         // 无论用户是点击返回按钮还是点击浏览器返回按钮离开详情页，都自动标记来自详情页以保持单查询列表现场
@@ -331,12 +348,154 @@ class DetailApp {
 
         try {
             const data = JSON.parse(dataStr);
+            this.currentData = data;
             sessionStorage.removeItem('detailData');
             await this.renderDetail(data);
         } catch (error) {
             console.error('解析数据失败:', error);
             this.showError('数据解析失败');
         }
+    }
+
+    /**
+     * 在浏览器新标签页中直接打开 OSS 上的原始 JSON 真实地址（完美支持 JSON-handle 等扩展插件）
+     */
+    async viewRawJson() {
+        if (!this.currentData) {
+            this.showToast('暂无数据可查看');
+            return;
+        }
+
+        try {
+            let targetUrl = '';
+            const client = this.getOssClient();
+            let ossKey = this.currentData.ossKey;
+
+            // 1. 若当前数据对象未直接携带 ossKey，通过业务属性推导
+            if (!ossKey) {
+                ossKey = await this.resolveOssKey();
+            }
+
+            // 2. 根据 ossKey 生成签名或直接链接
+            if (ossKey) {
+                if (client) {
+                    try {
+                        targetUrl = client.signatureUrl(ossKey, { expires: 3600 });
+                    } catch (e) {
+                        console.warn('OSS 签名失败，尝试直链:', e);
+                    }
+                }
+                if (!targetUrl) {
+                    const savedConfig = localStorage.getItem('oss_tool_config');
+                    let bucket = 'zhongtai-prod';
+                    let endpoint = 'oss-cn-shanghai.aliyuncs.com';
+                    if (savedConfig) {
+                        try {
+                            const conf = JSON.parse(savedConfig);
+                            if (conf.bucket) bucket = conf.bucket;
+                            if (conf.endpoint) {
+                                endpoint = conf.endpoint.replace(/^https?:\/\//, '').replace(/\/$/, '');
+                            }
+                        } catch (_) {}
+                    }
+                    targetUrl = `https://${bucket}.${endpoint}/${ossKey}`;
+                }
+            } else if (this.currentData.ossUrl) {
+                targetUrl = this.currentData.ossUrl;
+            }
+
+            // 3. 打开真实网络地址，浏览器 JSON-handle 插件能自动拦截并美化
+            if (targetUrl) {
+                const newWindow = window.open(targetUrl, '_blank');
+                if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                    const a = document.createElement('a');
+                    a.href = targetUrl;
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+                this.showToast('已在浏览器打开 OSS 原始 JSON');
+                return;
+            }
+
+            // 4. 离线/兜底降级：若未找到 OSS 路径则使用 Blob 打开
+            const jsonStr = JSON.stringify(this.currentData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+            const blobUrl = URL.createObjectURL(blob);
+            window.open(blobUrl, '_blank');
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+            this.showToast('已在新标签页打开原始JSON');
+        } catch (e) {
+            console.error('打开原始JSON失败:', e);
+            this.showToast('打开失败: ' + (e.message || '未知错误'));
+        }
+    }
+
+    /**
+     * 推导当前报告在 OSS 上的文件 key
+     */
+    async resolveOssKey() {
+        const data = this.currentData || {};
+        const studentInfo = data.studentInfo || {};
+        const userAccount = data.loginName || studentInfo.loginName || data.userId || studentInfo.id || studentInfo.userId || data.searchUsername || '';
+
+        let formattedDate = '';
+        const timeStr = data.reportTime || data.report_time || data.errorTime || data.startTime || '';
+        if (timeStr) {
+            const matchYMD = timeStr.match(/^(\d{4})[_\-](\d{2})[_\-](\d{2})/);
+            if (matchYMD) {
+                formattedDate = `${matchYMD[1]}_${matchYMD[2]}_${matchYMD[3]}`;
+            } else {
+                const date = new Date(timeStr.replace(/-/g, '/'));
+                if (!isNaN(date.getTime())) {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    formattedDate = `${year}_${month}_${day}`;
+                }
+            }
+        }
+        if (!formattedDate && data.searchDate) {
+            formattedDate = data.searchDate.replace(/-/g, '_');
+        }
+        if (!formattedDate) {
+            const fallbackDate = sessionStorage.getItem('autoSearchDate') || sessionStorage.getItem('exceptionReportDate') || sessionStorage.getItem('reportDate');
+            if (fallbackDate) {
+                formattedDate = fallbackDate.replace(/-/g, '_');
+            }
+        }
+
+        const exceptionType = data.exceptionType || reportTypeMapping[data.reportType] || data.sourceExceptionType || 'dataException';
+        const folderName = exceptionTypeMapping[exceptionType] || 'data_error';
+
+        if (formattedDate && userAccount) {
+            const prefix = `usertemp/xuelianxitong/${formattedDate}/${userAccount}/${folderName}/`;
+            const client = this.getOssClient();
+            if (client && data.fileName) {
+                try {
+                    const listResult = await client.list({
+                        prefix: prefix,
+                        'max-keys': 50
+                    });
+                    const objects = listResult.objects || [];
+                    const matchedObj = objects.find(obj => obj.name.endsWith(data.fileName));
+                    if (matchedObj) {
+                        return matchedObj.name;
+                    }
+                } catch (e) {
+                    console.warn('推导检索 OSS Key 失败:', e);
+                }
+            }
+            if (data.fileName) {
+                return `${prefix}${data.fileName}`;
+            }
+            if (data.index !== undefined && data.index !== null) {
+                return `${prefix}${data.index}.json`;
+            }
+        }
+        return '';
     }
 
     /**
@@ -465,7 +624,28 @@ class DetailApp {
         const phonePlatformVal = deviceInfo.phonePlatformVersion || data.phonePlatformVersion || studentInfo.phonePlatformVersion || '-';
         const deviceSnVal = deviceInfo.sn || data.sn || studentInfo.sn || '-';
 
-        document.getElementById('errorTime').textContent = this.formatDateTime(data.errorTime || data.reportTime || '-');
+        const isNetworkException = exceptionType === 'networkException' || exceptionType === 'network_error';
+        const errorTimeLabelEl = document.getElementById('errorTimeLabel');
+        const networkEndTimeItem = document.getElementById('networkEndTimeItem');
+        const networkEndTimeEl = document.getElementById('networkEndTime');
+
+        if (isNetworkException) {
+            if (errorTimeLabelEl) errorTimeLabelEl.textContent = '网络请求时间';
+            const reqTime = data.startTime || data.errorTime || data.reportTime || '-';
+            document.getElementById('errorTime').textContent = this.formatDateTime(reqTime);
+
+            if (networkEndTimeItem && networkEndTimeEl) {
+                networkEndTimeItem.style.display = 'flex';
+                networkEndTimeEl.textContent = this.formatDateTime(data.endTime || '-');
+            }
+        } else {
+            if (errorTimeLabelEl) errorTimeLabelEl.textContent = '错误时间';
+            document.getElementById('errorTime').textContent = this.formatDateTime(data.errorTime || data.reportTime || '-');
+
+            if (networkEndTimeItem) {
+                networkEndTimeItem.style.display = 'none';
+            }
+        }
         const typeClass = typeToClass[exceptionType] || 'other';
         document.getElementById('status').innerHTML = `<span class="type-badge ${typeClass}">${escapeHtml(typeName)}</span>`;
         document.getElementById('appVersion').textContent = appVersionVal;

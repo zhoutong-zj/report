@@ -1474,6 +1474,8 @@ document.addEventListener('DOMContentLoaded', () => {
             safeSetSession('autoSearchDate', dateVal);
         }
         safeSetSession('fromDauDetail', 'true');
+        safeRemoveSession('fromLogReport');
+        safeRemoveSession('fromExceptionDetail');
 
         if (window.self !== window.parent) {
             window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html', fromDauDetail: true }, '*');

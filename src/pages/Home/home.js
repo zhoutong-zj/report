@@ -16,9 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Switch iframe source
             const pageSrc = item.getAttribute('data-page');
             if (pageSrc) {
-                // 点击左侧菜单直接进入时，清除从日活详情或异常分类详情跳转的标记
+                // 点击左侧菜单直接进入时，清除所有从日活详情、异常分类详情或日志报表跳转的来源标记
                 sessionStorage.removeItem('fromDauDetail');
                 sessionStorage.removeItem('fromExceptionDetail');
+                sessionStorage.removeItem('fromLogReport');
                 contentFrame.src = pageSrc;
             }
         });

@@ -527,33 +527,52 @@ class UserListApp {
     }
 
     /**
-     * 根据是否从日活详情页、异常分类详情页或日志报表排查跳转而来，控制返回按钮的显隐
+     * 根据是否从日活详情页、异常分类详情页或日志报表排查跳转而来，控制返回按钮的显隐（互斥展示，最多只显示一个）
      */
     checkBackBtnVisibility() {
         const backToLogReportBtn = document.getElementById('backToLogReportBtn');
         const backToDauBtn = document.getElementById('backToDauBtn');
         const backToExceptionBtn = document.getElementById('backToExceptionBtn');
 
-        const fromLogReport = sessionStorage.getItem('fromLogReport');
-        const fromDau = sessionStorage.getItem('fromDauDetail');
-        const fromException = sessionStorage.getItem('fromExceptionDetail');
+        const fromLogReport = sessionStorage.getItem('fromLogReport') === 'true';
+        const fromDau = sessionStorage.getItem('fromDauDetail') === 'true';
+        const fromException = sessionStorage.getItem('fromExceptionDetail') === 'true';
 
-        if (backToLogReportBtn) {
-            backToLogReportBtn.style.display = (fromLogReport === 'true') ? 'inline-flex' : 'none';
+        // 默认先隐藏所有返回按钮
+        if (backToLogReportBtn) backToLogReportBtn.style.display = 'none';
+        if (backToDauBtn) backToDauBtn.style.display = 'none';
+        if (backToExceptionBtn) backToExceptionBtn.style.display = 'none';
+
+        // 严格互斥展示：同一时间只允许存在一个有效来源，并自动清理其余脏标记
+        if (fromException) {
+            if (backToExceptionBtn) backToExceptionBtn.style.display = 'inline-flex';
+            sessionStorage.removeItem('fromLogReport');
+            sessionStorage.removeItem('fromDauDetail');
+        } else if (fromDau) {
+            if (backToDauBtn) backToDauBtn.style.display = 'inline-flex';
+            sessionStorage.removeItem('fromLogReport');
+            sessionStorage.removeItem('fromExceptionDetail');
+        } else if (fromLogReport) {
+            if (backToLogReportBtn) backToLogReportBtn.style.display = 'inline-flex';
+            sessionStorage.removeItem('fromDauDetail');
+            sessionStorage.removeItem('fromExceptionDetail');
         }
-        if (backToDauBtn) {
-            backToDauBtn.style.display = (fromDau === 'true') ? 'inline-flex' : 'none';
-        }
-        if (backToExceptionBtn) {
-            backToExceptionBtn.style.display = (fromException === 'true') ? 'inline-flex' : 'none';
-        }
+    }
+
+    /**
+     * 清理所有返回来源标记
+     */
+    clearAllFromSessionFlags() {
+        sessionStorage.removeItem('fromLogReport');
+        sessionStorage.removeItem('fromDauDetail');
+        sessionStorage.removeItem('fromExceptionDetail');
     }
 
     /**
      * 返回日志报表处理逻辑
      */
     handleBackToLogReport() {
-        sessionStorage.removeItem('fromLogReport');
+        this.clearAllFromSessionFlags();
         try {
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage({ action: 'syncMenu', activeMenu: 'logReport/logReport.html' }, '*');
@@ -581,7 +600,7 @@ class UserListApp {
      * 返回日活详情页处理逻辑
      */
     handleBackToDau() {
-        sessionStorage.removeItem('fromDauDetail');
+        this.clearAllFromSessionFlags();
         try {
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage({ action: 'syncMenu', activeMenu: 'logReport/logReport.html' }, '*');
@@ -609,7 +628,7 @@ class UserListApp {
      * 返回异常分类详情页处理逻辑
      */
     handleBackToException() {
-        sessionStorage.removeItem('fromExceptionDetail');
+        this.clearAllFromSessionFlags();
         sessionStorage.setItem('fromExceptionDetail_back', 'true');
         try {
             if (window.parent && window.parent !== window) {
@@ -841,6 +860,7 @@ class UserListApp {
                             const resolvedLogin = item.loginName || studentInfo.loginName || item.userId || currentUserName;
                             this.allData.push({
                                 ...item,
+                                ossKey: obj.name,
                                 loginName: resolvedLogin,
                                 userId: item.userId || studentInfo.id || studentInfo.userId || currentUserName,
                                 fileName: item.fileName || currentFileName,
@@ -962,6 +982,8 @@ class UserListApp {
                             const resolvedLogin = item.loginName || studentInfo.loginName || item.userId || currentUserName;
                             this.allData.push({
                                 ...item,
+                                ossKey: fileObj.key,
+                                ossUrl: fileUrl,
                                 loginName: resolvedLogin,
                                 userId: item.userId || studentInfo.id || studentInfo.userId || currentUserName,
                                 fileName: item.fileName || currentFileName,

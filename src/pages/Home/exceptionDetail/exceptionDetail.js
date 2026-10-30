@@ -1318,6 +1318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         sessionStorage.setItem('fromExceptionDetail', 'true');
         sessionStorage.removeItem('fromDauDetail');
+        sessionStorage.removeItem('fromLogReport');
 
         if (window.self !== window.parent) {
             window.parent.postMessage({ action: 'navigate', page: 'singleQuery/singleQuery.html', fromExceptionDetail: true }, '*');

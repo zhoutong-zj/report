@@ -30,6 +30,16 @@
                             <span id="status">-</span>
                         </div>
                     </div>
+                    <div class="header-actions">
+                        <button id="viewJsonBtn" class="view-json-btn" title="在新标签页中查看完整原始JSON">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: -2px;">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                            查看原始JSON
+                        </button>
+                    </div>
                 </div>
                 <div class="info-grid">
                     <div class="info-item">
@@ -64,9 +74,13 @@
                         <label>评测内容</label>
                         <span id="identity" class="identity-clamp" title="点击直接复制完整评测内容">-</span>
                     </div>
-                    <div class="info-item">
-                        <label>错误时间</label>
+                    <div class="info-item" id="errorTimeItem">
+                        <label id="errorTimeLabel">错误时间</label>
                         <span id="errorTime">-</span>
+                    </div>
+                    <div class="info-item" id="networkEndTimeItem" style="display: none;">
+                        <label>网络结束时间</label>
+                        <span id="networkEndTime">-</span>
                     </div>
                     <div class="info-item">
                         <label>报告时间</label>
