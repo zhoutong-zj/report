@@ -343,6 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     schoolName: '-',
                     teacherName: '-',
                     version: '-',
+                    deviceName: '-',
                     category: folder,
                     fileName: fileName,
                     timeStr: errorTime || '-',
@@ -356,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 按日志时间倒序排列（最新优先）
             parsedLogs.sort((a, b) => b.lastModified.localeCompare(a.lastModified));
 
-            // 2. 异步后台安全并发解析学生姓名、学校、老师、版本（同账号缓存+限制并发数，杜绝并发风暴与丢包）
+            // 2. 异步后台安全并发解析学生姓名、学校、老师、版本、手机型号（同账号缓存+限制并发数，杜绝并发风暴与丢包）
             enrichLogDetails(parsedLogs);
 
             return parsedLogs;
@@ -367,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * 异步后台并发解析日志中的学生姓名、学校、老师、版本，并实时局部刷新到表格中
+     * 异步后台并发解析日志中的学生姓名、学校、老师、版本、手机型号，并实时局部刷新到表格中
      */
     async function enrichLogDetails(logsList) {
         if (!ossClient || !logsList || logsList.length === 0) return;
@@ -389,6 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (cached.schoolName && item.schoolName === '-') item.schoolName = cached.schoolName;
                     if (cached.teacherName && item.teacherName === '-') item.teacherName = cached.teacherName;
                     if (cached.version && item.version === '-') item.version = cached.version;
+                    if (cached.deviceName && (!item.deviceName || item.deviceName === '-')) item.deviceName = cached.deviceName;
                     updateTableRowInfo(item);
                     continue;
                 }
@@ -407,18 +409,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         const school = studentInfo.shopName || data.shopName || studentInfo.schoolName || data.schoolName || '';
                         const teacher = studentInfo.teacherName || data.teacherName || '';
                         const version = data.versionName || studentInfo.versionName || data.appVersion || data.version || data.clientVersion || studentInfo.appVersion || studentInfo.version || (data.meta && data.meta.client ? data.meta.client.replace(/.*Client\//, 'v') : '') || '';
+                        const deviceName = data.deviceName || studentInfo.deviceName || data.phoneModel || studentInfo.phoneModel || (data.meta && data.meta.phoneModel) || '';
 
                         if (name) item.studentName = name;
                         if (school) item.schoolName = school;
                         if (teacher) item.teacherName = teacher;
                         if (version) item.version = version;
+                        if (deviceName) item.deviceName = deviceName;
 
-                        if (name || school || teacher || version) {
+                        if (name || school || teacher || version || deviceName) {
                             userToInfoCache[item.username] = {
                                 studentName: item.studentName,
                                 schoolName: item.schoolName,
                                 teacherName: item.teacherName,
-                                version: item.version
+                                version: item.version,
+                                deviceName: item.deviceName
                             };
                             updateTableRowInfo(item);
                         }
@@ -438,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * 局部更新表格指定行的数据（学生姓名、学校、老师、版本）
+     * 局部更新表格指定行的数据（学生姓名、学校、老师、版本、手机型号）
      */
     function updateTableRowInfo(item) {
         if (!item || !item.key) return;
@@ -464,6 +469,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     versionCell.innerHTML = window.createVersionBadgeHtml
                         ? window.createVersionBadgeHtml(item.version || '-')
                         : `<span class="version-badge">${escapeHtml(item.version || '-')}</span>`;
+                }
+                const deviceCell = row.querySelector('.device-name-cell');
+                if (deviceCell && item.deviceName && item.deviceName !== '-') {
+                    deviceCell.textContent = item.deviceName;
+                    deviceCell.title = item.deviceName;
                 }
                 break;
             }
@@ -754,6 +764,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!item.version || item.version === '-') {
                     item.version = data.versionName || studentInfo.versionName || data.appVersion || data.version || data.clientVersion || studentInfo.appVersion || studentInfo.version || '-';
                 }
+                if (!item.deviceName || item.deviceName === '-') {
+                    item.deviceName = data.deviceName || studentInfo.deviceName || data.phoneModel || studentInfo.phoneModel || (data.meta && data.meta.phoneModel) || '-';
+                }
             } catch (e) { }
         } catch (e) {
             console.error('Failed to get log item content on hover:', e);
@@ -790,6 +803,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const schoolVal = item.schoolName || '-';
         const teacherVal = item.teacherName || '-';
         const versionVal = item.version || '-';
+        const deviceVal = item.deviceName || '-';
         const timeVal = item.timeStr || item.errorTime || item.lastModified || '-';
 
         if (metaEl) {
@@ -798,6 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span><strong>学校:</strong> ${schoolVal}</span>
                 <span><strong>老师:</strong> ${teacherVal}</span>
                 <span><strong>版本:</strong> ${versionVal}</span>
+                <span><strong>手机型号:</strong> ${deviceVal}</span>
                 <span><strong>时间:</strong> ${timeVal}</span>
             `;
         }
@@ -958,14 +973,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             }
 
-            // Search filter (Match username, studentName, school, teacher, or version)
+            // Search filter (Match username, studentName, school, teacher, version, or deviceName)
             if (query) {
                 const usernameMatch = item.username && item.username.toLowerCase().includes(query);
                 const nameMatch = item.studentName && item.studentName.toLowerCase().includes(query);
                 const schoolMatch = item.schoolName && item.schoolName.toLowerCase().includes(query);
                 const teacherMatch = item.teacherName && item.teacherName.toLowerCase().includes(query);
                 const versionMatch = item.version && item.version.toLowerCase().includes(query);
-                return usernameMatch || nameMatch || schoolMatch || teacherMatch || versionMatch;
+                const deviceMatch = item.deviceName && item.deviceName.toLowerCase().includes(query);
+                return usernameMatch || nameMatch || schoolMatch || teacherMatch || versionMatch || deviceMatch;
             }
 
             return true;
@@ -979,7 +995,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filteredList.length === 0) {
             exceptionTableBody.innerHTML = `
                 <tr>
-                    <td colspan="9" style="text-align: center; padding: 40px; color: #909399;">
+                    <td colspan="10" style="text-align: center; padding: 40px; color: #909399;">
                         暂无符合条件的异常日志
                     </td>
                 </tr>
@@ -1005,6 +1021,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const schoolName = item.schoolName && item.schoolName !== '-' ? item.schoolName : '-';
             const teacherName = item.teacherName && item.teacherName !== '-' ? item.teacherName : '-';
+            const deviceName = item.deviceName && item.deviceName !== '-' ? item.deviceName : '-';
             const versionStr = item.version || '-';
             const versionHtml = window.createVersionBadgeHtml
                 ? window.createVersionBadgeHtml(versionStr)
@@ -1020,6 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="school-name-cell" title="${escapeHtml(schoolName)}">${escapeHtml(schoolName)}</td>
                     <td class="teacher-name-cell" title="${escapeHtml(teacherName)}">${escapeHtml(teacherName)}</td>
                     <td class="version-cell" style="text-align: center;">${versionHtml}</td>
+                    <td class="device-name-cell" style="text-align: center;" title="${escapeHtml(deviceName)}">${escapeHtml(deviceName)}</td>
                     <td style="text-align: center;">
                         <span class="type-badge ${categoryClass}">${categoryName}</span>
                     </td>
@@ -1317,7 +1335,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         exceptionTableBody.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align: center; padding: 40px; color: #409eff;">
+                <td colspan="10" style="text-align: center; padding: 40px; color: #409eff;">
                     ⏳ 正在从 OSS 获取异常日志详细数据...
                 </td>
             </tr>
@@ -1427,13 +1445,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mock list of logs
         const mockUsers = ['user_102938', 'user_882019', 'user_330192', 'user_550182', 'student_demo', 'teacher_admin', 'test_account'];
         const mockUserInfo = {
-            'user_102938': { name: '张明宇', school: '光明实验外国语小学', teacher: '王老师', version: '2.5.4' },
-            'user_882019': { name: '王泽轩', school: '博雅外国语实验学校', teacher: '李老师', version: '2.5.4' },
-            'user_330192': { name: '李俊熙', school: '育英双语国际学校', teacher: '张老师', version: '2.5.3' },
-            'user_550182': { name: '赵梓琪', school: '光明实验外国语小学', teacher: '孙老师', version: '2.5.4' },
-            'student_demo': { name: '陈小东', school: '南开实验学校本部', teacher: '赵老师', version: '2.5.2' },
-            'teacher_admin': { name: '教师管理员', school: '博雅外国语实验学校', teacher: '刘老师', version: '2.5.4' },
-            'test_account': { name: '测试学生', school: '育才实验示范学校', teacher: '周老师', version: '2.5.4' }
+            'user_102938': { name: '张明宇', school: '光明实验外国语小学', teacher: '王老师', version: '2.5.4', deviceName: 'iPad Air (5th generation)' },
+            'user_882019': { name: '王泽轩', school: '博雅外国语实验学校', teacher: '李老师', version: '2.5.4', deviceName: 'HUAWEI MatePad 11' },
+            'user_330192': { name: '李俊熙', school: '育英双语国际学校', teacher: '张老师', version: '2.5.3', deviceName: 'Xiaomi Pad 6' },
+            'user_550182': { name: '赵梓琪', school: '光明实验外国语小学', teacher: '孙老师', version: '2.5.4', deviceName: 'iPhone 14 Pro' },
+            'student_demo': { name: '陈小东', school: '南开实验学校本部', teacher: '赵老师', version: '2.5.2', deviceName: 'Honor Pad V8 Pro' },
+            'teacher_admin': { name: '教师管理员', school: '博雅外国语实验学校', teacher: '刘老师', version: '2.5.4', deviceName: 'iPhone 13 Pro Max' },
+            'test_account': { name: '测试学生', school: '育才实验示范学校', teacher: '周老师', version: '2.5.4', deviceName: 'vivo Pad2' }
         };
         const mockFolders = ['evaluation_error', 'data_error', 'platform_error', 'audio_video_error', 'audio_video_test', 'network_error', 'other_error'];
         const mockLogs = [];
@@ -1458,7 +1476,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.entries(counts).forEach(([folder, count]) => {
             for (let i = 0; i < count; i++) {
                 const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-                const uInfo = mockUserInfo[user] || { name: '未知学生', school: '示范学校', teacher: '带班老师', version: '2.5.4' };
+                const uInfo = mockUserInfo[user] || { name: '未知学生', school: '示范学校', teacher: '带班老师', version: '2.5.4', deviceName: 'iPhone 13 Pro Max' };
 
                 seconds += 14;
                 if (seconds >= 60) {
@@ -1493,6 +1511,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     schoolName: uInfo.school,
                     teacherName: uInfo.teacher,
                     version: uInfo.version,
+                    deviceName: uInfo.deviceName || '-',
                     category: folder,
                     fileName: fileName,
                     timeStr: `${hh}:${mm}:${ss}`,

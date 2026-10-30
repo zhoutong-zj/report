@@ -201,6 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const slotTableViewBtn = document.getElementById('slotTableViewBtn');
     const slotChartViewBtn = document.getElementById('slotChartViewBtn');
     const peakSlotBadge = document.getElementById('peakSlotBadge');
+    const earliestDayBadge = document.getElementById('earliestDayBadge');
 
     // Table & Filter Elements
     const tabBtns = document.querySelectorAll('.tab-btn');
@@ -217,6 +218,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const dauSortBtnText = document.getElementById('dauSortBtnText');
     const sortDauTimeTh = document.getElementById('sortDauTimeTh');
     const dauSortArrow = document.getElementById('dauSortArrow');
+    const sortLogsTimeTh = document.getElementById('sortLogsTimeTh');
+    const logsSortArrow = document.getElementById('logsSortArrow');
+    const sortSummaryTimeTh = document.getElementById('sortSummaryTimeTh');
+    const summarySortArrow = document.getElementById('summarySortArrow');
+    const summaryTimeThLabel = document.getElementById('summaryTimeThLabel');
+    const earliestUserBanner = document.getElementById('earliestUserBanner');
     const timeSlotSummaryBar = document.getElementById('timeSlotSummaryBar');
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     const tableInfo = document.getElementById('tableInfo');
@@ -248,6 +255,34 @@ document.addEventListener('DOMContentLoaded', () => {
         if (h >= 14 && h < 18) return TIME_SLOT_DEFS[3];
         if (h >= 18 && h < 22) return TIME_SLOT_DEFS[4];
         return TIME_SLOT_DEFS[5];
+    }
+
+    /**
+     * 判断某条记录的小时/时段是否匹配当前选中的 selectedTimeSlot ('all' | 6大时段key | 'hour_0'..'hour_23')
+     */
+    function isSlotMatched(hour, slotObj, selectedSlot) {
+        if (!selectedSlot || selectedSlot === 'all') return true;
+        if (selectedSlot.startsWith('hour_')) {
+            const targetH = parseInt(selectedSlot.slice(5), 10);
+            return Number(hour) === targetH;
+        }
+        const s = slotObj || getTimeSlotInfo(hour);
+        return Boolean(s && s.key === selectedSlot);
+    }
+
+    /**
+     * 获取当前选中时间段/整点的友好可读标题
+     */
+    function getSlotFilterLabel(selectedSlot) {
+        if (!selectedSlot || selectedSlot === 'all') return '⏰ 全天时段 (00:00 - 24:00)';
+        if (selectedSlot.startsWith('hour_')) {
+            const h = parseInt(selectedSlot.slice(5), 10);
+            const hStr = String(h).padStart(2, '0');
+            const nextHStr = String(h + 1).padStart(2, '0');
+            return `🕒 ${hStr}:00 - ${nextHStr}:00 整点时段`;
+        }
+        const found = TIME_SLOT_DEFS.find(s => s.key === selectedSlot);
+        return found ? `${found.icon} ${found.name} (${found.range})` : selectedSlot;
     }
 
     function formatFullDateTime(d) {
@@ -394,16 +429,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dauTimeSlotTableView) dauTimeSlotTableView.style.display = 'none';
                 if (timeSlotSummaryBar) timeSlotSummaryBar.style.display = 'none';
                 gameFilter.style.display = 'inline-block';
-                if (timeSlotFilter) timeSlotFilter.style.display = 'none';
-                if (dauSortBtn) dauSortBtn.style.display = 'none';
+                if (timeSlotFilter) timeSlotFilter.style.display = 'inline-block';
+                if (dauSortBtn) dauSortBtn.style.display = 'inline-flex';
             } else if (currentView === 'logs') {
                 summaryTableView.style.display = 'none';
                 logsTableView.style.display = 'block';
                 if (dauTimeSlotTableView) dauTimeSlotTableView.style.display = 'none';
                 if (timeSlotSummaryBar) timeSlotSummaryBar.style.display = 'none';
                 gameFilter.style.display = 'inline-block';
-                if (timeSlotFilter) timeSlotFilter.style.display = 'none';
-                if (dauSortBtn) dauSortBtn.style.display = 'none';
+                if (timeSlotFilter) timeSlotFilter.style.display = 'inline-block';
+                if (dauSortBtn) dauSortBtn.style.display = 'inline-flex';
             } else if (currentView === 'dauTimeSlot') {
                 summaryTableView.style.display = 'none';
                 logsTableView.style.display = 'none';
@@ -414,6 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dauSortBtn) dauSortBtn.style.display = 'inline-flex';
                 renderTimeSlotSummaryBar();
             }
+            updateSortUI();
             applyFiltersAndRender();
         });
     });
@@ -425,20 +461,44 @@ document.addEventListener('DOMContentLoaded', () => {
     if (timeSlotFilter) {
         timeSlotFilter.addEventListener('change', (e) => {
             selectedTimeSlot = e.target.value;
+            // 当用户主动选择某个具体时间段/整点时，默认切换为按最早时间升序排列，方便直接看该时段最早是谁在使用
+            if (selectedTimeSlot !== 'all') {
+                dauTimeSortOrder = 'asc';
+            }
+            updateSortUI();
             renderTimeSlotSummaryBar();
+            renderTimeSlotReportTable();
             applyFiltersAndRender();
         });
     }
 
+    function updateSortUI() {
+        const isAsc = (dauTimeSortOrder === 'asc');
+        const arrow = isAsc ? '↑' : '↓';
+        if (dauSortBtnText) {
+            dauSortBtnText.textContent = isAsc ? '最早使用在前 ↑' : '最新使用在前 ↓';
+        }
+        if (dauSortBtn) {
+            dauSortBtn.classList.toggle('sort-asc-active', isAsc);
+        }
+        if (dauSortArrow) dauSortArrow.textContent = arrow;
+        if (logsSortArrow) logsSortArrow.textContent = arrow;
+        if (summarySortArrow) summarySortArrow.textContent = arrow;
+        if (summaryTimeThLabel) {
+            summaryTimeThLabel.textContent = isAsc ? '最早活动时间' : '最新活动时间';
+        }
+    }
+
     function toggleDauSort() {
         dauTimeSortOrder = (dauTimeSortOrder === 'desc') ? 'asc' : 'desc';
-        if (dauSortBtnText) dauSortBtnText.textContent = `最后使用时间 ${dauTimeSortOrder === 'desc' ? '↓' : '↑'}`;
-        if (dauSortArrow) dauSortArrow.textContent = dauTimeSortOrder === 'desc' ? '↓' : '↑';
+        updateSortUI();
         applyFiltersAndRender();
     }
 
     if (dauSortBtn) dauSortBtn.addEventListener('click', toggleDauSort);
     if (sortDauTimeTh) sortDauTimeTh.addEventListener('click', toggleDauSort);
+    if (sortLogsTimeTh) sortLogsTimeTh.addEventListener('click', toggleDauSort);
+    if (sortSummaryTimeTh) sortSummaryTimeTh.addEventListener('click', toggleDauSort);
 
     // 3. Initialize OSS Client
     function initOssClient() {
@@ -523,6 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 rawObjectsList = [];
                 studentSummaryList = [];
                 renderEmptyState();
+                fetchDauActivityForDate(dateStr);
                 return;
             }
 
@@ -732,6 +793,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         rawObjectsList.forEach(item => {
             const u = item.username;
+            const itemTime = item.fullCnTime || item.timeStr;
+            const itemSortKey = item.sortKey || item.timeStr || '';
+            const slotObj = getTimeSlotInfo(item.hour);
+            const slotKey = slotObj ? slotObj.key : 'afternoon';
+            const hourKey = `hour_${item.hour}`;
+
             if (!studentMap[u]) {
                 studentMap[u] = {
                     username: u,
@@ -746,8 +813,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     totalCount: 0,
                     totalDurationSec: 0,
                     gameCenterDurationSec: 0,
-                    lastTime: item.fullCnTime || item.timeStr,
-                    lastSortKey: item.sortKey || item.timeStr,
+                    firstTime: itemTime,
+                    firstSortKey: itemSortKey,
+                    firstGameName: item.gameCfg ? item.gameCfg.name : '-',
+                    lastTime: itemTime,
+                    lastSortKey: itemSortKey,
+                    lastGameName: item.gameCfg ? item.gameCfg.name : '-',
+                    slotMeta: {},
                     gameCounts: {
                         game_center_page: 0,
                         fruit_store_page: 0,
@@ -770,11 +842,45 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 studentMap[u].gameCounts[item.gameCode] = (studentMap[u].gameCounts[item.gameCode] || 0) + 1;
             }
-            // Keep latest time based on sortKey
-            if ((item.sortKey || item.timeStr) > (studentMap[u].lastSortKey || '')) {
-                studentMap[u].lastTime = item.fullCnTime || item.timeStr;
-                studentMap[u].lastSortKey = item.sortKey || item.timeStr;
+
+            // Keep earliest time based on sortKey
+            if (!studentMap[u].firstSortKey || (itemSortKey && itemSortKey < studentMap[u].firstSortKey)) {
+                studentMap[u].firstTime = itemTime;
+                studentMap[u].firstSortKey = itemSortKey;
+                studentMap[u].firstGameName = item.gameCfg ? item.gameCfg.name : '-';
             }
+
+            // Keep latest time based on sortKey
+            if (itemSortKey > (studentMap[u].lastSortKey || '')) {
+                studentMap[u].lastTime = itemTime;
+                studentMap[u].lastSortKey = itemSortKey;
+                studentMap[u].lastGameName = item.gameCfg ? item.gameCfg.name : '-';
+            }
+
+            // Record per-slot and per-hour earliest/latest time for this student
+            [slotKey, hourKey].forEach(k => {
+                if (!studentMap[u].slotMeta[k]) {
+                    studentMap[u].slotMeta[k] = {
+                        count: 0,
+                        firstTime: itemTime,
+                        firstSortKey: itemSortKey,
+                        firstGameName: item.gameCfg ? item.gameCfg.name : '-',
+                        lastTime: itemTime,
+                        lastSortKey: itemSortKey
+                    };
+                }
+                const m = studentMap[u].slotMeta[k];
+                m.count++;
+                if (!m.firstSortKey || (itemSortKey && itemSortKey < m.firstSortKey)) {
+                    m.firstTime = itemTime;
+                    m.firstSortKey = itemSortKey;
+                    m.firstGameName = item.gameCfg ? item.gameCfg.name : '-';
+                }
+                if (itemSortKey > (m.lastSortKey || '')) {
+                    m.lastTime = itemTime;
+                    m.lastSortKey = itemSortKey;
+                }
+            });
         });
 
         studentSummaryList = Object.values(studentMap).sort((a, b) => {
@@ -958,13 +1064,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Activate specific time slot filter and navigate to DAU table
+    // Activate specific time slot filter and navigate to DAU table (or Logs table if DAU is empty)
     function activateTimeSlotFilter(slotKey) {
-        const dauTabBtn = document.querySelector('.tab-btn[data-view="dauTimeSlot"]');
-        if (dauTabBtn) dauTabBtn.click();
-
         selectedTimeSlot = slotKey;
+        // 选中某个时段查看时，自动切换为按最早使用时间升序排列 (↑ 最早在前)
+        dauTimeSortOrder = 'asc';
         if (timeSlotFilter) timeSlotFilter.value = slotKey;
+        updateSortUI();
+
+        const hasDauInSlot = dauUsersList.some(u => isSlotMatched(u.hour, u.timeSlot, slotKey));
+        if (hasDauInSlot) {
+            const dauTabBtn = document.querySelector('.tab-btn[data-view="dauTimeSlot"]');
+            if (dauTabBtn) dauTabBtn.click();
+        } else {
+            const logsTabBtn = document.querySelector('.tab-btn[data-view="logs"]');
+            if (logsTabBtn) logsTabBtn.click();
+        }
+
+        renderTimeSlotSummaryBar();
+        renderTimeSlotReportTable();
+        applyFiltersAndRender();
+
+        const tableSec = document.querySelector('.table-section');
+        if (tableSec) {
+            tableSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    // Activate specific exact hour filter from 24h Hourly Trend Chart
+    function activateExactHourFilter(hourIndex) {
+        const slotKey = `hour_${hourIndex}`;
+        selectedTimeSlot = slotKey;
+        dauTimeSortOrder = 'asc';
+        if (timeSlotFilter) timeSlotFilter.value = slotKey;
+        updateSortUI();
+
+        const hasLogsInHour = rawObjectsList.some(it => Number(it.hour) === Number(hourIndex));
+        if (hasLogsInHour) {
+            const logsTabBtn = document.querySelector('.tab-btn[data-view="logs"]');
+            if (logsTabBtn) logsTabBtn.click();
+        } else {
+            const dauTabBtn = document.querySelector('.tab-btn[data-view="dauTimeSlot"]');
+            if (dauTabBtn) dauTabBtn.click();
+        }
+
         renderTimeSlotSummaryBar();
         renderTimeSlotReportTable();
         applyFiltersAndRender();
@@ -1084,12 +1227,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
         const hourCounts = new Array(24).fill(0);
+        const hourUsersSet = Array.from({ length: 24 }, () => new Set());
+        const hourEarliestItem = new Array(24).fill(null);
+        let dayEarliestItem = null;
 
         rawObjectsList.forEach(it => {
             if (it.hour >= 0 && it.hour < 24) {
                 hourCounts[it.hour]++;
+                hourUsersSet[it.hour].add(it.username);
+                const curSort = it.sortKey || it.timeStr || '';
+                const prev = hourEarliestItem[it.hour];
+                if (!prev || (curSort && curSort < (prev.sortKey || prev.timeStr || ''))) {
+                    hourEarliestItem[it.hour] = it;
+                }
+                if (!dayEarliestItem || (curSort && curSort < (dayEarliestItem.sortKey || dayEarliestItem.timeStr || ''))) {
+                    dayEarliestItem = it;
+                }
             }
         });
+
+        // Update earliest badge in 24h chart header
+        if (earliestDayBadge) {
+            if (dayEarliestItem) {
+                const nameDisplay = (dayEarliestItem.studentName && dayEarliestItem.studentName !== '-')
+                    ? `${dayEarliestItem.studentName} (${dayEarliestItem.username})`
+                    : dayEarliestItem.username;
+                earliestDayBadge.style.display = 'inline-flex';
+                earliestDayBadge.innerHTML = `🌅 今日最早: <strong>${dayEarliestItem.timeStr}</strong> · ${escapeHtml(nameDisplay)}`;
+                earliestDayBadge.onclick = () => {
+                    selectedLogKey = dayEarliestItem.key;
+                    selectedSummaryUsername = dayEarliestItem.username;
+                    activateExactHourFilter(dayEarliestItem.hour);
+                };
+            } else {
+                earliestDayBadge.style.display = 'none';
+            }
+        }
 
         if (hourlyTrendChart && !hourlyTrendChart.isDisposed()) {
             hourlyTrendChart.dispose();
@@ -1106,8 +1279,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 trigger: 'axis',
                 formatter: (p) => {
                     const item = p[0];
-                    return `<div style="font-weight: 600; margin-bottom: 4px;">${item.name}</div>
-                            <div>活跃次数: <span style="font-weight: bold; color: #10b981;">${item.value}</span> 次</div>`;
+                    const hIdx = item.dataIndex;
+                    const nextH = String(hIdx + 1).padStart(2, '0') + ':00';
+                    const uvCount = hourUsersSet[hIdx] ? hourUsersSet[hIdx].size : 0;
+                    const earliest = hourEarliestItem[hIdx];
+                    let earliestHtml = '';
+                    if (earliest) {
+                        const uName = (earliest.studentName && earliest.studentName !== '-')
+                            ? `${earliest.studentName} (${earliest.username})`
+                            : earliest.username;
+                        earliestHtml = `<div style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(148,163,184,0.3); font-size: 11.5px;">
+                            🌅 最早使用: <span style="font-weight: 600; color: #f59e0b;">${escapeHtml(uName)}</span> <span style="font-family: monospace;">[${earliest.timeStr}]</span>
+                        </div>
+                        <div style="font-size: 11px; color: #10b981; margin-top: 2px;">👉 点击筛选该整点时段用户</div>`;
+                    }
+                    return `<div style="font-weight: 600; margin-bottom: 4px;">🕒 ${item.name} - ${nextH}</div>
+                            <div>活跃次数: <span style="font-weight: bold; color: #10b981;">${item.value}</span> 次 · 参与学生: <strong>${uvCount}</strong> 人</div>
+                            ${earliestHtml}`;
                 }
             },
             grid: {
@@ -1134,7 +1322,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'line',
                 smooth: 0.35,
                 symbol: 'circle',
-                symbolSize: 6,
+                symbolSize: 7,
+                cursor: 'pointer',
                 itemStyle: { color: '#10b981' },
                 lineStyle: { width: 2.5, color: '#10b981' },
                 areaStyle: {
@@ -1148,6 +1337,22 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         hourlyTrendChart.setOption(option);
+
+        // 点击折线节点或整点区域均可筛选对应整点时段
+        hourlyTrendChart.on('click', (params) => {
+            if (typeof params.dataIndex === 'number' && params.dataIndex >= 0 && params.dataIndex < 24) {
+                activateExactHourFilter(params.dataIndex);
+            }
+        });
+        hourlyTrendChart.getZr().on('click', (params) => {
+            const pointInPixel = [params.offsetX, params.offsetY];
+            if (hourlyTrendChart.containPixel('grid', pointInPixel)) {
+                const xIndex = hourlyTrendChart.convertFromPixel({ seriesIndex: 0 }, pointInPixel)[0];
+                if (typeof xIndex === 'number' && xIndex >= 0 && xIndex < 24) {
+                    activateExactHourFilter(Math.round(xIndex));
+                }
+            }
+        });
     }
 
     // Bar Chart: Top Students by Game Center Duration with ECharts
@@ -1258,6 +1463,101 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Render Earliest User Spotlight Banner above Table
+    function renderEarliestUserBanner(earliestInfo) {
+        if (!earliestUserBanner) return;
+
+        if (!earliestInfo) {
+            if (selectedTimeSlot !== 'all') {
+                earliestUserBanner.style.display = 'flex';
+                earliestUserBanner.innerHTML = `
+                    <div class="earliest-banner-left">
+                        <span class="earliest-slot-pill">${escapeHtml(getSlotFilterLabel(selectedTimeSlot))}</span>
+                        <span style="color: #64748b; font-size: 13px;">当前筛选时段暂无活跃或游戏记录</span>
+                    </div>
+                    <div class="earliest-banner-actions">
+                        <button type="button" class="earliest-action-btn ghost" id="bannerResetSlotBtn">重置为全天时段</button>
+                    </div>
+                `;
+                const resetBtn = document.getElementById('bannerResetSlotBtn');
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', () => {
+                        selectedTimeSlot = 'all';
+                        if (timeSlotFilter) timeSlotFilter.value = 'all';
+                        renderTimeSlotSummaryBar();
+                        renderTimeSlotReportTable();
+                        applyFiltersAndRender();
+                    });
+                }
+            } else {
+                earliestUserBanner.style.display = 'none';
+            }
+            return;
+        }
+
+        const isAsc = (dauTimeSortOrder === 'asc');
+        const displayName = (earliestInfo.studentName && earliestInfo.studentName !== '-')
+            ? escapeHtml(earliestInfo.studentName)
+            : escapeHtml(earliestInfo.username);
+        const schoolDisplay = (earliestInfo.schoolName && earliestInfo.schoolName !== '-')
+            ? `<span>🏫 ${escapeHtml(earliestInfo.schoolName)}</span>`
+            : '';
+        const moduleDisplay = earliestInfo.moduleText
+            ? `<span class="earliest-module-tag">${escapeHtml(earliestInfo.moduleText)}</span>`
+            : '';
+
+        earliestUserBanner.style.display = 'flex';
+        earliestUserBanner.innerHTML = `
+            <div class="earliest-banner-left">
+                <span class="earliest-slot-pill">🌅 ${selectedTimeSlot === 'all' ? '全天最早使用' : '所选时段最早使用'} · ${escapeHtml(getSlotFilterLabel(selectedTimeSlot))}</span>
+                <div class="earliest-user-meta">
+                    <span class="earliest-user-name">🏆 <strong>${displayName}</strong> <small class="mono-font">(${escapeHtml(earliestInfo.username)})</small></span>
+                    ${schoolDisplay}
+                    <span class="earliest-time-chip">⏱️ ${escapeHtml(earliestInfo.timeText)}</span>
+                    ${moduleDisplay}
+                </div>
+            </div>
+            <div class="earliest-banner-actions">
+                ${isAsc
+                    ? `<span class="earliest-sorted-hint">✓ 已按最早时间升序排列 (第1行)</span>`
+                    : `<button type="button" class="earliest-action-btn primary" id="bannerSortAscBtn" title="将下方表格按最早时间升序排列">按最早时间排序 ↑</button>`
+                }
+                <button type="button" class="earliest-action-btn" id="bannerViewUserBtn" data-username="${escapeHtml(earliestInfo.username)}">查看该学生详情</button>
+                ${selectedTimeSlot !== 'all'
+                    ? `<button type="button" class="earliest-action-btn ghost" id="bannerResetSlotBtn">重置全天</button>`
+                    : ''
+                }
+            </div>
+        `;
+
+        const sortAscBtn = document.getElementById('bannerSortAscBtn');
+        if (sortAscBtn) {
+            sortAscBtn.addEventListener('click', () => {
+                dauTimeSortOrder = 'asc';
+                updateSortUI();
+                applyFiltersAndRender();
+            });
+        }
+
+        const viewUserBtn = document.getElementById('bannerViewUserBtn');
+        if (viewUserBtn) {
+            viewUserBtn.addEventListener('click', () => {
+                showUserGameDetail(earliestInfo.username);
+            });
+        }
+
+        const resetBtn = document.getElementById('bannerResetSlotBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                selectedTimeSlot = 'all';
+                if (timeSlotFilter) timeSlotFilter.value = 'all';
+                renderTimeSlotSummaryBar();
+                renderTimeSlotReportTable();
+                applyFiltersAndRender();
+            });
+        }
+    }
+
     // 9. Filter and Render Tables
     function applyFiltersAndRender() {
         const query = (searchInput.value || '').trim().toLowerCase();
@@ -1271,19 +1571,41 @@ document.addEventListener('DOMContentLoaded', () => {
                     (u.studentName && u.studentName.toLowerCase().includes(query)) ||
                     (u.schoolName && u.schoolName.toLowerCase().includes(query));
 
-                const matchSlot = (selectedTimeSlot === 'all') || (u.timeSlot && u.timeSlot.key === selectedTimeSlot);
+                const matchSlot = isSlotMatched(u.hour, u.timeSlot, selectedTimeSlot);
                 return matchQuery && matchSlot;
             });
 
-            // Sort by last active time
+            // Sort by active time
             filteredDau.sort((a, b) => {
                 const tA = a.lastTimeDate ? a.lastTimeDate.getTime() : 0;
                 const tB = b.lastTimeDate ? b.lastTimeDate.getTime() : 0;
                 return (dauTimeSortOrder === 'desc') ? (tB - tA) : (tA - tB);
             });
 
+            // Identify earliest DAU user in this filtered list
+            let earliestDau = null;
+            filteredDau.forEach(u => {
+                if (!earliestDau) {
+                    earliestDau = u;
+                } else {
+                    const tU = u.lastTimeDate ? u.lastTimeDate.getTime() : Infinity;
+                    const tE = earliestDau.lastTimeDate ? earliestDau.lastTimeDate.getTime() : Infinity;
+                    if (tU < tE) earliestDau = u;
+                }
+            });
+
+            renderEarliestUserBanner(earliestDau ? {
+                username: earliestDau.username,
+                studentName: earliestDau.studentName,
+                schoolName: earliestDau.schoolName,
+                timeText: earliestDau.lastTimeStr || '-',
+                moduleText: (earliestDau.gameSummary && earliestDau.gameSummary.totalCount > 0)
+                    ? `今日玩过 ${earliestDau.gameSummary.totalCount} 次`
+                    : '日活活跃'
+            } : null);
+
             renderDauTimeSlotTable(filteredDau);
-            tableInfo.textContent = `共 ${filteredDau.length} 位日活用户最后使用记录`;
+            tableInfo.textContent = `共 ${filteredDau.length} 位日活用户记录`;
             return;
         }
 
@@ -1306,8 +1628,58 @@ document.addEventListener('DOMContentLoaded', () => {
                     matchGame = (s.gameCounts[selectedGame] || 0) > 0;
                 }
 
-                return matchQuery && matchGame;
+                let matchSlot = true;
+                if (selectedTimeSlot !== 'all') {
+                    matchSlot = Boolean(s.slotMeta && s.slotMeta[selectedTimeSlot] && s.slotMeta[selectedTimeSlot].count > 0);
+                }
+
+                return matchQuery && matchGame && matchSlot;
             });
+
+            // Helper to get student's earliest/latest sort key in the selected slot (or full day)
+            const getStudentSortKey = (s, mode) => {
+                if (selectedTimeSlot !== 'all' && s.slotMeta && s.slotMeta[selectedTimeSlot]) {
+                    return mode === 'asc'
+                        ? (s.slotMeta[selectedTimeSlot].firstSortKey || '')
+                        : (s.slotMeta[selectedTimeSlot].lastSortKey || '');
+                }
+                return mode === 'asc' ? (s.firstSortKey || '') : (s.lastSortKey || '');
+            };
+
+            if (dauTimeSortOrder === 'asc') {
+                filteredSummary.sort((a, b) => getStudentSortKey(a, 'asc').localeCompare(getStudentSortKey(b, 'asc')));
+            } else if (selectedTimeSlot !== 'all') {
+                filteredSummary.sort((a, b) => getStudentSortKey(b, 'desc').localeCompare(getStudentSortKey(a, 'desc')));
+            }
+
+            // Find earliest student in filteredSummary
+            let earliestStudent = null;
+            filteredSummary.forEach(s => {
+                if (!earliestStudent) {
+                    earliestStudent = s;
+                } else {
+                    const kS = getStudentSortKey(s, 'asc');
+                    const kE = getStudentSortKey(earliestStudent, 'asc');
+                    if (kS && (!kE || kS < kE)) {
+                        earliestStudent = s;
+                    }
+                }
+            });
+
+            if (earliestStudent) {
+                const slotData = (selectedTimeSlot !== 'all' && earliestStudent.slotMeta && earliestStudent.slotMeta[selectedTimeSlot])
+                    ? earliestStudent.slotMeta[selectedTimeSlot]
+                    : earliestStudent;
+                renderEarliestUserBanner({
+                    username: earliestStudent.username,
+                    studentName: earliestStudent.studentName,
+                    schoolName: earliestStudent.schoolName,
+                    timeText: slotData.firstTime || earliestStudent.firstTime || earliestStudent.lastTime || '-',
+                    moduleText: slotData.firstGameName || earliestStudent.firstGameName || `共 ${earliestStudent.totalCount} 次行为`
+                });
+            } else {
+                renderEarliestUserBanner(null);
+            }
 
             renderSummaryTable(filteredSummary);
             tableInfo.textContent = `共 ${filteredSummary.length} 位学生参与游戏与页面访问`;
@@ -1330,8 +1702,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     matchGame = it.gameCode === selectedGame;
                 }
 
-                return matchQuery && matchGame;
+                const matchSlot = isSlotMatched(it.hour, null, selectedTimeSlot);
+
+                return matchQuery && matchGame && matchSlot;
             });
+
+            // Sort event logs by occurrence time (asc: earliest first, desc: latest first)
+            filteredLogs.sort((a, b) => {
+                const kA = a.sortKey || a.timeStr || '';
+                const kB = b.sortKey || b.timeStr || '';
+                return (dauTimeSortOrder === 'asc') ? kA.localeCompare(kB) : kB.localeCompare(kA);
+            });
+
+            // Find earliest log in filteredLogs
+            let earliestLog = null;
+            filteredLogs.forEach(it => {
+                if (!earliestLog) {
+                    earliestLog = it;
+                } else {
+                    const kIt = it.sortKey || it.timeStr || '';
+                    const kE = earliestLog.sortKey || earliestLog.timeStr || '';
+                    if (kIt && (!kE || kIt < kE)) {
+                        earliestLog = it;
+                    }
+                }
+            });
+
+            renderEarliestUserBanner(earliestLog ? {
+                username: earliestLog.username,
+                studentName: earliestLog.studentName,
+                schoolName: earliestLog.schoolName,
+                timeText: earliestLog.fullCnTime || earliestLog.timeStr || '-',
+                moduleText: earliestLog.gameCfg ? earliestLog.gameCfg.name : '-'
+            } : null);
 
             renderLogsTable(filteredLogs);
             tableInfo.textContent = `共 ${filteredLogs.length} 条页面行为流水记录`;
@@ -1390,6 +1793,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const durationText = s.totalDurationSec > 0 ? `<div style="font-size:11px; color:#10b981; margin-top:2px; white-space:nowrap;">⏱️ ${formatDuration(s.totalDurationSec)}</div>` : '';
 
+            const slotSpecific = (selectedTimeSlot !== 'all' && s.slotMeta && s.slotMeta[selectedTimeSlot]) ? s.slotMeta[selectedTimeSlot] : null;
+            const displayTime = (dauTimeSortOrder === 'asc')
+                ? (slotSpecific ? slotSpecific.firstTime : (s.firstTime || s.lastTime || '-'))
+                : (slotSpecific ? slotSpecific.lastTime : (s.lastTime || '-'));
+            const timePrefix = (dauTimeSortOrder === 'asc')
+                ? `<span style="color:#10b981; font-weight:600; font-size:11px; margin-right:4px;">[最早]</span>`
+                : '';
+
             return `
                 <tr data-username="${s.username}" class="${isSelected ? 'selected-row' : ''}">
                     <td style="color: #9ca3af; font-weight: 500;">${idx + 1}</td>
@@ -1400,11 +1811,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="grade-cell">${gradeHtml} ${userNoHtml}</td>
                     <td class="assets-cell">${assetContent}</td>
                     <td style="text-align: center;">
-                        <span class="count-badge">${s.totalCount} 次</span>
+                        <span class="count-badge">${slotSpecific ? `${slotSpecific.count} / ${s.totalCount}` : s.totalCount} 次</span>
                         ${durationText}
                     </td>
                     <td><div class="game-distribution-pills">${pillsHtml}</div></td>
-                    <td style="color: #6b7280; font-family: monospace; font-size: 12px;">${s.lastTime || '-'}</td>
+                    <td style="color: #6b7280; font-family: monospace; font-size: 12px;">${timePrefix}${displayTime}</td>
                     <td style="text-align: center;">
                         <button class="action-link view-student-logs-btn" data-username="${s.username}">查看明细</button>
                     </td>
@@ -1571,8 +1982,13 @@ document.addEventListener('DOMContentLoaded', () => {
             card.addEventListener('click', () => {
                 const slot = card.dataset.slot;
                 selectedTimeSlot = slot;
+                if (slot !== 'all') {
+                    dauTimeSortOrder = 'asc';
+                }
+                updateSortUI();
                 if (timeSlotFilter) timeSlotFilter.value = slot;
                 renderTimeSlotSummaryBar();
+                renderTimeSlotReportTable();
                 applyFiltersAndRender();
             });
         });
@@ -1736,9 +2152,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         await Promise.all(workers);
 
-        // Update charts top students with parsed names
+        // Update charts top students & hourly trend with parsed names
         renderTopStudentsBar();
+        renderHourlyTrendChart();
         renderStats();
+        applyFiltersAndRender();
     }
 
     function updateUserCells(username, info) {

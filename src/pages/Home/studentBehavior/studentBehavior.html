@@ -10,7 +10,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="../../../src/assets/favicon-16x16.png?v=4">
     <link rel="shortcut icon" href="../favicon.ico?v=4">
     <link rel="stylesheet" href="../theme.css?v=1722249000012">
-    <link rel="stylesheet" href="studentBehavior.css?v=1722249000012">
+    <link rel="stylesheet" href="studentBehavior.css?v=1729068000001">
     <script src="../theme.js"></script>
 </head>
 
@@ -215,8 +215,11 @@
             <div class="chart-card wide-chart">
                 <div class="chart-header">
                     <div>
-                        <h3>24 小时学生游戏活跃时段趋势</h3>
-                        <span class="chart-sub">全天各整点时间段游戏游玩与上报热度走势</span>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h3>24 小时学生游戏活跃时段趋势</h3>
+                            <span id="earliestDayBadge" class="earliest-day-tag" style="display: none; cursor: pointer;" title="点击定位当天最早使用记录">🌅 今日最早: -</span>
+                        </div>
+                        <span class="chart-sub">全天各整点时间段游戏游玩与上报热度走势（点击折线整点可筛选该时段最早使用用户）</span>
                     </div>
                 </div>
                 <div class="chart-container">
@@ -290,23 +293,51 @@
                         </optgroup>
                     </select>
 
-                    <!-- Time Slot Filter (active in dauTimeSlot view) -->
-                    <select id="timeSlotFilter" class="filter-select" style="display: none;">
+                    <!-- Time Slot Filter (active across all views) -->
+                    <select id="timeSlotFilter" class="filter-select">
                         <option value="all">⏰ 全部时间段</option>
-                        <option value="morning_early">🌅 早晨时段 (06:00 - 09:00)</option>
-                        <option value="morning">☀️ 上午时段 (09:00 - 12:00)</option>
-                        <option value="noon">🍱 中午时段 (12:00 - 14:00)</option>
-                        <option value="afternoon">☕ 下午时段 (14:00 - 18:00)</option>
-                        <option value="evening">🌙 晚间高峰 (18:00 - 22:00)</option>
-                        <option value="night">🌌 深夜时段 (22:00 - 次日06:00)</option>
+                        <optgroup label="📅 6 大核心时段">
+                            <option value="morning_early">🌅 早晨时段 (06:00 - 09:00)</option>
+                            <option value="morning">☀️ 上午时段 (09:00 - 12:00)</option>
+                            <option value="noon">🍱 中午时段 (12:00 - 14:00)</option>
+                            <option value="afternoon">☕ 下午时段 (14:00 - 18:00)</option>
+                            <option value="evening">🌙 晚间高峰 (18:00 - 22:00)</option>
+                            <option value="night">🌌 深夜时段 (22:00 - 次日06:00)</option>
+                        </optgroup>
+                        <optgroup label="🕒 精确整点时段" id="hourFilterOptgroup">
+                            <option value="hour_0">00:00 - 01:00</option>
+                            <option value="hour_1">01:00 - 02:00</option>
+                            <option value="hour_2">02:00 - 03:00</option>
+                            <option value="hour_3">03:00 - 04:00</option>
+                            <option value="hour_4">04:00 - 05:00</option>
+                            <option value="hour_5">05:00 - 06:00</option>
+                            <option value="hour_6">06:00 - 07:00</option>
+                            <option value="hour_7">07:00 - 08:00</option>
+                            <option value="hour_8">08:00 - 09:00</option>
+                            <option value="hour_9">09:00 - 10:00</option>
+                            <option value="hour_10">10:00 - 11:00</option>
+                            <option value="hour_11">11:00 - 12:00</option>
+                            <option value="hour_12">12:00 - 13:00</option>
+                            <option value="hour_13">13:00 - 14:00</option>
+                            <option value="hour_14">14:00 - 15:00</option>
+                            <option value="hour_15">15:00 - 16:00</option>
+                            <option value="hour_16">16:00 - 17:00</option>
+                            <option value="hour_17">17:00 - 18:00</option>
+                            <option value="hour_18">18:00 - 19:00</option>
+                            <option value="hour_19">19:00 - 20:00</option>
+                            <option value="hour_20">20:00 - 21:00</option>
+                            <option value="hour_21">21:00 - 22:00</option>
+                            <option value="hour_22">22:00 - 23:00</option>
+                            <option value="hour_23">23:00 - 24:00</option>
+                        </optgroup>
                     </select>
 
-                    <!-- Sort by Last Active Time Button -->
-                    <button id="dauSortBtn" class="dau-sort-btn" style="display: none;" title="点击切换按最后使用时间升序/降序">
+                    <!-- Sort by Active Time Button (Earliest vs Latest) -->
+                    <button id="dauSortBtn" class="dau-sort-btn" title="点击切换按使用时间升序(最早在前)/降序(最新在前)">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                             <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>
                         </svg>
-                        <span id="dauSortBtnText">最后使用时间 ↓</span>
+                        <span id="dauSortBtnText">按时间排序 ↓</span>
                     </button>
 
                     <button id="exportExcelBtn" class="export-btn" title="导出表格数据到 Excel">
@@ -317,6 +348,9 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Earliest User Spotlight Banner -->
+            <div id="earliestUserBanner" class="earliest-user-banner" style="display: none;"></div>
 
             <!-- Time Slot Quick Filter & Stat Capsules Bar -->
             <div id="timeSlotSummaryBar" class="time-slot-summary-bar" style="display: none;">
@@ -337,7 +371,9 @@
                             <th>资产与会员</th>
                             <th style="text-align: center; min-width: 110px; white-space: nowrap;">总行为次数</th>
                             <th>各系统参与频次</th>
-                            <th>最新活动时间</th>
+                            <th style="cursor: pointer;" id="sortSummaryTimeTh" title="点击切换按最早/最新活动时间排序">
+                                <span id="summaryTimeThLabel">最早 / 最新活动时间</span> <span id="summarySortArrow">↕</span>
+                            </th>
                             <th style="text-align: center; width: 100px;">操作</th>
                         </tr>
                     </thead>
@@ -354,7 +390,9 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th style="width: 170px;">发生时间</th>
+                            <th style="width: 170px; cursor: pointer;" id="sortLogsTimeTh" title="点击切换按发生时间升序(最早在前)/降序(最新在前)">
+                                发生时间 <span id="logsSortArrow">↓</span>
+                            </th>
                             <th style="width: 120px; text-align: center; white-space: nowrap;">停留时长</th>
                             <th>学生账号</th>
                             <th>学生姓名</th>
@@ -569,7 +607,7 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="studentBehavior.js?v=1729068000000"></script>
+    <script src="studentBehavior.js?v=1729068000001"></script>
 </body>
 
 </html>

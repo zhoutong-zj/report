@@ -403,6 +403,7 @@ body.modal-open {
 .student-name-cell,
 .school-name-cell,
 .teacher-name-cell,
+.device-name-cell,
 .time-cell {
     overflow: hidden;
     text-overflow: ellipsis;

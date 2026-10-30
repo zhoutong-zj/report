@@ -2816,3 +2816,233 @@ body {
     border: 1px solid #203140 !important;
 }
 
+/* ==========================================================================
+   Earliest User Spotlight Banner & 24h Earliest Badge
+   ========================================================================== */
+.earliest-day-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(16, 185, 129, 0.08);
+}
+
+.earliest-day-tag:hover {
+    background: #d1fae5;
+    border-color: #6ee7b7;
+    transform: translateY(-1px);
+}
+
+.dau-sort-btn.sort-asc-active {
+    background: #ecfdf5;
+    border-color: #10b981;
+    color: #059669;
+    font-weight: 600;
+}
+
+.dau-sort-btn.sort-asc-active svg {
+    color: #059669;
+}
+
+.earliest-user-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 10px 16px;
+    margin-bottom: 14px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #f0fdf4 0%, #f8fafc 100%);
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #10b981;
+}
+
+.earliest-banner-left {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 13px;
+    color: #334155;
+}
+
+.earliest-slot-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #10b981;
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+.earliest-user-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.earliest-user-name strong {
+    color: #0f172a;
+    font-size: 13.5px;
+}
+
+.earliest-user-name small {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.earliest-time-chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: #047857;
+    background: #d1fae5;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.earliest-module-tag {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #0369a1;
+    background: #e0f2fe;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.earliest-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.earliest-sorted-hint {
+    font-size: 12px;
+    font-weight: 600;
+    color: #059669;
+    background: rgba(16, 185, 129, 0.12);
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.earliest-action-btn {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    transition: all 0.2s ease;
+}
+
+.earliest-action-btn:hover {
+    border-color: #10b981;
+    color: #059669;
+    background: #f0fdf4;
+}
+
+.earliest-action-btn.primary {
+    background: #10b981;
+    border-color: #059669;
+    color: #ffffff;
+}
+
+.earliest-action-btn.primary:hover {
+    background: #059669;
+}
+
+.earliest-action-btn.ghost {
+    background: transparent;
+    color: #64748b;
+}
+
+/* Dark Mode for Earliest Banner & Tag */
+[data-theme="dark"] .earliest-day-tag {
+    background: rgba(16, 185, 129, 0.16) !important;
+    color: #34d399 !important;
+    border-color: rgba(52, 211, 153, 0.35) !important;
+}
+
+[data-theme="dark"] .dau-sort-btn.sort-asc-active {
+    background: rgba(16, 185, 129, 0.18) !important;
+    border-color: #10b981 !important;
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .dau-sort-btn.sort-asc-active svg {
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .earliest-user-banner {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, #15222c 100%) !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+    border-left-color: #10b981 !important;
+}
+
+[data-theme="dark"] .earliest-banner-left {
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .earliest-user-name strong {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .earliest-user-name small {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .earliest-time-chip {
+    background: rgba(16, 185, 129, 0.2) !important;
+    color: #6ee7b7 !important;
+}
+
+[data-theme="dark"] .earliest-module-tag {
+    background: rgba(2, 132, 199, 0.2) !important;
+    color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .earliest-sorted-hint {
+    color: #34d399 !important;
+    background: rgba(16, 185, 129, 0.16) !important;
+}
+
+[data-theme="dark"] .earliest-action-btn {
+    background: #1a2734 !important;
+    border-color: #2a3c4f !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .earliest-action-btn:hover {
+    border-color: #34d399 !important;
+    color: #34d399 !important;
+    background: #1e3042 !important;
+}
+
+[data-theme="dark"] .earliest-action-btn.primary {
+    background: #059669 !important;
+    border-color: #10b981 !important;
+    color: #ffffff !important;
+}
+
+

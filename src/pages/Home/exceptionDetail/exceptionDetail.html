@@ -10,7 +10,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="../../../assets/favicon-16x16.png?v=4">
     <link rel="shortcut icon" href="../../../assets/favicon.png?v=4">
     <link rel="stylesheet" href="../theme.css?v=1722249000009">
-    <link rel="stylesheet" href="exceptionDetail.css?v=1722249000009">
+    <link rel="stylesheet" href="exceptionDetail.css?v=1722249000010">
     <script src="../theme.js"></script>
 </head>
 
@@ -57,7 +57,7 @@
                 </div>
                 <div class="filter-item search-item">
                     <label for="exceptionSearchInput">综合搜索：</label>
-                    <input type="text" id="exceptionSearchInput" placeholder="按账号 / 姓名 / 学校 / 老师 / 版本搜索..." />
+                    <input type="text" id="exceptionSearchInput" placeholder="按账号 / 姓名 / 学校 / 老师 / 手机型号 / 版本搜索..." />
                 </div>
                 <div class="filter-item">
                     <button id="exceptionRefreshBtn" class="exception-refresh-btn" title="点击重新从 OSS 获取最新异常数据">
@@ -108,13 +108,14 @@
                     <thead>
                         <tr>
                             <th style="width: 4%; text-align: center;">#</th>
-                            <th style="width: 13%;">账号 ID</th>
-                            <th style="width: 10%;">学生姓名</th>
-                            <th style="width: 16%;">学校</th>
-                            <th style="width: 10%;">老师</th>
-                            <th style="width: 9%; text-align: center;">版本号</th>
-                            <th style="width: 11%; text-align: center;">异常类型</th>
-                            <th style="width: 14%; text-align: center;">日志发生时间</th>
+                            <th style="width: 11%;">账号 ID</th>
+                            <th style="width: 9%;">学生姓名</th>
+                            <th style="width: 14%;">学校</th>
+                            <th style="width: 8%;">老师</th>
+                            <th style="width: 8%; text-align: center;">版本号</th>
+                            <th style="width: 11%; text-align: center;">手机型号</th>
+                            <th style="width: 10%; text-align: center;">异常类型</th>
+                            <th style="width: 12%; text-align: center;">日志发生时间</th>
                             <th style="width: 13%; text-align: center;">操作</th>
                         </tr>
                     </thead>
@@ -189,7 +190,7 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <!-- Aliyun OSS JS SDK for loading dynamic report data -->
     <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
-    <script src="exceptionDetail.js?v=1722249000009"></script>
+    <script src="exceptionDetail.js?v=1722249000010"></script>
 </body>
 
 </html>
