@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const backBtn = document.getElementById('backBtn');
     const exceptionDateInput = document.getElementById('exceptionDateInput');
     const exceptionSearchInput = document.getElementById('exceptionSearchInput');
+    const exceptionSchoolSelect = document.getElementById('exceptionSchoolSelect');
     const categoryTabs = document.getElementById('categoryTabs');
     const exceptionTableBody = document.getElementById('exceptionTableBody');
     const pageSubtitle = document.getElementById('pageSubtitle');
@@ -171,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveExceptionStateToCache(activeAccount = '') {
         const selectedDate = exceptionDateInput ? exceptionDateInput.value : '';
         const searchQuery = exceptionSearchInput ? exceptionSearchInput.value : '';
+        const selectedSchool = exceptionSchoolSelect ? exceptionSchoolSelect.value : 'all';
         const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
 
         // 避免 sessionStorage 达到配额上限，缓存时去除体积较大的 rawContent 和 parsedData
@@ -183,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
             date: selectedDate,
             list: compactList,
             selectedCategory: selectedCategory,
+            selectedSchool: selectedSchool,
             searchQuery: searchQuery,
             activeSelectedAccount: activeAccount || activeSelectedAccount,
             scrollY: scrollY
@@ -439,7 +442,9 @@ document.addEventListener('DOMContentLoaded', () => {
             workers.push(worker());
         }
         await Promise.all(workers);
+        updateSchoolSelectOptions();
         saveExceptionStateToCache();
+        renderTable();
     }
 
     /**
@@ -603,10 +608,54 @@ document.addEventListener('DOMContentLoaded', () => {
         // Re-draw chart to update highlighted selection
         updateChartHighlight();
 
+        // 切换分类时联动更新当前分类下的学校过滤选项
+        updateSchoolSelectOptions();
+
         saveExceptionStateToCache();
 
         // Render matching rows in table
         renderTable();
+    }
+
+    /**
+     * 动态更新学校过滤下拉选项
+     * 根据当前选中的异常分类（若为'all'则提取全部），汇总出现的所有学校及异常条数
+     */
+    function updateSchoolSelectOptions(explicitVal) {
+        if (!exceptionSchoolSelect) return;
+        const currentVal = explicitVal !== undefined ? explicitVal : (exceptionSchoolSelect.value || 'all');
+
+        // 筛选出当前选中的分类下的日志列表
+        const relevantLogs = (currentLogsList || []).filter(item => {
+            if (selectedCategory === 'all') return true;
+            return item.category === selectedCategory;
+        });
+
+        // 统计各学校出现频次
+        const schoolMap = {};
+        relevantLogs.forEach(item => {
+            const rawSchool = (item.schoolName || '').trim();
+            const sName = (rawSchool && rawSchool !== '-') ? rawSchool : '未关联学校';
+            schoolMap[sName] = (schoolMap[sName] || 0) + 1;
+        });
+
+        const totalCount = relevantLogs.length;
+        let html = `<option value="all">全部学校 (${totalCount})</option>`;
+
+        // 按日志数量降序排列各学校
+        const sortedSchools = Object.keys(schoolMap).sort((a, b) => schoolMap[b] - schoolMap[a]);
+        sortedSchools.forEach(name => {
+            html += `<option value="${escapeHtml(name)}">${escapeHtml(name)} (${schoolMap[name]})</option>`;
+        });
+
+        exceptionSchoolSelect.innerHTML = html;
+
+        // 若之前选中的学校在新列表中存在，保持选中；否则恢复为全部学校
+        if (schoolMap[currentVal] || currentVal === 'all') {
+            exceptionSchoolSelect.value = currentVal;
+        } else {
+            exceptionSchoolSelect.value = 'all';
+        }
     }
 
     function updateChartHighlight() {
@@ -661,6 +710,13 @@ document.addEventListener('DOMContentLoaded', () => {
         saveExceptionStateToCache();
         renderTable();
     });
+
+    if (exceptionSchoolSelect) {
+        exceptionSchoolSelect.addEventListener('change', () => {
+            saveExceptionStateToCache();
+            renderTable();
+        });
+    }
 
     /**
      * 初始化悬停错误数据弹框相关的事件与DOM引用
@@ -962,15 +1018,25 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPopoverItem = null;
     }
 
-    // Render Table based on selected category and text search
+    // Render Table based on selected category, school and text search
     function renderTable() {
         hideErrorPopover();
-        const query = exceptionSearchInput.value.trim().toLowerCase();
+        const query = exceptionSearchInput ? exceptionSearchInput.value.trim().toLowerCase() : '';
+        const selectedSchool = exceptionSchoolSelect ? exceptionSchoolSelect.value : 'all';
 
         const filteredList = currentLogsList.filter(item => {
             // Category filter
             if (selectedCategory !== 'all' && item.category !== selectedCategory) {
                 return false;
+            }
+
+            // School filter
+            if (selectedSchool !== 'all') {
+                const rawSchool = (item.schoolName || '').trim();
+                const itemSchool = (rawSchool && rawSchool !== '-') ? rawSchool : '未关联学校';
+                if (itemSchool !== selectedSchool) {
+                    return false;
+                }
             }
 
             // Search filter (Match username, studentName, school, teacher, version, or deviceName)
@@ -1319,6 +1385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 updateBadgesAndChart();
+                updateSchoolSelectOptions(cache.selectedSchool || 'all');
                 switchTab(selectedCategory);
 
                 if (cache.scrollY) {
@@ -1384,6 +1451,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         selectedCategory = maxCategory;
 
+        if (exceptionSchoolSelect) {
+            exceptionSchoolSelect.value = 'all';
+        }
+        updateSchoolSelectOptions('all');
+
         saveExceptionStateToCache();
         switchTab(selectedCategory);
     }
@@ -1394,6 +1466,9 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionStorage.setItem('exceptionReportDate', selectedDate);
             sessionStorage.setItem('reportDate', selectedDate);
             updateQuickDateActive(selectedDate);
+            if (exceptionSchoolSelect) {
+                exceptionSchoolSelect.value = 'all';
+            }
             loadData(false);
         });
     }
@@ -1418,6 +1493,9 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionStorage.setItem('exceptionReportDate', dateStr);
             sessionStorage.setItem('reportDate', dateStr);
             updateQuickDateActive(dateStr);
+            if (exceptionSchoolSelect) {
+                exceptionSchoolSelect.value = 'all';
+            }
             loadData(false);
         });
     });

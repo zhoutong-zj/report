@@ -366,6 +366,7 @@ body {
 .student-cell,
 .school-cell,
 .teacher-cell,
+.device-cell,
 .time-cell {
     overflow: hidden;
     text-overflow: ellipsis;

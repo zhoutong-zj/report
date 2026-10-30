@@ -1029,7 +1029,7 @@ class UserListApp {
      */
     renderLoading() {
         const tbody = document.getElementById('userList');
-        tbody.innerHTML = '<tr><td colspan="9" class="table-feedback-cell loading" style="text-align: center; padding: 28px;">加载中...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="table-feedback-cell loading" style="text-align: center; padding: 28px;">加载中...</td></tr>';
     }
 
     /**
@@ -1038,7 +1038,7 @@ class UserListApp {
      */
     renderError(message) {
         const tbody = document.getElementById('userList');
-        tbody.innerHTML = `<tr><td colspan="9" class="table-feedback-cell error" style="text-align: center; padding: 28px;">加载失败: ${message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="table-feedback-cell error" style="text-align: center; padding: 28px;">加载失败: ${message}</td></tr>`;
     }
 
     /**
@@ -1220,7 +1220,7 @@ class UserListApp {
 
         // 无数据时的缺省页渲染
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="table-feedback-cell empty" style="text-align: center; padding: 28px;">暂无数据</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="table-feedback-cell empty" style="text-align: center; padding: 28px;">暂无数据</td></tr>';
             return;
         }
 
@@ -1335,6 +1335,8 @@ class UserListApp {
                 ? window.createVersionBadgeHtml(appVersion)
                 : `<span class="version-badge">${escapeHtml(appVersion)}</span>`;
 
+            const deviceName = item.deviceName || studentInfo.deviceName || item.phoneModel || studentInfo.phoneModel || (item.meta && item.meta.phoneModel) || '-';
+
             const gradeHtml = gradeDisplay !== '-'
                 ? `<span class="grade-badge">${escapeHtml(gradeDisplay)}</span>`
                 : `<span style="color: #909399;">-</span>`;
@@ -1349,6 +1351,7 @@ class UserListApp {
                 <td class="teacher-cell" title="${escapeHtml(teacherName)}">${escapeHtml(teacherName)}</td>
                 <td style="text-align: center;">${gradeHtml}</td>
                 <td style="text-align: center;">${versionHtml}</td>
+                <td class="device-cell" style="text-align: center;" title="${escapeHtml(deviceName)}">${escapeHtml(deviceName)}</td>
                 <td class="time-cell" style="text-align: center;">
                     <span class="error-time-badge">${this.formatReportTime(item.errorTime || item.reportTime || '-')}</span>
                 </td>
