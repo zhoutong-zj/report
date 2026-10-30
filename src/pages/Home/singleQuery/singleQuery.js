@@ -1070,12 +1070,13 @@ class UserListApp {
         }
 
         const studentInfo = item.studentInfo || {};
+        const deviceInfo = item.deviceInfo || {};
         const nickNameVal = item.nickName || studentInfo.nickName || studentInfo.name || item.studentName || item.name || '-';
         const schoolVal = studentInfo.shopName || item.shopName || studentInfo.schoolName || item.schoolName || '-';
         const teacherVal = studentInfo.teacherName || item.teacherName || studentInfo.teacher || item.teacher || '-';
         const rawGrade = studentInfo.gradeName || item.gradeName || studentInfo.grade || item.grade || studentInfo.className || item.className || '';
         const gradeVal = this.formatGrade(rawGrade);
-        const versionVal = item.versionName || studentInfo.versionName || item.appVersion || item.version || studentInfo.appVersion || studentInfo.version || item.clientVersion || '-';
+        const versionVal = deviceInfo.versionName || item.versionName || studentInfo.versionName || item.appVersion || item.version || studentInfo.appVersion || studentInfo.version || item.clientVersion || '-';
         const timeVal = this.formatReportTime(item.errorTime || item.reportTime || '-');
 
         if (metaEl) {
@@ -1112,8 +1113,8 @@ class UserListApp {
                 loginName: item.loginName || item.userId,
                 errorTime: item.errorTime,
                 exceptionType: typeName,
-                appVersion: item.versionName || item.version || '-',
-                deviceName: item.deviceName || (item.studentInfo && item.studentInfo.deviceName) || '-',
+                appVersion: deviceInfo.versionName || item.versionName || item.version || '-',
+                deviceName: deviceInfo.deviceName || item.deviceName || (item.studentInfo && item.studentInfo.deviceName) || '-',
                 remark: '暂无独立errorData字段，可进入详情页查看完整信息'
             };
             errorDataText = JSON.stringify(summary, null, 2);
@@ -1330,12 +1331,13 @@ class UserListApp {
             const rawGrade = studentInfo.gradeName || item.gradeName || studentInfo.grade || item.grade || studentInfo.className || item.className || '';
             const gradeDisplay = this.formatGrade(rawGrade);
 
-            const appVersion = item.versionName || studentInfo.versionName || item.appVersion || item.version || studentInfo.appVersion || studentInfo.version || item.clientVersion || '-';
+            const deviceInfo = item.deviceInfo || {};
+            const appVersion = deviceInfo.versionName || item.versionName || studentInfo.versionName || item.appVersion || item.version || studentInfo.appVersion || studentInfo.version || item.clientVersion || '-';
             const versionHtml = window.createVersionBadgeHtml
                 ? window.createVersionBadgeHtml(appVersion)
                 : `<span class="version-badge">${escapeHtml(appVersion)}</span>`;
 
-            const deviceName = item.deviceName || studentInfo.deviceName || item.phoneModel || studentInfo.phoneModel || (item.meta && item.meta.phoneModel) || '-';
+            const deviceName = deviceInfo.deviceName || item.deviceName || studentInfo.deviceName || item.phoneModel || studentInfo.phoneModel || (item.meta && item.meta.phoneModel) || '-';
 
             const gradeHtml = gradeDisplay !== '-'
                 ? `<span class="grade-badge">${escapeHtml(gradeDisplay)}</span>`
@@ -1598,14 +1600,16 @@ class UserListApp {
             const rawReportTime = item.reportTime || item.report_time || '-';
             const reportTime = this.formatReportTime(rawReportTime);
 
+            const deviceInfo = item.deviceInfo || {};
+
             // 15. 版本
-            const appVersion = item.versionName || item.version || item.appVersion || '-';
+            const appVersion = deviceInfo.versionName || item.versionName || item.version || item.appVersion || (studentInfo && studentInfo.versionName) || '-';
 
             // 16. 设备型号
-            const deviceName = item.deviceName || studentInfo.deviceName || '-';
+            const deviceName = deviceInfo.deviceName || item.deviceName || (studentInfo && studentInfo.deviceName) || item.phoneModel || '-';
 
             // 17. 系统版本
-            const phonePlatformVersion = item.phonePlatformVersion || studentInfo.phonePlatformVersion || '-';
+            const phonePlatformVersion = deviceInfo.phonePlatformVersion || item.phonePlatformVersion || (studentInfo && studentInfo.phonePlatformVersion) || '-';
 
             // 18. 错误数据
             let errorDataVal = item.errorData !== undefined && item.errorData !== null ? item.errorData : '-';

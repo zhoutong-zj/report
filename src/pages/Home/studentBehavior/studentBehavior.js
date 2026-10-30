@@ -2121,8 +2121,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const coin = studentInfo.coin !== undefined ? studentInfo.coin : (data.coin !== undefined ? data.coin : null);
                         const diamondNum = studentInfo.diamondNum !== undefined ? studentInfo.diamondNum : (data.diamondNum !== undefined ? data.diamondNum : null);
                         const serviceName = studentInfo.serviceName || data.serviceName || '';
-                        const deviceName = data.deviceName || studentInfo.deviceName || '-';
-                        const platformVersion = data.phonePlatformVersion || data.versionName || studentInfo.phonePlatformVersion || '-';
+                        const deviceInfo = data.deviceInfo || {};
+                        const deviceName = deviceInfo.deviceName || data.deviceName || studentInfo.deviceName || '-';
+                        const platformVersion = deviceInfo.phonePlatformVersion || data.phonePlatformVersion || deviceInfo.versionName || data.versionName || studentInfo.phonePlatformVersion || '-';
 
                         const info = {
                             studentName: name || '-',
@@ -2392,8 +2393,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         const name = fileData.nickName || studentInfo.nickName || fileData.userName || studentInfo.userName || '';
                         const school = studentInfo.shopName || fileData.shopName || studentInfo.schoolName || fileData.schoolName || '';
-                        const device = fileData.deviceName || studentInfo.deviceName || '-';
-                        const platform = fileData.phonePlatformVersion || studentInfo.phonePlatformVersion || fileData.appVersion || '-';
+                        const deviceInfo = fileData.deviceInfo || {};
+                        const device = deviceInfo.deviceName || fileData.deviceName || studentInfo.deviceName || '-';
+                        const platform = deviceInfo.phonePlatformVersion || fileData.phonePlatformVersion || studentInfo.phonePlatformVersion || deviceInfo.versionName || fileData.appVersion || '-';
 
                         item.deviceName = device;
                         item.platformVersion = platform;
@@ -2630,8 +2632,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (studentInfo.serviceName) item.serviceName = studentInfo.serviceName;
                             if (studentInfo.grade) item.grade = studentInfo.grade;
                             if (studentInfo.userNo) item.userNo = studentInfo.userNo;
-                            if (data.deviceName) item.deviceName = data.deviceName;
-                            if (data.phonePlatformVersion) item.platformVersion = data.phonePlatformVersion;
+                            const deviceInfo = data.deviceInfo || {};
+                            const devName = deviceInfo.deviceName || data.deviceName;
+                            if (devName) item.deviceName = devName;
+                            const pltVer = deviceInfo.phonePlatformVersion || data.phonePlatformVersion;
+                            if (pltVer) item.platformVersion = pltVer;
                         }
                     } catch (e) {
                         // Ignore single item error

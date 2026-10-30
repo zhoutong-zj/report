@@ -459,12 +459,20 @@ class DetailApp {
             }
         }
 
+        const deviceInfo = data.deviceInfo || {};
+        const appVersionVal = deviceInfo.versionName || data.versionName || data.version || studentInfo.versionName || '-';
+        const deviceNameVal = deviceInfo.deviceName || data.deviceName || studentInfo.deviceName || data.phoneModel || studentInfo.phoneModel || '-';
+        const phonePlatformVal = deviceInfo.phonePlatformVersion || data.phonePlatformVersion || studentInfo.phonePlatformVersion || '-';
+        const deviceSnVal = deviceInfo.sn || data.sn || studentInfo.sn || '-';
+
         document.getElementById('errorTime').textContent = this.formatDateTime(data.errorTime || data.reportTime || '-');
         const typeClass = typeToClass[exceptionType] || 'other';
         document.getElementById('status').innerHTML = `<span class="type-badge ${typeClass}">${escapeHtml(typeName)}</span>`;
-        document.getElementById('appVersion').textContent = data.versionName || data.version || '-';
-        document.getElementById('deviceName').textContent = data.deviceName || studentInfo.deviceName || '-';
-        document.getElementById('phonePlatformVersion').textContent = data.phonePlatformVersion || studentInfo.phonePlatformVersion || '-';
+        document.getElementById('appVersion').textContent = appVersionVal;
+        document.getElementById('deviceName').textContent = deviceNameVal;
+        document.getElementById('phonePlatformVersion').textContent = phonePlatformVal;
+        const deviceSnEl = document.getElementById('deviceSn');
+        if (deviceSnEl) deviceSnEl.textContent = deviceSnVal;
         document.getElementById('reportTime').textContent = this.formatDateTime(data.reportTime || data.report_time);
         this.renderCodeBlock('errorData', data.errorData);
         this.renderCodeBlock('stackTrace', data.stackTrace);

@@ -411,8 +411,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const name = data.nickName || studentInfo.nickName || data.userName || studentInfo.userName || '';
                         const school = studentInfo.shopName || data.shopName || studentInfo.schoolName || data.schoolName || '';
                         const teacher = studentInfo.teacherName || data.teacherName || '';
-                        const version = data.versionName || studentInfo.versionName || data.appVersion || data.version || data.clientVersion || studentInfo.appVersion || studentInfo.version || (data.meta && data.meta.client ? data.meta.client.replace(/.*Client\//, 'v') : '') || '';
-                        const deviceName = data.deviceName || studentInfo.deviceName || data.phoneModel || studentInfo.phoneModel || (data.meta && data.meta.phoneModel) || '';
+                        const deviceInfo = data.deviceInfo || {};
+                        const version = deviceInfo.versionName || data.versionName || studentInfo.versionName || data.appVersion || data.version || data.clientVersion || studentInfo.appVersion || studentInfo.version || (data.meta && data.meta.client ? data.meta.client.replace(/.*Client\//, 'v') : '') || '';
+                        const deviceName = deviceInfo.deviceName || data.deviceName || studentInfo.deviceName || data.phoneModel || studentInfo.phoneModel || (data.meta && data.meta.phoneModel) || '';
 
                         if (name) item.studentName = name;
                         if (school) item.schoolName = school;
@@ -817,11 +818,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!item.teacherName || item.teacherName === '-') {
                     item.teacherName = studentInfo.teacherName || data.teacherName || '-';
                 }
+                const deviceInfo = data.deviceInfo || {};
                 if (!item.version || item.version === '-') {
-                    item.version = data.versionName || studentInfo.versionName || data.appVersion || data.version || data.clientVersion || studentInfo.appVersion || studentInfo.version || '-';
+                    item.version = deviceInfo.versionName || data.versionName || studentInfo.versionName || data.appVersion || data.version || data.clientVersion || studentInfo.appVersion || studentInfo.version || '-';
                 }
                 if (!item.deviceName || item.deviceName === '-') {
-                    item.deviceName = data.deviceName || studentInfo.deviceName || data.phoneModel || studentInfo.phoneModel || (data.meta && data.meta.phoneModel) || '-';
+                    item.deviceName = deviceInfo.deviceName || data.deviceName || studentInfo.deviceName || data.phoneModel || studentInfo.phoneModel || (data.meta && data.meta.phoneModel) || '-';
                 }
             } catch (e) { }
         } catch (e) {
