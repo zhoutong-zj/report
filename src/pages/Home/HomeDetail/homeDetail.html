@@ -31,6 +31,14 @@
                         </div>
                     </div>
                     <div class="header-actions">
+                        <button id="downloadCrashBtn" class="download-btn" style="display: none;" title="下载评测crash文件">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: -2px;">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            下载评测crash文件
+                        </button>
                         <button id="viewJsonBtn" class="view-json-btn" title="在新标签页中查看完整原始JSON">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: -2px;">
                                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
@@ -102,9 +110,9 @@
                         <label>设备SN</label>
                         <span id="deviceSn">-</span>
                     </div>
-                    <div class="info-item" style="display: none;">
-                        <label>操作</label>
-                        <button id="downloadCrashBtn" class="download-btn" style="display: none;">下载评测crash文件</button>
+                    <div class="info-item" id="requestIdItem" style="display: none;">
+                        <label>RequestID</label>
+                        <span id="requestId">-</span>
                     </div>
                     <div class="info-item" id="mediaContentItem" style="display: none;">
                         <label>音视频内容</label>
@@ -211,7 +219,7 @@
     <div id="detailToast" class="detail-toast" style="display: none;">已复制到剪贴板</div>
     <!-- Aliyun OSS JS SDK for loading and downloading crash logs securely -->
     <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
-    <script src="homeDetail.js?v=1722249000001"></script>
+    <script src="homeDetail.js?v=1722249000002"></script>
 </body>
 
 </html>

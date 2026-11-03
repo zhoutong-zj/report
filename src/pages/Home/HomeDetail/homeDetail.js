@@ -653,6 +653,32 @@ class DetailApp {
         document.getElementById('phonePlatformVersion').textContent = phonePlatformVal;
         const deviceSnEl = document.getElementById('deviceSn');
         if (deviceSnEl) deviceSnEl.textContent = deviceSnVal;
+
+        const isEvaluationException = exceptionType === 'evaluationException' || exceptionType === 'evaluation_error';
+        const requestIdItem = document.getElementById('requestIdItem');
+        const requestIdEl = document.getElementById('requestId');
+        if (requestIdItem && requestIdEl) {
+            if (isEvaluationException) {
+                requestIdItem.style.display = 'flex';
+                const reqId = data.requestId || (data.studentInfo && data.studentInfo.requestId) || data.request_id || (data.studentInfo && data.studentInfo.request_id) || '-';
+                requestIdEl.textContent = reqId;
+                if (reqId && reqId !== '-') {
+                    requestIdEl.title = `点击直接复制 RequestID：\n${reqId}`;
+                    requestIdEl.style.cursor = 'pointer';
+                    requestIdEl.onclick = () => {
+                        this.copyToClipboard(reqId);
+                        this.showToast('已复制 RequestID: ' + reqId);
+                    };
+                } else {
+                    requestIdEl.title = '';
+                    requestIdEl.style.cursor = 'default';
+                    requestIdEl.onclick = null;
+                }
+            } else {
+                requestIdItem.style.display = 'none';
+                requestIdEl.textContent = '-';
+            }
+        }
         document.getElementById('reportTime').textContent = this.formatDateTime(data.reportTime || data.report_time);
         this.renderCodeBlock('errorData', data.errorData);
         this.renderCodeBlock('stackTrace', data.stackTrace);
@@ -771,14 +797,12 @@ class DetailApp {
         }
         this.renderCodeBlock('studentInfoDetail', studentInfoStr);
 
-        if (exceptionType === 'evaluationException') {
-            const crashSection = document.getElementById('crashSection');
-            const downloadBtn = document.getElementById('downloadCrashBtn');
-            const operationItem = downloadBtn.parentElement;
+        const crashSection = document.getElementById('crashSection');
+        const downloadBtn = document.getElementById('downloadCrashBtn');
 
-            crashSection.style.display = 'block';
-            operationItem.style.display = 'flex';
-            downloadBtn.style.display = 'inline-block';
+        if (isEvaluationException) {
+            if (crashSection) crashSection.style.display = 'block';
+            if (downloadBtn) downloadBtn.style.display = 'inline-flex';
 
             // 1. 获取账号/用户名 (多重回退，彻底解决 undefined 问题)
             const userAccount = data.loginName || studentInfo.loginName || data.userId || studentInfo.id || studentInfo.userId || data.searchUsername || sessionStorage.getItem('autoSearchUsername') || '';
@@ -944,6 +968,9 @@ class DetailApp {
                     alert('缺少账号或日期信息，无法下载评测 crash 文件');
                 };
             }
+        } else {
+            if (crashSection) crashSection.style.display = 'none';
+            if (downloadBtn) downloadBtn.style.display = 'none';
         }
     }
 
