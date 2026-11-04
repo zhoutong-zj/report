@@ -654,6 +654,39 @@ class DetailApp {
         const deviceSnEl = document.getElementById('deviceSn');
         if (deviceSnEl) deviceSnEl.textContent = deviceSnVal;
 
+        // 处理 locationInfo 打卡位置
+        const locInfo = data.locationInfo || (data.studentInfo && data.studentInfo.locationInfo);
+        const locationInfoItem = document.getElementById('locationInfoItem');
+        const locationCoordsEl = document.getElementById('locationCoords');
+        const viewLocationBtn = document.getElementById('viewLocationBtn');
+
+        if (locationInfoItem && locationCoordsEl) {
+            if (locInfo && typeof locInfo.latitude !== 'undefined' && typeof locInfo.longitude !== 'undefined') {
+                locationInfoItem.style.display = 'flex';
+                const lat = Number(locInfo.latitude);
+                const lng = Number(locInfo.longitude);
+                locationCoordsEl.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                locationCoordsEl.title = `更新时间: ${locInfo.updateTime || '-'}`;
+
+                if (viewLocationBtn) {
+                    viewLocationBtn.onclick = () => {
+                        if (window.MapHelper) {
+                            window.MapHelper.openSingleStudentMap({
+                                studentName: data.nickName || studentInfo.nickName || userAccount || '学生',
+                                loginName: userAccount || '-',
+                                schoolName: studentInfo.shopName || data.shopName || studentInfo.schoolName || data.schoolName || '-',
+                                latitude: lat,
+                                longitude: lng,
+                                updateTime: locInfo.updateTime || data.reportTime || '-'
+                            });
+                        }
+                    };
+                }
+            } else {
+                locationInfoItem.style.display = 'none';
+            }
+        }
+
         const isEvaluationException = exceptionType === 'evaluationException' || exceptionType === 'evaluation_error';
         const requestIdItem = document.getElementById('requestIdItem');
         const requestIdEl = document.getElementById('requestId');

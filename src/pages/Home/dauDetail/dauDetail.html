@@ -11,6 +11,7 @@
     <link rel="shortcut icon" href="../../../assets/favicon.png?v=4">
     <link rel="stylesheet" href="../theme.css?v=1722249000011">
     <link rel="stylesheet" href="dauDetail.css?v=1722249000011">
+    <link rel="stylesheet" href="../mapModal.css">
     <script src="../theme.js"></script>
 </head>
 
@@ -79,6 +80,12 @@
                         </svg>
                         <span>学校总数：<strong id="schoolTotalCount">0</strong> 所</span>
                     </div>
+                    <button id="openSchoolMapBtn" class="school-map-trigger-btn" type="button" title="在地图上查看所有学校/门店位置分布（自动合并同校坐标偏差）">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        <span>学校门店地图</span>
+                    </button>
                     <div id="timelinePeakBadge" class="school-total-badge timeline-peak-badge" style="display: none;"
                         title="当天最高峰在线时段与人数">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="opacity: 0.85;">
@@ -164,16 +171,17 @@
                     <thead>
                         <tr>
                             <th style="width: 4%; text-align: center;">#</th>
-                            <th style="width: 10%;">账号 ID</th>
-                            <th style="width: 9%;">用户名</th>
-                            <th style="width: 15%;">学校名称</th>
-                            <th style="width: 8%;">老师名称</th>
-                            <th style="width: 7%; text-align: center;">年级</th>
+                            <th style="width: 9%;">账号 ID</th>
+                            <th style="width: 8%;">用户名</th>
+                            <th style="width: 14%;">学校名称</th>
+                            <th style="width: 7%;">老师名称</th>
+                            <th style="width: 6%; text-align: center;">年级</th>
                             <th style="width: 7%; text-align: center;">版本号</th>
-                            <th style="width: 10%;">设备型号</th>
-                            <th style="width: 8%; text-align: center;">系统版本</th>
-                            <th style="width: 12%; text-align: center;">最后活跃时间</th>
-                            <th style="width: 10%; text-align: center;">操作</th>
+                            <th style="width: 9%;">设备型号</th>
+                            <th style="width: 7%; text-align: center;">系统版本</th>
+                            <th style="width: 11%; text-align: center;">最后活跃时间</th>
+                            <th style="width: 9%; text-align: center;">位置定位</th>
+                            <th style="width: 9%; text-align: center;">操作</th>
                         </tr>
                     </thead>
                     <tbody id="dauTableBody">
@@ -379,6 +387,18 @@
                                     <span class="u-value strong-time" id="uGridLastActiveTime">-</span>
                                 </div>
                             </div>
+                            <div class="u-info-card" id="uGridLocationCard">
+                                <span class="u-label">地理位置 (GPS定位)</span>
+                                <div class="u-value-box" style="display: flex; align-items: center; justify-content: space-between;">
+                                    <span class="u-value code-font" id="uGridLocationCoords" style="font-size: 11px;">未获取到位置</span>
+                                    <button class="location-tag-btn" id="uGridOpenMapBtn" type="button" style="display: none;">
+                                        <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
+                                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                        </svg>
+                                        定位
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -444,6 +464,7 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <!-- Aliyun OSS JS SDK -->
     <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
+    <script src="../mapHelper.js"></script>
     <script src="dauDetail.js?v=1722249000011"></script>
 </body>
 

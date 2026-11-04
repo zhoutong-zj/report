@@ -11,6 +11,7 @@
     <link rel="shortcut icon" href="../../../assets/favicon.png?v=4">
     <link rel="stylesheet" href="../theme.css">
     <link rel="stylesheet" href="homeDetail.css">
+    <link rel="stylesheet" href="../mapModal.css">
     <script src="../theme.js"></script>
 </head>
 
@@ -31,8 +32,16 @@
                         </div>
                     </div>
                     <div class="header-actions">
+                        <button id="viewLocationHeaderBtn" class="view-map-top-btn" style="display: none;" title="在地图上查看该学生定位">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 4px; vertical-align: -2px;">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                            </svg>
+                            查看地图定位
+                        </button>
                         <button id="downloadCrashBtn" class="download-btn" style="display: none;" title="下载评测crash文件">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: -2px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                style="margin-right: 4px; vertical-align: -2px;">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                 <polyline points="7 10 12 15 17 10"></polyline>
                                 <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -40,7 +49,9 @@
                             下载评测crash文件
                         </button>
                         <button id="viewJsonBtn" class="view-json-btn" title="在新标签页中查看完整原始JSON">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: -2px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                style="margin-right: 4px; vertical-align: -2px;">
                                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                                 <polyline points="15 3 21 3 21 9"></polyline>
                                 <line x1="10" y1="14" x2="21" y2="3"></line>
@@ -50,6 +61,19 @@
                     </div>
                 </div>
                 <div class="info-grid">
+                    <div class="info-item" id="locationInfoItem" style="display: none;">
+                        <label>打卡位置 (GPS定位)</label>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 10px; background-color: #f0f7ff; border: 1px solid #bae7ff; border-radius: 4px;">
+                            <span id="locationCoords" style="font-family: monospace; font-size: 13px; font-weight: 600; color: #0284c7; background: transparent; padding: 0;">-</span>
+                            <button id="viewLocationBtn" class="location-tag-btn" type="button" title="在地图上查看位置">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                                    <path
+                                        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                                </svg>
+                                查看地图
+                            </button>
+                        </div>
+                    </div>
                     <div class="info-item">
                         <label>登录名</label>
                         <span id="loginName">-</span>
@@ -109,6 +133,19 @@
                     <div class="info-item">
                         <label>设备SN</label>
                         <span id="deviceSn">-</span>
+                    </div>
+                    <div class="info-item" id="locationInfoItem" style="display: none;">
+                        <label>打卡位置</label>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span id="locationCoords" style="font-family: monospace; font-size: 12px;">-</span>
+                            <button id="viewLocationBtn" class="location-tag-btn" type="button" title="在地图上查看位置">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                                    <path
+                                        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                                </svg>
+                                查看地图
+                            </button>
+                        </div>
                     </div>
                     <div class="info-item" id="requestIdItem" style="display: none;">
                         <label>RequestID</label>
@@ -219,6 +256,7 @@
     <div id="detailToast" class="detail-toast" style="display: none;">已复制到剪贴板</div>
     <!-- Aliyun OSS JS SDK for loading and downloading crash logs securely -->
     <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.18.0.min.js"></script>
+    <script src="../mapHelper.js"></script>
     <script src="homeDetail.js?v=1722249000002"></script>
 </body>
 

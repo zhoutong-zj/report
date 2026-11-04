@@ -436,6 +436,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn(`Failed to read/parse file content for ${key}:`, e);
                 }
 
+                // 提取顶层或 studentInfo 中的 locationInfo
+                const locationInfo = (rawDataObj && rawDataObj.locationInfo) || (studentInfoObj && studentInfoObj.locationInfo) || null;
+
                 return {
                     key: obj.name,
                     lastModified: obj.lastModified || new Date().toISOString(),
@@ -459,7 +462,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     serviceName: serviceName,
                     identity: identity,
                     studentInfo: studentInfoObj,
-                    rawData: rawDataObj
+                    rawData: rawDataObj,
+                    locationInfo: locationInfo
                 };
             });
 
@@ -486,11 +490,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mock DAU Generator for static demonstration
     function generateMockDauList(dateStr) {
         const mockSchools = [
-            { shopId: 'SHOP_1001', shopName: '阳光第一实验小学' },
-            { shopId: 'SHOP_1002', shopName: '博雅外国语实验学校' },
-            { shopId: 'SHOP_1003', shopName: '育英双语国际学校' },
-            { shopId: 'SHOP_1004', shopName: '金陵高级附属小学' },
-            { shopId: 'SHOP_1005', shopName: '枫林大道中心小学' }
+            { shopId: 'SHOP_1001', shopName: '阳光第一实验小学', baseLat: 28.233865, baseLng: 112.929979 },
+            { shopId: 'SHOP_1002', shopName: '博雅外国语实验学校', baseLat: 28.201240, baseLng: 112.975412 },
+            { shopId: 'SHOP_1003', shopName: '育英双语国际学校', baseLat: 28.225600, baseLng: 113.012300 },
+            { shopId: 'SHOP_1004', shopName: '金陵高级附属小学', baseLat: 28.182300, baseLng: 112.934100 },
+            { shopId: 'SHOP_1005', shopName: '枫林大道中心小学', baseLat: 28.241500, baseLng: 112.891200 }
         ];
 
         const mockPresets = [
@@ -641,6 +645,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return mockPresets.map((preset) => {
             const school = mockSchools[preset.schoolIndex] || mockSchools[0];
             const eventTime = new Date(baseTime - preset.timeOffset * 60 * 1000).toISOString();
+
+            // 模拟同一学校学生获取的经纬度有微小偏差（几十米漂移/不同教学楼）
+            const driftLat = ((Math.random() - 0.5) * 0.0006);
+            const driftLng = ((Math.random() - 0.5) * 0.0006);
+            const mockLocation = {
+                latitude: Number((school.baseLat + driftLat).toFixed(6)),
+                longitude: Number((school.baseLng + driftLng).toFixed(6)),
+                updateTime: eventTime.replace('T', ' ').substring(0, 19)
+            };
+
             const studentInfoObj = {
                 id: preset.userId,
                 userId: preset.userId,
@@ -661,7 +675,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 versionName: preset.version,
                 deviceName: preset.device,
                 phonePlatformVersion: preset.os,
-                lastActiveTime: eventTime
+                lastActiveTime: eventTime,
+                locationInfo: mockLocation
             };
 
             return {
@@ -687,12 +702,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 serviceName: preset.service,
                 identity: preset.identity,
                 studentInfo: studentInfoObj,
+                locationInfo: mockLocation,
                 rawData: {
                     loginName: preset.loginName,
                     nickName: preset.nickName,
                     userId: preset.userId,
                     grade: preset.grade,
-                    studentInfo: studentInfoObj
+                    studentInfo: studentInfoObj,
+                    locationInfo: mockLocation
                 }
             };
         });
@@ -840,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filteredList.length === 0) {
             dauTableBody.innerHTML = `
                 <tr>
-                    <td colspan="11" style="text-align: center; padding: 40px; color: #909399;">
+                    <td colspan="12" style="text-align: center; padding: 40px; color: #909399;">
                         暂无相关日活数据
                     </td>
                 </tr>
@@ -863,6 +880,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const versionBadgeClass = getVersionBadgeClass(rawAppVersion);
                 const teacherDisplay = (item.teacherName && item.teacherName !== '-') ? escapeHtml(item.teacherName) : '<span style="color: #909399;">-</span>';
 
+                const hasLocation = item.locationInfo && typeof item.locationInfo.latitude !== 'undefined' && typeof item.locationInfo.longitude !== 'undefined';
+
                 html += `
                     <tr class="${selectedClass}" data-index="${index}">
                         <td style="text-align: center; color: ${isSelected ? '#1890ff' : '#909399'}; font-weight: ${isSelected ? '700' : '500'};">
@@ -883,6 +902,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td style="color: #303133;" title="${escapeHtml(item.deviceName || '')}">${escapeHtml(item.deviceName || '-')}</td>
                         <td style="text-align: center;"><span class="dau-os-badge">${escapeHtml(item.phonePlatformVersion || '-')}</span></td>
                         <td style="text-align: center;"><span class="dau-time-badge">${escapeHtml(timeFormatted)}</span></td>
+                        <td style="text-align: center;">
+                            ${hasLocation ? `
+                                <button class="dau-loc-tag-btn" data-index="${index}" data-action="locateMap" title="点击在地图上查看位置：${item.locationInfo.latitude}, ${item.locationInfo.longitude}">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                    </svg>
+                                    <span>定位</span>
+                                </button>
+                            ` : '<span style="color: #94a3b8; font-size: 13px;">-</span>'}
+                        </td>
                         <td style="text-align: center;">
                             <div class="dau-actions-cell">
                                 <button class="dau-detail-btn" data-index="${index}" data-action="viewDetail" title="点击查看用户详细档案">
@@ -1730,6 +1759,37 @@ document.addEventListener('DOMContentLoaded', () => {
         if (uGridPhonePlatform) uGridPhonePlatform.textContent = item.phonePlatformVersion || '-';
         if (uGridLastActiveTime) uGridLastActiveTime.textContent = formatLastModifiedDate(item.lastModified);
 
+        // 地理位置卡片处理
+        const locInfo = item.locationInfo || (item.rawData && item.rawData.locationInfo) || (item.studentInfo && item.studentInfo.locationInfo);
+        const uGridLocationCoords = document.getElementById('uGridLocationCoords');
+        const uGridOpenMapBtn = document.getElementById('uGridOpenMapBtn');
+        if (uGridLocationCoords && uGridOpenMapBtn) {
+            if (locInfo && typeof locInfo.latitude !== 'undefined' && typeof locInfo.longitude !== 'undefined') {
+                const lat = Number(locInfo.latitude);
+                const lng = Number(locInfo.longitude);
+                uGridLocationCoords.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                uGridLocationCoords.style.color = '#2563eb';
+                uGridOpenMapBtn.style.display = 'inline-flex';
+                uGridOpenMapBtn.onclick = () => {
+                    if (window.MapHelper) {
+                        window.MapHelper.openSingleStudentMap({
+                            studentName: item.username || item.loginName || '学生',
+                            loginName: item.loginName || item.account || '-',
+                            schoolName: item.schoolName || item.shopName || '-',
+                            latitude: lat,
+                            longitude: lng,
+                            updateTime: locInfo.updateTime || item.lastModified || '-'
+                        });
+                    }
+                };
+            } else {
+                uGridLocationCoords.textContent = '暂无位置上报';
+                uGridLocationCoords.style.color = '#94a3b8';
+                uGridOpenMapBtn.style.display = 'none';
+                uGridOpenMapBtn.onclick = null;
+            }
+        }
+
         // JSON block
         const uJsonContentBlock = document.getElementById('uJsonContentBlock');
         if (uJsonContentBlock) {
@@ -1860,6 +1920,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (item) {
                     window.selectDauRow(item.loginName || item.account || item.username);
                     openUserInfoModal(item);
+                }
+                return;
+            }
+
+            // 点击直接定位按钮
+            const locateBtn = e.target.closest('button[data-action="locateMap"]');
+            if (locateBtn) {
+                e.stopPropagation();
+                const index = locateBtn.getAttribute('data-index');
+                const item = lastFilteredList[index];
+                if (item && item.locationInfo && window.MapHelper) {
+                    window.MapHelper.openSingleStudentMap({
+                        studentName: item.username || item.loginName || '学生',
+                        loginName: item.loginName || item.account || '-',
+                        schoolName: item.schoolName || item.shopName || '-',
+                        latitude: item.locationInfo.latitude,
+                        longitude: item.locationInfo.longitude,
+                        updateTime: item.locationInfo.updateTime || item.lastModified || '-'
+                    });
                 }
                 return;
             }
@@ -2025,6 +2104,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dauRefreshBtn) {
         dauRefreshBtn.addEventListener('click', () => {
             loadData(true); // 按钮主动刷新时强制从 OSS 重新拉取
+        });
+    }
+
+    const openSchoolMapBtn = document.getElementById('openSchoolMapBtn');
+    if (openSchoolMapBtn) {
+        openSchoolMapBtn.addEventListener('click', () => {
+            if (window.MapHelper) {
+                window.MapHelper.openSchoolDauMap(currentDauList, {
+                    dateStr: (dauDateInput ? dauDateInput.value : '') || '当日'
+                });
+            }
         });
     }
 
