@@ -1287,7 +1287,7 @@ class UserListApp {
 
         // 无数据时的缺省页渲染
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="table-feedback-cell empty" style="text-align: center; padding: 28px;">暂无数据</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="table-feedback-cell empty" style="text-align: center; padding: 28px;">暂无数据</td></tr>';
             return;
         }
 
@@ -1321,8 +1321,8 @@ class UserListApp {
 
             // 单击行：更换背景颜色（选中当前Item，取消其他Item的选中状态）
             tr.addEventListener('click', (e) => {
-                // 如果点击的是查看详情按钮本身，由按钮自己的事件处理
-                if (e.target.closest('.view-detail-btn')) return;
+                // 如果点击的是查看详情按钮或定位按钮本身，由按钮自己的事件处理
+                if (e.target.closest('.view-detail-btn') || e.target.closest('button[data-action="locateMap"]')) return;
 
                 // 移除所有已选行的选中样式与按钮高亮
                 tbody.querySelectorAll('tr.selected-row').forEach(row => {
@@ -1352,9 +1352,11 @@ class UserListApp {
                     this.hoverTimer = null;
                 }
 
-                // 如果鼠标当前已经在“查看详情”按钮上，不触发弹框
+                // 如果鼠标当前已经在“查看详情”或“定位”按钮上，不触发弹框
                 const detailBtn = tr.querySelector('.view-detail-btn');
-                if (detailBtn && (detailBtn === e.target || detailBtn.contains(e.target) || detailBtn.matches(':hover'))) {
+                const locateBtnEl = tr.querySelector('button[data-action="locateMap"]');
+                if ((detailBtn && (detailBtn === e.target || detailBtn.contains(e.target) || detailBtn.matches(':hover'))) ||
+                    (locateBtnEl && (locateBtnEl === e.target || locateBtnEl.contains(e.target) || locateBtnEl.matches(':hover')))) {
                     return;
                 }
 
@@ -1410,6 +1412,9 @@ class UserListApp {
                 : `<span style="color: #909399;">-</span>`;
 
             const exceptionName = exceptionTypeNames[exceptionType] || '-';
+            const locInfo = item.locationInfo || (item.studentInfo && item.studentInfo.locationInfo) || (item.rawData && item.rawData.locationInfo);
+            const hasLocation = locInfo && typeof locInfo.latitude !== 'undefined' && typeof locInfo.longitude !== 'undefined' && locInfo.latitude !== null && locInfo.longitude !== null && locInfo.latitude !== '' && locInfo.longitude !== '';
+
             tr.innerHTML = `
                 <td class="index-cell" style="text-align: center;">${index + 1}</td>
                 <td class="student-cell" title="${escapeHtml(studentName)}">
@@ -1426,6 +1431,16 @@ class UserListApp {
                 <td style="text-align: center;">
                     <span class="type-badge exception-status-badge exception-tag-${exceptionType}">${exceptionName}</span>
                 </td>
+                <td class="location-cell" style="text-align: center;">
+                    ${hasLocation ? `
+                        <button class="dau-loc-tag-btn" data-action="locateMap" title="点击在地图上查看位置：${locInfo.latitude}, ${locInfo.longitude}">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                            </svg>
+                            <span>定位</span>
+                        </button>
+                    ` : '<span style="color: #94a3b8; font-size: 13px;">-</span>'}
+                </td>
                 <td style="text-align: center;">
                     <button class="view-detail-btn ${isSelected ? 'selected' : ''}" title="查看完整详情">
                         <span>查看详情</span>
@@ -1435,6 +1450,24 @@ class UserListApp {
                     </button>
                 </td>
             `;
+
+            // 点击定位按钮直接在地图上定位
+            const locateBtn = tr.querySelector('button[data-action="locateMap"]');
+            if (locateBtn) {
+                locateBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (hasLocation && window.MapHelper) {
+                        window.MapHelper.openSingleStudentMap({
+                            studentName: studentName !== '-' ? studentName : (item.loginName || '学生'),
+                            loginName: item.loginName || item.userId || '-',
+                            schoolName: schoolName !== '-' ? schoolName : '-',
+                            latitude: locInfo.latitude,
+                            longitude: locInfo.longitude,
+                            updateTime: locInfo.updateTime || item.errorTime || item.reportTime || '-'
+                        });
+                    }
+                });
+            }
 
             // 双击行 或 点击“查看详情”按钮：跳转至详情页
             const navigateToDetail = (e) => {
@@ -1566,7 +1599,7 @@ class UserListApp {
                 const ss = String(dt.getSeconds()).padStart(2, '0');
                 return `${y}年${m}月${d}日 ${hh}时${mm}分${ss}秒`;
             }
-        } catch (e) {}
+        } catch (e) { }
 
         return str;
     }

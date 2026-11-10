@@ -298,6 +298,7 @@ body {
 
 .dau-table {
     width: 100%;
+    min-width: 1120px;
     border-collapse: collapse;
     font-size: 13px;
     table-layout: fixed;
@@ -379,6 +380,22 @@ body {
     padding: 2px 8px;
     border-radius: 4px;
     display: inline-block;
+}
+
+.dau-card-badge {
+    color: #6d28d9;
+    background-color: #f3e8ff;
+    border: 1px solid #ddd6fe;
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 4px;
+    display: inline-block;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
 }
 
 .dau-version-badge {
@@ -1628,7 +1645,8 @@ body.modal-open {
     /* 老师名称柔和浅灰 */
 }
 
-[data-theme="dark"] .dau-table td:nth-child(8) {
+[data-theme="dark"] .dau-table td:nth-child(9),
+[data-theme="dark"] .dau-table td.dau-device-cell {
     color: #cbd5e1 !important;
     /* 设备名称 */
 }
@@ -1643,6 +1661,12 @@ body.modal-open {
     background-color: rgba(56, 189, 248, 0.12) !important;
     color: #38bdf8 !important;
     border-color: rgba(56, 189, 248, 0.3) !important;
+}
+
+[data-theme="dark"] .dau-card-badge {
+    background-color: rgba(168, 85, 247, 0.15) !important;
+    color: #c084fc !important;
+    border-color: rgba(168, 85, 247, 0.3) !important;
 }
 
 /* Dark Mode: 版本分类徽章多色彩系统 */

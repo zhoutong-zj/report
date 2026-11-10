@@ -394,6 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (cached.teacherName && item.teacherName === '-') item.teacherName = cached.teacherName;
                     if (cached.version && item.version === '-') item.version = cached.version;
                     if (cached.deviceName && (!item.deviceName || item.deviceName === '-')) item.deviceName = cached.deviceName;
+                    if (cached.locationInfo && !item.locationInfo) item.locationInfo = cached.locationInfo;
                     updateTableRowInfo(item);
                     continue;
                 }
@@ -415,19 +416,29 @@ document.addEventListener('DOMContentLoaded', () => {
                         const version = deviceInfo.versionName || data.versionName || studentInfo.versionName || data.appVersion || data.version || data.clientVersion || studentInfo.appVersion || studentInfo.version || (data.meta && data.meta.client ? data.meta.client.replace(/.*Client\//, 'v') : '') || '';
                         const deviceName = deviceInfo.deviceName || data.deviceName || studentInfo.deviceName || data.phoneModel || studentInfo.phoneModel || (data.meta && data.meta.phoneModel) || '';
 
+                        const loc = data.locationInfo || studentInfo.locationInfo || (data.meta && data.meta.locationInfo);
+                        if (loc && (loc.latitude || loc.lat)) {
+                            item.locationInfo = {
+                                latitude: loc.latitude || loc.lat,
+                                longitude: loc.longitude || loc.lng,
+                                updateTime: loc.updateTime || item.lastModified || item.timeStr || ''
+                            };
+                        }
+
                         if (name) item.studentName = name;
                         if (school) item.schoolName = school;
                         if (teacher) item.teacherName = teacher;
                         if (version) item.version = version;
                         if (deviceName) item.deviceName = deviceName;
 
-                        if (name || school || teacher || version || deviceName) {
+                        if (name || school || teacher || version || deviceName || item.locationInfo) {
                             userToInfoCache[item.username] = {
                                 studentName: item.studentName,
                                 schoolName: item.schoolName,
                                 teacherName: item.teacherName,
                                 version: item.version,
-                                deviceName: item.deviceName
+                                deviceName: item.deviceName,
+                                locationInfo: item.locationInfo
                             };
                             updateTableRowInfo(item);
                         }
@@ -480,6 +491,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (deviceCell && item.deviceName && item.deviceName !== '-') {
                     deviceCell.textContent = item.deviceName;
                     deviceCell.title = item.deviceName;
+                }
+                const locCell = row.querySelector('.location-cell');
+                if (locCell && item.locationInfo && typeof item.locationInfo.latitude !== 'undefined') {
+                    locCell.innerHTML = `
+                        <button class="dau-loc-tag-btn" data-key="${item.key}" data-action="locateMap" title="点击在地图上查看位置：${item.locationInfo.latitude}, ${item.locationInfo.longitude}">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                            </svg>
+                            <span>定位</span>
+                        </button>
+                    `;
                 }
                 break;
             }
@@ -825,6 +847,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!item.deviceName || item.deviceName === '-') {
                     item.deviceName = deviceInfo.deviceName || data.deviceName || studentInfo.deviceName || data.phoneModel || studentInfo.phoneModel || (data.meta && data.meta.phoneModel) || '-';
                 }
+                const loc = data.locationInfo || studentInfo.locationInfo || (data.meta && data.meta.locationInfo);
+                if (loc && (loc.latitude || loc.lat)) {
+                    item.locationInfo = {
+                        latitude: loc.latitude || loc.lat,
+                        longitude: loc.longitude || loc.lng,
+                        updateTime: loc.updateTime || item.lastModified || item.timeStr || ''
+                    };
+                }
             } catch (e) { }
         } catch (e) {
             console.error('Failed to get log item content on hover:', e);
@@ -1063,7 +1093,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filteredList.length === 0) {
             exceptionTableBody.innerHTML = `
                 <tr>
-                    <td colspan="10" style="text-align: center; padding: 40px; color: #909399;">
+                    <td colspan="11" style="text-align: center; padding: 40px; color: #909399;">
                         暂无符合条件的异常日志
                     </td>
                 </tr>
@@ -1095,6 +1125,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? window.createVersionBadgeHtml(versionStr)
                 : `<span class="version-badge">${escapeHtml(versionStr)}</span>`;
 
+            const locInfo = item.locationInfo || (item.parsedData && (item.parsedData.locationInfo || (item.parsedData.studentInfo && item.parsedData.studentInfo.locationInfo)));
+            const hasLocation = locInfo && typeof locInfo.latitude !== 'undefined' && typeof locInfo.longitude !== 'undefined' && locInfo.latitude !== null && locInfo.longitude !== null && locInfo.latitude !== '' && locInfo.longitude !== '';
+
             html += `
                 <tr class="${selectedClass}" data-key="${item.key}">
                     <td style="text-align: center; color: ${isSelected ? '#f5222d' : '#909399'}; font-weight: ${isSelected ? '700' : '500'};">
@@ -1110,6 +1143,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="type-badge ${categoryClass}">${categoryName}</span>
                     </td>
                     <td class="time-cell" style="text-align: center;"><span style="font-weight: 500; color: #0050b3;">${timeFormatted}</span></td>
+                    <td class="location-cell" style="text-align: center;">
+                        ${hasLocation ? `
+                            <button class="dau-loc-tag-btn" data-key="${item.key}" data-action="locateMap" title="点击在地图上查看位置：${locInfo.latitude}, ${locInfo.longitude}">
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                </svg>
+                                <span>定位</span>
+                            </button>
+                        ` : '<span style="color: #94a3b8; font-size: 13px;">-</span>'}
+                    </td>
                     <td style="text-align: center;">
                         <button class="action-btn" onclick="window.viewExceptionLogContent('${item.key}')">查看内容</button>
                         <button class="trouble-btn ${isSelected ? 'selected' : ''}" onclick="window.troubleshootAccount('${item.username}')">
@@ -1122,11 +1165,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         exceptionTableBody.innerHTML = html;
 
-        // 为表格行绑定悬停错误数据弹框和点击高亮事件
+        // 为表格行绑定悬停错误数据弹框、点击高亮与定位事件
         const rows = exceptionTableBody.querySelectorAll('tr');
         rows.forEach((tr, index) => {
             const item = filteredList[index];
             if (!item) return;
+
+            // 点击定位按钮
+            const locateBtn = tr.querySelector('button[data-action="locateMap"]');
+            if (locateBtn) {
+                locateBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const currentLoc = item.locationInfo || (item.parsedData && (item.parsedData.locationInfo || (item.parsedData.studentInfo && item.parsedData.studentInfo.locationInfo)));
+                    if (currentLoc && window.MapHelper) {
+                        window.MapHelper.openSingleStudentMap({
+                            studentName: item.studentName || item.username || '学生',
+                            loginName: item.username || '-',
+                            schoolName: item.schoolName || '-',
+                            latitude: currentLoc.latitude,
+                            longitude: currentLoc.longitude,
+                            updateTime: currentLoc.updateTime || item.lastModified || item.timeStr || '-'
+                        });
+                    }
+                });
+            }
 
             // 单击行：高亮选中该行
             tr.addEventListener('click', (e) => {
@@ -1564,13 +1626,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mock list of logs
         const mockUsers = ['user_102938', 'user_882019', 'user_330192', 'user_550182', 'student_demo', 'teacher_admin', 'test_account'];
         const mockUserInfo = {
-            'user_102938': { name: '张明宇', school: '光明实验外国语小学', teacher: '王老师', version: '2.5.4', deviceName: 'iPad Air (5th generation)' },
-            'user_882019': { name: '王泽轩', school: '博雅外国语实验学校', teacher: '李老师', version: '2.5.4', deviceName: 'HUAWEI MatePad 11' },
-            'user_330192': { name: '李俊熙', school: '育英双语国际学校', teacher: '张老师', version: '2.5.3', deviceName: 'Xiaomi Pad 6' },
-            'user_550182': { name: '赵梓琪', school: '光明实验外国语小学', teacher: '孙老师', version: '2.5.4', deviceName: 'iPhone 14 Pro' },
-            'student_demo': { name: '陈小东', school: '南开实验学校本部', teacher: '赵老师', version: '2.5.2', deviceName: 'Honor Pad V8 Pro' },
-            'teacher_admin': { name: '教师管理员', school: '博雅外国语实验学校', teacher: '刘老师', version: '2.5.4', deviceName: 'iPhone 13 Pro Max' },
-            'test_account': { name: '测试学生', school: '育才实验示范学校', teacher: '周老师', version: '2.5.4', deviceName: 'vivo Pad2' }
+            'user_102938': { name: '张明宇', school: '光明实验外国语小学', teacher: '王老师', version: '2.5.4', deviceName: 'iPad Air (5th generation)', location: { latitude: 39.908722, longitude: 116.397499 } },
+            'user_882019': { name: '王泽轩', school: '博雅外国语实验学校', teacher: '李老师', version: '2.5.4', deviceName: 'HUAWEI MatePad 11', location: { latitude: 31.230416, longitude: 121.473701 } },
+            'user_330192': { name: '李俊熙', school: '育英双语国际学校', teacher: '张老师', version: '2.5.3', deviceName: 'Xiaomi Pad 6', location: { latitude: 23.129110, longitude: 113.264385 } },
+            'user_550182': { name: '赵梓琪', school: '光明实验外国语小学', teacher: '孙老师', version: '2.5.4', deviceName: 'iPhone 14 Pro', location: { latitude: 39.912345, longitude: 116.401234 } },
+            'student_demo': { name: '陈小东', school: '南开实验学校本部', teacher: '赵老师', version: '2.5.2', deviceName: 'Honor Pad V8 Pro', location: { latitude: 39.102213, longitude: 117.165432 } },
+            'teacher_admin': { name: '教师管理员', school: '博雅外国语实验学校', teacher: '刘老师', version: '2.5.4', deviceName: 'iPhone 13 Pro Max', location: { latitude: 31.235678, longitude: 121.478901 } },
+            'test_account': { name: '测试学生', school: '育才实验示范学校', teacher: '周老师', version: '2.5.4', deviceName: 'vivo Pad2', location: { latitude: 30.572816, longitude: 104.066801 } }
         };
         const mockFolders = ['evaluation_error', 'data_error', 'platform_error', 'audio_video_error', 'audio_video_test', 'network_error', 'other_error'];
         const mockLogs = [];
@@ -1631,6 +1693,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     teacherName: uInfo.teacher,
                     version: uInfo.version,
                     deviceName: uInfo.deviceName || '-',
+                    locationInfo: uInfo.location ? { ...uInfo.location, updateTime: `${dateStr} ${hh}:${mm}:${ss}` } : null,
                     category: folder,
                     fileName: fileName,
                     timeStr: `${hh}:${mm}:${ss}`,

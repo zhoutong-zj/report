@@ -797,6 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 (item.account && item.account.toLowerCase().includes(query)) ||
                 (item.teacherName && item.teacherName.toLowerCase().includes(query)) ||
                 (item.grade && item.grade.toLowerCase().includes(query)) ||
+                (item.serviceName && item.serviceName.toLowerCase().includes(query)) ||
                 (item.shopName && item.shopName.toLowerCase().includes(query)) ||
                 (item.shopId && item.shopId.toLowerCase().includes(query)) ||
                 (item.schoolName && item.schoolName.toLowerCase().includes(query)) ||
@@ -857,7 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filteredList.length === 0) {
             dauTableBody.innerHTML = `
                 <tr>
-                    <td colspan="12" style="text-align: center; padding: 40px; color: #909399;">
+                    <td colspan="13" style="text-align: center; padding: 40px; color: #909399;">
                         暂无相关日活数据
                     </td>
                 </tr>
@@ -894,12 +895,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td style="text-align: center;">
                             ${item.grade && item.grade !== '-' ? `<span class="dau-grade-badge">${escapeHtml(item.grade)}</span>` : '<span style="color: #909399;">-</span>'}
                         </td>
+                        <td style="text-align: center;" title="${escapeHtml(item.serviceName && item.serviceName !== '-' ? item.serviceName : '')}">
+                            ${item.serviceName && item.serviceName !== '-' ? `<span class="dau-card-badge">${escapeHtml(item.serviceName)}</span>` : '<span style="color: #909399;">-</span>'}
+                        </td>
                         <td style="text-align: center;">
                             <span class="dau-version-badge ${versionBadgeClass}" data-version="${escapeHtml(rawAppVersion)}" title="版本号: ${escapeHtml(rawAppVersion)} (点击快捷筛选)">
                                 ${escapeHtml(rawAppVersion)}
                             </span>
                         </td>
-                        <td style="color: #303133;" title="${escapeHtml(item.deviceName || '')}">${escapeHtml(item.deviceName || '-')}</td>
+                        <td class="dau-device-cell" style="color: #303133;" title="${escapeHtml(item.deviceName || '')}">${escapeHtml(item.deviceName || '-')}</td>
                         <td style="text-align: center;"><span class="dau-os-badge">${escapeHtml(item.phonePlatformVersion || '-')}</span></td>
                         <td style="text-align: center;"><span class="dau-time-badge">${escapeHtml(timeFormatted)}</span></td>
                         <td style="text-align: center;">
@@ -939,6 +943,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return item.username.toLowerCase().includes(query) ||
                     (item.loginName && item.loginName.toLowerCase().includes(query)) ||
                     (item.account && item.account.toLowerCase().includes(query)) ||
+                    (item.teacherName && item.teacherName.toLowerCase().includes(query)) ||
+                    (item.grade && item.grade.toLowerCase().includes(query)) ||
+                    (item.serviceName && item.serviceName.toLowerCase().includes(query)) ||
                     (item.shopName && item.shopName.toLowerCase().includes(query)) ||
                     (item.shopId && item.shopId.toLowerCase().includes(query)) ||
                     (item.schoolName && item.schoolName.toLowerCase().includes(query)) ||
@@ -1686,7 +1693,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dauTableBody) {
             dauTableBody.innerHTML = `
                 <tr>
-                    <td colspan="11" style="text-align: center; padding: 40px; color: #409eff;">
+                    <td colspan="13" style="text-align: center; padding: 40px; color: #409eff;">
                         ⏳ 正在获取 OSS 日活详细数据...
                     </td>
                 </tr>

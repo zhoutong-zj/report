@@ -1454,8 +1454,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 name: '分钟',
                 nameTextStyle: { color: colors.textColor || '#909399', fontSize: 10 },
                 splitLine: { lineStyle: { color: colors.gridColor || '#f3f4f6' } },
-                axisLabel: { 
-                    color: colors.textColor || '#909399', 
+                axisLabel: {
+                    color: colors.textColor || '#909399',
                     fontSize: 10,
                     formatter: '{value} 分'
                 }
@@ -1465,8 +1465,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 data: labels,
                 inverse: true,
                 axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
-                axisLabel: { 
-                    color: colors.textColor || '#606266', 
+                axisLabel: {
+                    color: colors.textColor || '#606266',
                     fontSize: 10.5,
                     interval: 0
                 }
@@ -1563,14 +1563,14 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="earliest-banner-actions">
                 ${isAsc
-                    ? `<span class="earliest-sorted-hint">✓ 已按最早时间升序排列 (第1行)</span>`
-                    : `<button type="button" class="earliest-action-btn primary" id="bannerSortAscBtn" title="将下方表格按最早时间升序排列">按最早时间排序 ↑</button>`
-                }
+                ? `<span class="earliest-sorted-hint">✓ 已按最早时间升序排列 (第1行)</span>`
+                : `<button type="button" class="earliest-action-btn primary" id="bannerSortAscBtn" title="将下方表格按最早时间升序排列">按最早时间排序 ↑</button>`
+            }
                 <button type="button" class="earliest-action-btn" id="bannerViewUserBtn" data-username="${escapeHtml(earliestInfo.username)}">查看该学生详情</button>
                 ${selectedTimeSlot !== 'all'
-                    ? `<button type="button" class="earliest-action-btn ghost" id="bannerResetSlotBtn">重置全天</button>`
-                    : ''
-                }
+                ? `<button type="button" class="earliest-action-btn ghost" id="bannerResetSlotBtn">重置全天</button>`
+                : ''
+            }
             </div>
         `;
 
@@ -1790,7 +1790,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!summaryTableBody) return;
 
         if (list.length === 0) {
-            summaryTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">暂无符合条件的学生行为数据</td></tr>`;
+            summaryTableBody.innerHTML = `<tr><td colspan="12" class="loading-cell">暂无符合条件的学生行为数据</td></tr>`;
             return;
         }
 
@@ -1845,6 +1845,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? `<span style="color:#10b981; font-weight:600; font-size:11px; margin-right:4px;">[最早]</span>`
                 : '';
 
+            const locInfo = s.locationInfo || userToInfoCache[s.username]?.locationInfo;
+            const hasLocation = locInfo && typeof locInfo.latitude !== 'undefined' && typeof locInfo.longitude !== 'undefined' && locInfo.latitude !== null && locInfo.longitude !== null && locInfo.latitude !== '' && locInfo.longitude !== '';
+
             return `
                 <tr data-username="${s.username}" class="${isSelected ? 'selected-row' : ''}">
                     <td style="color: #9ca3af; font-weight: 500;">${idx + 1}</td>
@@ -1860,6 +1863,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td><div class="game-distribution-pills">${pillsHtml}</div></td>
                     <td style="color: #6b7280; font-family: monospace; font-size: 12px;">${timePrefix}${displayTime}</td>
+                    <td class="location-cell" style="text-align: center;">
+                        ${hasLocation ? `
+                            <button class="dau-loc-tag-btn" data-username="${s.username}" data-action="locateMap" title="点击在地图上查看位置：${locInfo.latitude}, ${locInfo.longitude}">
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                </svg>
+                                <span>定位</span>
+                            </button>
+                        ` : '<span style="color: #94a3b8; font-size: 13px;">-</span>'}
+                    </td>
                     <td style="text-align: center;">
                         <button class="action-link view-student-logs-btn" data-username="${s.username}">查看明细</button>
                     </td>
@@ -1869,10 +1882,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Bind row click for selection highlighting
         summaryTableBody.querySelectorAll('tr[data-username]').forEach(tr => {
-            tr.addEventListener('click', () => {
+            tr.addEventListener('click', (e) => {
+                if (e.target.closest('button[data-action="locateMap"]')) return;
                 summaryTableBody.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
                 tr.classList.add('selected-row');
                 selectedSummaryUsername = tr.dataset.username;
+            });
+        });
+
+        // Bind locate map button
+        summaryTableBody.querySelectorAll('button[data-action="locateMap"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const u = btn.dataset.username;
+                const item = list.find(it => it.username === u) || {};
+                const loc = item.locationInfo || userToInfoCache[u]?.locationInfo;
+                if (loc && window.MapHelper) {
+                    window.MapHelper.openSingleStudentMap({
+                        studentName: item.studentName !== '-' ? item.studentName : (item.username || '学生'),
+                        loginName: item.username || '-',
+                        schoolName: item.schoolName !== '-' ? item.schoolName : '-',
+                        latitude: loc.latitude,
+                        longitude: loc.longitude,
+                        updateTime: loc.updateTime || item.lastTime || '-'
+                    });
+                }
             });
         });
 
@@ -1897,7 +1931,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!logsTableBody) return;
 
         if (list.length === 0) {
-            logsTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">暂无符合条件的行为流水记录</td></tr>`;
+            logsTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">暂无符合条件的行为流水记录</td></tr>`;
             return;
         }
 
@@ -1916,6 +1950,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 : (it.durationText && it.durationText !== '-' ? `<span class="duration-badge">${it.durationText}</span>` : '<span style="color:#9ca3af;">-</span>');
 
             const subNote = it.gameCfg.isSub ? `<span style="font-size:11px; color:#6b7280; margin-left:4px;">(子页面)</span>` : '';
+            const locInfo = it.locationInfo || userToInfoCache[it.username]?.locationInfo;
+            const hasLocation = locInfo && typeof locInfo.latitude !== 'undefined' && typeof locInfo.longitude !== 'undefined' && locInfo.latitude !== null && locInfo.longitude !== null && locInfo.latitude !== '' && locInfo.longitude !== '';
 
             return `
                 <tr data-key="${it.key}" class="${isSelected ? 'selected-row' : ''}">
@@ -1933,6 +1969,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td class="device-val">${it.deviceName || '-'}</td>
                     <td class="platform-val" style="text-align: center;">${verHtml}</td>
+                    <td class="location-cell" style="text-align: center;">
+                        ${hasLocation ? `
+                            <button class="dau-loc-tag-btn" data-key="${it.key}" data-action="locateMap" title="点击在地图上查看位置：${locInfo.latitude}, ${locInfo.longitude}">
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                </svg>
+                                <span>定位</span>
+                            </button>
+                        ` : '<span style="color: #94a3b8; font-size: 13px;">-</span>'}
+                    </td>
                     <td style="text-align: center;">
                         <button class="action-link open-detail-btn" data-key="${it.key}">详情</button>
                     </td>
@@ -1942,10 +1988,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Bind row click for selection highlighting
         logsTableBody.querySelectorAll('tr[data-key]').forEach(tr => {
-            tr.addEventListener('click', () => {
+            tr.addEventListener('click', (e) => {
+                if (e.target.closest('button[data-action="locateMap"]')) return;
                 logsTableBody.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
                 tr.classList.add('selected-row');
                 selectedLogKey = tr.dataset.key;
+            });
+        });
+
+        // Bind locate map button
+        logsTableBody.querySelectorAll('button[data-action="locateMap"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const k = btn.dataset.key;
+                const it = displayList.find(item => item.key === k) || {};
+                const loc = it.locationInfo || userToInfoCache[it.username]?.locationInfo;
+                if (loc && window.MapHelper) {
+                    window.MapHelper.openSingleStudentMap({
+                        studentName: it.studentName !== '-' ? it.studentName : (it.username || '学生'),
+                        loginName: it.username || '-',
+                        schoolName: it.schoolName !== '-' ? it.schoolName : '-',
+                        latitude: loc.latitude,
+                        longitude: loc.longitude,
+                        updateTime: loc.updateTime || it.fullCnTime || it.timeStr || '-'
+                    });
+                }
             });
         });
 
@@ -2043,7 +2110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!dauTimeSlotTableBody) return;
 
         if (list.length === 0) {
-            dauTimeSlotTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">所选时段暂无活跃用户记录</td></tr>`;
+            dauTimeSlotTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">所选时段暂无活跃用户记录</td></tr>`;
             return;
         }
 
@@ -2064,6 +2131,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const deviceText = (devicePart && verBadge)
                 ? `${devicePart} · ${verBadge}`
                 : (verBadge || devicePart || '-');
+
+            const locInfo = item.locationInfo || userToInfoCache[item.username]?.locationInfo;
+            const hasLocation = locInfo && typeof locInfo.latitude !== 'undefined' && typeof locInfo.longitude !== 'undefined' && locInfo.latitude !== null && locInfo.longitude !== null && locInfo.latitude !== '' && locInfo.longitude !== '';
 
             return `
                 <tr data-username="${item.username}" class="${isSelected ? 'selected-row' : ''}">
@@ -2089,6 +2159,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td>${gameBadge}</td>
                     <td style="color: #64748b; font-size: 12px;">${deviceText}</td>
+                    <td class="location-cell" style="text-align: center;">
+                        ${hasLocation ? `
+                            <button class="dau-loc-tag-btn" data-username="${item.username}" data-action="locateMap" title="点击在地图上查看位置：${locInfo.latitude}, ${locInfo.longitude}">
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                </svg>
+                                <span>定位</span>
+                            </button>
+                        ` : '<span style="color: #94a3b8; font-size: 13px;">-</span>'}
+                    </td>
                     <td style="text-align: center;">
                         <button class="action-link view-student-detail-btn" data-username="${item.username}">查看详情</button>
                     </td>
@@ -2097,10 +2177,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
 
         dauTimeSlotTableBody.querySelectorAll('tr[data-username]').forEach(tr => {
-            tr.addEventListener('click', () => {
+            tr.addEventListener('click', (e) => {
+                if (e.target.closest('button[data-action="locateMap"]')) return;
                 dauTimeSlotTableBody.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
                 tr.classList.add('selected-row');
                 selectedSummaryUsername = tr.dataset.username;
+            });
+        });
+
+        // Bind locate map button
+        dauTimeSlotTableBody.querySelectorAll('button[data-action="locateMap"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const u = btn.dataset.username;
+                const item = list.find(it => it.username === u) || {};
+                const loc = item.locationInfo || userToInfoCache[u]?.locationInfo;
+                if (loc && window.MapHelper) {
+                    window.MapHelper.openSingleStudentMap({
+                        studentName: item.studentName !== '-' ? item.studentName : (item.username || '学生'),
+                        loginName: item.username || '-',
+                        schoolName: item.schoolName !== '-' ? item.schoolName : '-',
+                        latitude: loc.latitude,
+                        longitude: loc.longitude,
+                        updateTime: loc.updateTime || item.lastTimeStr || '-'
+                    });
+                }
             });
         });
 
@@ -2169,6 +2270,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         const deviceName = deviceInfo.deviceName || data.deviceName || studentInfo.deviceName || '-';
                         const platformVersion = deviceInfo.phonePlatformVersion || data.phonePlatformVersion || deviceInfo.versionName || data.versionName || studentInfo.phonePlatformVersion || '-';
 
+                        const loc = data.locationInfo || studentInfo.locationInfo || (data.meta && data.meta.locationInfo);
+                        let locObj = null;
+                        if (loc && (loc.latitude || loc.lat)) {
+                            locObj = {
+                                latitude: loc.latitude || loc.lat,
+                                longitude: loc.longitude || loc.lng,
+                                updateTime: loc.updateTime || sampleItem.fullCnTime || sampleItem.timeStr || ''
+                            };
+                            sampleItem.locationInfo = locObj;
+                        }
+
                         const info = {
                             studentName: name || '-',
                             schoolName: school || '-',
@@ -2179,7 +2291,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             diamondNum: diamondNum,
                             serviceName: serviceName || '-',
                             deviceName: deviceName,
-                            platformVersion: platformVersion
+                            platformVersion: platformVersion,
+                            locationInfo: locObj
                         };
 
                         userToInfoCache[u] = info;
@@ -2218,6 +2331,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (info.serviceName && info.serviceName !== '-') it.serviceName = info.serviceName;
                 if (info.deviceName && info.deviceName !== '-') it.deviceName = info.deviceName;
                 if (info.platformVersion && info.platformVersion !== '-') it.platformVersion = info.platformVersion;
+                if (info.locationInfo && !it.locationInfo) it.locationInfo = info.locationInfo;
             }
         });
 
@@ -2232,6 +2346,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (info.coin !== null && info.coin !== undefined) s.coin = info.coin;
                 if (info.diamondNum !== null && info.diamondNum !== undefined) s.diamondNum = info.diamondNum;
                 if (info.serviceName && info.serviceName !== '-') s.serviceName = info.serviceName;
+                if (info.locationInfo && !s.locationInfo) s.locationInfo = info.locationInfo;
             }
         });
 
@@ -2242,6 +2357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (info.schoolName && info.schoolName !== '-') u.schoolName = info.schoolName;
                 if (info.deviceName && info.deviceName !== '-') u.deviceName = info.deviceName;
                 if (info.platformVersion && info.platformVersion !== '-') u.platformVersion = info.platformVersion;
+                if (info.locationInfo && !u.locationInfo) u.locationInfo = info.locationInfo;
             }
         });
 
@@ -2441,14 +2557,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         const device = deviceInfo.deviceName || fileData.deviceName || studentInfo.deviceName || '-';
                         const platform = deviceInfo.phonePlatformVersion || fileData.phonePlatformVersion || studentInfo.phonePlatformVersion || deviceInfo.versionName || fileData.appVersion || '-';
 
+                        const loc = fileData.locationInfo || studentInfo.locationInfo || (fileData.rawData && fileData.rawData.locationInfo);
+                        let locObj = null;
+                        if (loc && (loc.latitude || loc.lat)) {
+                            locObj = {
+                                latitude: loc.latitude || loc.lat,
+                                longitude: loc.longitude || loc.lng,
+                                updateTime: loc.updateTime || item.lastTimeStr || ''
+                            };
+                            item.locationInfo = locObj;
+                        }
+
                         item.deviceName = device;
                         item.platformVersion = platform;
 
-                        if (name || school) {
+                        if (name || school || locObj) {
                             userToInfoCache[item.username] = {
                                 studentName: name || userToInfoCache[item.username]?.studentName || '-',
                                 schoolName: school || userToInfoCache[item.username]?.schoolName || '-',
-                                teacherName: userToInfoCache[item.username]?.teacherName || '-'
+                                teacherName: userToInfoCache[item.username]?.teacherName || '-',
+                                locationInfo: locObj || userToInfoCache[item.username]?.locationInfo
                             };
                             updateUserCells(item.username, userToInfoCache[item.username]);
                         }
@@ -3247,6 +3375,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 13. High-Quality Static Mock Data
     function useStaticMockData() {
+        const schoolLocationMap = {
+            '青园梓枫小学': { latitude: 28.118923, longitude: 112.986341 },
+            '光明实验外国语小学': { latitude: 39.908722, longitude: 116.397499 },
+            '汇文第一寄宿学校': { latitude: 39.882103, longitude: 116.425812 },
+            '育才实验示范学校': { latitude: 30.572816, longitude: 104.066801 },
+            '南开实验学校本部': { latitude: 39.102213, longitude: 117.165432 },
+            '朝阳外国语小学分校': { latitude: 39.982245, longitude: 116.429811 }
+        };
+
         const mockUsers = [
             { username: '13755188999', name: '刘俊熙', school: '青园梓枫小学', teacher: '徐老师', grade: 'fourGrade', userNo: 'S20260401', coin: 120, diamondNum: 15, serviceName: '会员年卡' },
             { username: '13107342492', name: '李明轩', school: '光明实验外国语小学', teacher: '王老师', grade: 'threeGrade', userNo: 'S20260312', coin: 85, diamondNum: 6, serviceName: '会员半年卡' },
@@ -3266,6 +3403,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
         mockUsers.forEach(u => {
+            const loc = schoolLocationMap[u.school];
             userToInfoCache[u.username] = {
                 studentName: u.name,
                 schoolName: u.school,
@@ -3276,7 +3414,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 diamondNum: u.diamondNum,
                 serviceName: u.serviceName,
                 deviceName: 'vivo-PA2511',
-                platformVersion: '15'
+                platformVersion: '15',
+                locationInfo: loc ? { ...loc, updateTime: `${dateStr} 12:00:00` } : null
             };
         });
 
@@ -3372,6 +3511,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.serviceName = uInfo.serviceName;
                 item.deviceName = uInfo.deviceName;
                 item.platformVersion = uInfo.platformVersion;
+                if (uInfo.locationInfo) item.locationInfo = uInfo.locationInfo;
             }
         });
 
@@ -3392,10 +3532,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         allMockDauUsers.forEach(u => {
             if (!userToInfoCache[u.username]) {
+                const loc = schoolLocationMap[u.school];
                 userToInfoCache[u.username] = {
                     studentName: u.name,
                     schoolName: u.school,
-                    teacherName: u.teacher
+                    teacherName: u.teacher,
+                    locationInfo: loc ? { ...loc, updateTime: `${dateStr} 12:00:00` } : null
                 };
             }
         });
@@ -3429,6 +3571,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const relInfo = getRelativeTimeDesc(mockDate);
             const devInfo = mockDevices[i % mockDevices.length];
             const gameSummary = studentSummaryList.find(s => s.username === u.username);
+            const userLoc = userToInfoCache[u.username]?.locationInfo || null;
 
             return {
                 key: `usertemp/xuelianxitong/${formattedDate}/user_activity/${u.username}.json`,
@@ -3437,6 +3580,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 schoolName: u.school,
                 deviceName: devInfo.dev,
                 platformVersion: devInfo.ver,
+                locationInfo: userLoc,
                 lastModified: mockDate.toISOString(),
                 lastTimeDate: mockDate,
                 lastTimeStr: fullDateStr,
@@ -3456,13 +3600,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderLoadingState() {
         if (summaryTableBody) {
-            summaryTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">⏳ 正在从 OSS 检索页面行为日志并汇总分析...</td></tr>`;
+            summaryTableBody.innerHTML = `<tr><td colspan="12" class="loading-cell">⏳ 正在从 OSS 检索页面行为日志并汇总分析...</td></tr>`;
         }
         if (logsTableBody) {
-            logsTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">⏳ 正在从 OSS 检索行为流水记录...</td></tr>`;
+            logsTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">⏳ 正在从 OSS 检索行为流水记录...</td></tr>`;
         }
         if (dauTimeSlotTableBody) {
-            dauTimeSlotTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">⏳ 正在从 OSS 检索日活数据并生成时间段报表...</td></tr>`;
+            dauTimeSlotTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">⏳ 正在从 OSS 检索日活数据并生成时间段报表...</td></tr>`;
         }
     }
 
@@ -3480,13 +3624,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (eBaoCountEl) eBaoCountEl.textContent = '0';
 
         if (summaryTableBody) {
-            summaryTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">所选日期暂无任何学生行为记录</td></tr>`;
+            summaryTableBody.innerHTML = `<tr><td colspan="12" class="loading-cell">所选日期暂无任何学生行为记录</td></tr>`;
         }
         if (logsTableBody) {
-            logsTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">所选日期暂无任何学生行为记录</td></tr>`;
+            logsTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">所选日期暂无任何学生行为记录</td></tr>`;
         }
         if (dauTimeSlotTableBody) {
-            dauTimeSlotTableBody.innerHTML = `<tr><td colspan="10" class="loading-cell">所选日期暂无日活活跃记录</td></tr>`;
+            dauTimeSlotTableBody.innerHTML = `<tr><td colspan="11" class="loading-cell">所选日期暂无日活活跃记录</td></tr>`;
         }
 
         renderCharts();

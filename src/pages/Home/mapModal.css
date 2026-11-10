@@ -484,4 +484,52 @@
     border: none !important;
 }
 
+/* =========================================================
+   通用定位按钮样式 (和日活列表 dauDetail 保持完全一致)
+   ========================================================= */
+.dau-loc-tag-btn,
+.loc-tag-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #2563eb;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    text-decoration: none;
+    line-height: 1.4;
+    box-sizing: border-box;
+}
+
+.dau-loc-tag-btn:hover,
+.loc-tag-btn:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+[data-theme="dark"] .dau-loc-tag-btn,
+[data-theme="dark"] .loc-tag-btn {
+    background: rgba(37, 99, 235, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .dau-loc-tag-btn:hover,
+[data-theme="dark"] .loc-tag-btn:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+}
+
+
 
