@@ -659,32 +659,39 @@ class DetailApp {
         const locationInfoItem = document.getElementById('locationInfoItem');
         const locationCoordsEl = document.getElementById('locationCoords');
         const viewLocationBtn = document.getElementById('viewLocationBtn');
+        const viewLocationHeaderBtn = document.getElementById('viewLocationHeaderBtn');
 
-        if (locationInfoItem && locationCoordsEl) {
-            if (locInfo && typeof locInfo.latitude !== 'undefined' && typeof locInfo.longitude !== 'undefined') {
+        if (locInfo && typeof locInfo.latitude !== 'undefined' && typeof locInfo.longitude !== 'undefined') {
+            const lat = Number(locInfo.latitude);
+            const lng = Number(locInfo.longitude);
+
+            if (locationInfoItem && locationCoordsEl) {
                 locationInfoItem.style.display = 'flex';
-                const lat = Number(locInfo.latitude);
-                const lng = Number(locInfo.longitude);
                 locationCoordsEl.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                 locationCoordsEl.title = `更新时间: ${locInfo.updateTime || '-'}`;
-
-                if (viewLocationBtn) {
-                    viewLocationBtn.onclick = () => {
-                        if (window.MapHelper) {
-                            window.MapHelper.openSingleStudentMap({
-                                studentName: data.nickName || studentInfo.nickName || userAccount || '学生',
-                                loginName: userAccount || '-',
-                                schoolName: studentInfo.shopName || data.shopName || studentInfo.schoolName || data.schoolName || '-',
-                                latitude: lat,
-                                longitude: lng,
-                                updateTime: locInfo.updateTime || data.reportTime || '-'
-                            });
-                        }
-                    };
-                }
-            } else {
-                locationInfoItem.style.display = 'none';
             }
+
+            const openMapHandler = () => {
+                if (window.MapHelper) {
+                    window.MapHelper.openSingleStudentMap({
+                        studentName: data.nickName || studentInfo.nickName || userAccount || '学生',
+                        loginName: userAccount || '-',
+                        schoolName: studentInfo.shopName || data.shopName || studentInfo.schoolName || data.schoolName || '-',
+                        latitude: lat,
+                        longitude: lng,
+                        updateTime: locInfo.updateTime || data.reportTime || '-'
+                    });
+                }
+            };
+
+            if (viewLocationBtn) viewLocationBtn.onclick = openMapHandler;
+            if (viewLocationHeaderBtn) {
+                viewLocationHeaderBtn.style.display = 'inline-flex';
+                viewLocationHeaderBtn.onclick = openMapHandler;
+            }
+        } else {
+            if (locationInfoItem) locationInfoItem.style.display = 'none';
+            if (viewLocationHeaderBtn) viewLocationHeaderBtn.style.display = 'none';
         }
 
         const isEvaluationException = exceptionType === 'evaluationException' || exceptionType === 'evaluation_error';

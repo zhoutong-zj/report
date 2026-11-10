@@ -143,8 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return `dau-version-c${colorIdx}`;
     }
 
-    // 2. Initialize Date Picker & Quick Date Selectors
-    const savedDate = safeGetSession('dauReportDate') || safeGetSession('reportDate') || new Date().toISOString().split('T')[0];
+    // 2. Initialize Date Picker & Quick Date Selectors (using global DateManager)
+    const savedDate = (window.DateManager ? window.DateManager.getDate() : (safeGetSession('reportDate') || safeGetSession('dauReportDate') || new Date().toISOString().split('T')[0]));
     if (dauDateInput) {
         dauDateInput.value = savedDate;
     }
@@ -2131,8 +2131,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dauDateInput) {
         dauDateInput.addEventListener('change', () => {
             const selectedDate = dauDateInput.value;
-            safeSetSession('dauReportDate', selectedDate);
-            safeSetSession('reportDate', selectedDate);
+            if (window.DateManager) {
+                window.DateManager.setDate(selectedDate);
+            } else {
+                safeSetSession('dauReportDate', selectedDate);
+                safeSetSession('reportDate', selectedDate);
+            }
             updateQuickDateActive(selectedDate);
             loadData(false);
         });
@@ -2143,23 +2147,51 @@ document.addEventListener('DOMContentLoaded', () => {
     quickDateBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const offset = parseInt(btn.dataset.offset, 10);
-            const target = new Date();
-            target.setDate(target.getDate() + offset);
-            const y = target.getFullYear();
-            const m = String(target.getMonth() + 1).padStart(2, '0');
-            const d = String(target.getDate()).padStart(2, '0');
-            const dateStr = `${y}-${m}-${d}`;
+            const dateStr = window.DateManager ? window.DateManager.getDateWithOffset(offset) : (() => {
+                const target = new Date();
+                target.setDate(target.getDate() + offset);
+                const y = target.getFullYear();
+                const m = String(target.getMonth() + 1).padStart(2, '0');
+                const d = String(target.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            })();
 
             if (dauDateInput && dauDateInput.value === dateStr) return;
 
             if (dauDateInput) {
                 dauDateInput.value = dateStr;
             }
-            safeSetSession('dauReportDate', dateStr);
-            safeSetSession('reportDate', dateStr);
+            if (window.DateManager) {
+                window.DateManager.setDate(dateStr);
+            } else {
+                safeSetSession('dauReportDate', dateStr);
+                safeSetSession('reportDate', dateStr);
+            }
             updateQuickDateActive(dateStr);
             loadData(false);
         });
+    });
+
+    // 监听全局统一日期变更
+    window.addEventListener('unifiedDateChanged', (e) => {
+        const newDate = e.detail && e.detail.date;
+        if (newDate && dauDateInput && dauDateInput.value !== newDate) {
+            dauDateInput.value = newDate;
+            updateQuickDateActive(newDate);
+            loadData(false);
+        }
+    });
+
+    // 页面重新显示时检查全局日期
+    window.addEventListener('pageshow', () => {
+        if (window.DateManager && dauDateInput) {
+            const globalDate = window.DateManager.getDate();
+            if (globalDate && dauDateInput.value !== globalDate) {
+                dauDateInput.value = globalDate;
+                updateQuickDateActive(globalDate);
+                loadData(false);
+            }
+        }
     });
 
     if (dauSchoolSelect) {

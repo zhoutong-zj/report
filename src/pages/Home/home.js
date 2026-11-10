@@ -73,7 +73,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (contentFrame) {
-        contentFrame.addEventListener('load', syncMenuWithIframe);
+        contentFrame.addEventListener('load', () => {
+            syncMenuWithIframe();
+            // 子 iframe 载入完成时，同步当前全局选中的统一日期
+            if (window.DateManager && contentFrame.contentWindow) {
+                try {
+                    contentFrame.contentWindow.postMessage({ action: 'globalDateChange', date: window.DateManager.getDate() }, '*');
+                } catch (_) { }
+            }
+        });
     }
     window.addEventListener('popstate', syncMenuWithIframe);
     setInterval(syncMenuWithIframe, 300);

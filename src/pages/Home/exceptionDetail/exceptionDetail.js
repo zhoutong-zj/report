@@ -78,8 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'other_error': 'other'
     };
 
-    // 2. Initialize Date Picker & Quick Date Selectors
-    const savedDate = sessionStorage.getItem('exceptionReportDate') || sessionStorage.getItem('reportDate') || new Date().toISOString().split('T')[0];
+    // 2. Initialize Date Picker & Quick Date Selectors (using global DateManager)
+    const savedDate = (window.DateManager ? window.DateManager.getDate() : (sessionStorage.getItem('reportDate') || sessionStorage.getItem('exceptionReportDate') || new Date().toISOString().split('T')[0]));
     exceptionDateInput.value = savedDate;
 
     function updateQuickDateActive(dateStr) {
@@ -1466,8 +1466,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (exceptionDateInput) {
         exceptionDateInput.addEventListener('change', () => {
             const selectedDate = exceptionDateInput.value;
-            sessionStorage.setItem('exceptionReportDate', selectedDate);
-            sessionStorage.setItem('reportDate', selectedDate);
+            if (window.DateManager) {
+                window.DateManager.setDate(selectedDate);
+            } else {
+                sessionStorage.setItem('exceptionReportDate', selectedDate);
+                sessionStorage.setItem('reportDate', selectedDate);
+            }
             updateQuickDateActive(selectedDate);
             if (exceptionSchoolSelect) {
                 exceptionSchoolSelect.value = 'all';
@@ -1481,26 +1485,60 @@ document.addEventListener('DOMContentLoaded', () => {
     quickDateBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const offset = parseInt(btn.dataset.offset, 10);
-            const target = new Date();
-            target.setDate(target.getDate() + offset);
-            const y = target.getFullYear();
-            const m = String(target.getMonth() + 1).padStart(2, '0');
-            const d = String(target.getDate()).padStart(2, '0');
-            const dateStr = `${y}-${m}-${d}`;
+            const dateStr = window.DateManager ? window.DateManager.getDateWithOffset(offset) : (() => {
+                const target = new Date();
+                target.setDate(target.getDate() + offset);
+                const y = target.getFullYear();
+                const m = String(target.getMonth() + 1).padStart(2, '0');
+                const d = String(target.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            })();
 
             if (exceptionDateInput && exceptionDateInput.value === dateStr) return;
 
             if (exceptionDateInput) {
                 exceptionDateInput.value = dateStr;
             }
-            sessionStorage.setItem('exceptionReportDate', dateStr);
-            sessionStorage.setItem('reportDate', dateStr);
+            if (window.DateManager) {
+                window.DateManager.setDate(dateStr);
+            } else {
+                sessionStorage.setItem('exceptionReportDate', dateStr);
+                sessionStorage.setItem('reportDate', dateStr);
+            }
             updateQuickDateActive(dateStr);
             if (exceptionSchoolSelect) {
                 exceptionSchoolSelect.value = 'all';
             }
             loadData(false);
         });
+    });
+
+    // 监听全局统一日期变更
+    window.addEventListener('unifiedDateChanged', (e) => {
+        const newDate = e.detail && e.detail.date;
+        if (newDate && exceptionDateInput && exceptionDateInput.value !== newDate) {
+            exceptionDateInput.value = newDate;
+            updateQuickDateActive(newDate);
+            if (exceptionSchoolSelect) {
+                exceptionSchoolSelect.value = 'all';
+            }
+            loadData(false);
+        }
+    });
+
+    // 页面重新显示时检查全局日期
+    window.addEventListener('pageshow', () => {
+        if (window.DateManager && exceptionDateInput) {
+            const globalDate = window.DateManager.getDate();
+            if (globalDate && exceptionDateInput.value !== globalDate) {
+                exceptionDateInput.value = globalDate;
+                updateQuickDateActive(globalDate);
+                if (exceptionSchoolSelect) {
+                    exceptionSchoolSelect.value = 'all';
+                }
+                loadData(false);
+            }
+        }
     });
 
     const exceptionRefreshBtn = document.getElementById('exceptionRefreshBtn');

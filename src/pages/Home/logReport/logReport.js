@@ -73,10 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. Initialize Date Picker (using sessionStorage to preserve chosen date)
-    const today = new Date();
-    const todayStr = formatDate(today);
-    const savedDate = sessionStorage.getItem('reportDate') || todayStr;
+    // 2. Initialize Date Picker (using DateManager to preserve chosen date across pages)
+    const savedDate = window.DateManager ? window.DateManager.getDate() : (sessionStorage.getItem('reportDate') || formatDate(new Date()));
     reportDateInput.value = savedDate;
     updateDateDisplay(savedDate);
     updateQuickDateActive(savedDate);
@@ -352,6 +350,8 @@ document.addEventListener('DOMContentLoaded', () => {
         errorBarChart.setOption(option);
     }
 
+    const WEEKDAY_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
     // Helper to calculate recent N dates ending on selectedDateStr (inclusive)
     function getRecentDates(selectedDateStr, days = 10) {
         const list = [];
@@ -367,11 +367,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
             const dd = String(d.getDate()).padStart(2, '0');
+            const weekday = WEEKDAY_NAMES[d.getDay()];
 
             list.push({
                 dateStr: `${yyyy}-${mm}-${dd}`,
                 ossFolder: `${yyyy}_${mm}_${dd}`,
-                label: `${mm}-${dd}`
+                label: `${mm}-${dd}`,
+                weekday: weekday,
+                labelWithWeek: `${mm}-${dd}\n${weekday}`
             });
         }
         return list;
@@ -402,10 +405,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const yyyy = String(year);
             const mm = String(month).padStart(2, '0');
             const dd = String(day).padStart(2, '0');
+            const d = new Date(year, month - 1, day);
+            const weekday = WEEKDAY_NAMES[d.getDay()];
             list.push({
                 dateStr: `${yyyy}-${mm}-${dd}`,
                 ossFolder: `${yyyy}_${mm}_${dd}`,
-                label: `${mm}-${dd}`
+                label: `${mm}-${dd}`,
+                weekday: weekday,
+                labelWithWeek: `${mm}-${dd}\n${weekday}`
             });
         }
         return list;
@@ -427,8 +434,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         monthlyDauChart = echarts.init(dom, theme === 'dark' ? 'dark' : null);
 
-        const labels = dates.map(d => d.label);
+        const labels = dates.map(d => d.weekday ? `${d.label} ${d.weekday}` : d.label);
         const fullDates = dates.map(d => d.dateStr);
+        const weekdays = dates.map(d => d.weekday || '');
 
         const option = {
             backgroundColor: 'transparent',
@@ -440,7 +448,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 formatter: function (params) {
                     const p = params[0];
                     const fullDate = fullDates[p.dataIndex] || p.name;
-                    return `<div style="font-weight: 600; margin-bottom: 6px; font-size: 13px;">${fullDate} (${p.name})</div>
+                    const weekText = weekdays[p.dataIndex] ? ` ${weekdays[p.dataIndex]}` : '';
+                    return `<div style="font-weight: 600; margin-bottom: 6px; font-size: 13px;">${fullDate}${weekText}</div>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0284c7;"></span>
                                 <span>日活账号数: <strong style="font-size: 14px; color: #0284c7;">${p.value}</strong> 个</span>
@@ -569,8 +578,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render 10-day Daily Active Users (DAU) line chart with ECharts
     let dauLineChart = null;
-    function renderDauChart(labels, data) {
-        lastDauChartParams = { labels, data };
+    function renderDauChart(labels, data, dates = null) {
+        lastDauChartParams = { labels, data, dates };
         const dom = document.getElementById('dauLineChart');
         if (!dom || typeof echarts === 'undefined') return;
 
@@ -593,7 +602,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 trigger: 'axis',
                 formatter: function (params) {
                     const p = params[0];
-                    return `<div style="font-weight: 600; margin-bottom: 4px;">${p.name}</div>
+                    const dateItem = dates && dates[p.dataIndex] ? dates[p.dataIndex] : null;
+                    const headerText = dateItem
+                        ? `${dateItem.dateStr} (${dateItem.weekday})`
+                        : String(p.name || '').replace('\n', ' ');
+                    return `<div style="font-weight: 600; margin-bottom: 4px;">${headerText}</div>
                             <div>日活数量: <span style="font-weight: bold; color: #409eff;">${p.value}</span> 个</div>`;
                 }
             },
@@ -601,14 +614,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 top: 25,
                 left: 45,
                 right: 30,
-                bottom: 25
+                bottom: 38
             },
             xAxis: {
                 type: 'category',
                 data: labels,
                 boundaryGap: false,
                 axisLine: { lineStyle: { color: colors.borderColor || '#e2e8f0' } },
-                axisLabel: { color: colors.textColor || '#909399', fontSize: 11 }
+                axisLabel: {
+                    color: colors.textColor || '#909399',
+                    fontSize: 11,
+                    lineHeight: 15,
+                    interval: 0
+                }
             },
             yAxis: {
                 type: 'value',
@@ -697,7 +715,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Listen to date changes
     reportDateInput.addEventListener('change', (e) => {
         const selectedDate = e.target.value;
-        sessionStorage.setItem('reportDate', selectedDate);
+        if (window.DateManager) {
+            window.DateManager.setDate(selectedDate);
+        } else {
+            sessionStorage.setItem('reportDate', selectedDate);
+        }
         updateDateDisplay(selectedDate);
         updateQuickDateActive(selectedDate);
         if (ossClient) {
@@ -711,11 +733,17 @@ document.addEventListener('DOMContentLoaded', () => {
     quickDateBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const offset = parseInt(btn.dataset.offset, 10);
-            const target = new Date();
-            target.setDate(target.getDate() + offset);
-            const dateStr = formatDate(target);
+            const dateStr = window.DateManager ? window.DateManager.getDateWithOffset(offset) : (() => {
+                const target = new Date();
+                target.setDate(target.getDate() + offset);
+                return formatDate(target);
+            })();
             reportDateInput.value = dateStr;
-            sessionStorage.setItem('reportDate', dateStr);
+            if (window.DateManager) {
+                window.DateManager.setDate(dateStr);
+            } else {
+                sessionStorage.setItem('reportDate', dateStr);
+            }
             quickDateBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             updateDateDisplay(dateStr);
@@ -725,6 +753,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 useStaticMockData();
             }
         });
+    });
+
+    // 监听全局统一日期变更（其他页面切换日期时实时同步更新）
+    window.addEventListener('unifiedDateChanged', (e) => {
+        const newDate = e.detail && e.detail.date;
+        if (newDate && reportDateInput.value !== newDate) {
+            reportDateInput.value = newDate;
+            updateDateDisplay(newDate);
+            updateQuickDateActive(newDate);
+            if (ossClient) {
+                loadDynamicReport(newDate);
+            } else {
+                useStaticMockData();
+            }
+        }
+    });
+
+    // 页面切回/重新显示时校验全局统一日期
+    window.addEventListener('pageshow', () => {
+        if (window.DateManager) {
+            const globalDate = window.DateManager.getDate();
+            if (globalDate && reportDateInput.value !== globalDate) {
+                reportDateInput.value = globalDate;
+                updateDateDisplay(globalDate);
+                updateQuickDateActive(globalDate);
+                if (ossClient) {
+                    loadDynamicReport(globalDate);
+                } else {
+                    useStaticMockData();
+                }
+            }
+        }
     });
 
     // 5. Fetch and analyze OSS directory files
@@ -770,8 +830,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const dauCounts = await Promise.all(dauPromises);
-            const dauLabels = recent10Dates.map(item => item.label);
-            renderDauChart(dauLabels, dauCounts);
+            const dauLabels = recent10Dates.map(item => item.labelWithWeek);
+            renderDauChart(dauLabels, dauCounts, recent10Dates);
 
             monitorStatusEl.textContent = '正常运行';
             monitorStatusEl.style.color = '#67c23a';
@@ -949,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function useStaticMockData(isError = false) {
         const dateStr = reportDateInput ? reportDateInput.value : new Date().toISOString().split('T')[0];
         const recent10Dates = getRecent10Dates(dateStr);
-        const mockDauLabels = recent10Dates.map(item => item.label);
+        const mockDauLabels = recent10Dates.map(item => item.labelWithWeek);
 
         if (isError) {
             todayErrorCountEl.textContent = '0';
@@ -963,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             renderLineChart([], []);
-            renderDauChart(mockDauLabels, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            renderDauChart(mockDauLabels, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], recent10Dates);
             return;
         }
 
@@ -976,7 +1036,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Render mock 10-day DAU line chart
         const mockDauCounts = [18, 25, 32, 28, 42, 50, 46, 62, 75, 88];
-        renderDauChart(mockDauLabels, mockDauCounts);
+        renderDauChart(mockDauLabels, mockDauCounts, recent10Dates);
 
         if (suggestionList) {
             suggestionList.innerHTML = `
@@ -1406,7 +1466,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function syncAllChartsTheme(theme) {
         if (lastLineChartParams) renderLineChart(lastLineChartParams.labels, lastLineChartParams.data);
         if (lastPieChartParams) renderPieChart(lastPieChartParams.evalCount, lastPieChartParams.dataCount, lastPieChartParams.platformCount, lastPieChartParams.otherCount, lastPieChartParams.audioVideoCount, lastPieChartParams.audioVideoTestCount, lastPieChartParams.networkCount);
-        if (lastDauChartParams) renderDauChart(lastDauChartParams.labels, lastDauChartParams.data);
+        if (lastDauChartParams) renderDauChart(lastDauChartParams.labels, lastDauChartParams.data, lastDauChartParams.dates);
         if (lastMonthlyDauParams) renderMonthlyDauChart(lastMonthlyDauParams.dates, lastMonthlyDauParams.data);
     }
 

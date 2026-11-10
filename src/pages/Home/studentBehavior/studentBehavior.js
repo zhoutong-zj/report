@@ -356,21 +356,30 @@ document.addEventListener('DOMContentLoaded', () => {
     let hourlyTrendChart = null;
     let topStudentsChart = null;
 
-    // 2. Initialize Date
+    // 2. Initialize Date (using global DateManager)
     function initDate() {
-        const storedDate = sessionStorage.getItem('reportDate');
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        const todayStr = `${yyyy}-${mm}-${dd}`;
-
-        const initialDate = storedDate || todayStr;
+        const todayStr = window.DateManager ? window.DateManager.getTodayStr() : (() => {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        })();
+        const initialDate = window.DateManager ? window.DateManager.getDate() : (sessionStorage.getItem('reportDate') || todayStr);
         reportDateInput.value = initialDate;
         updateQuickDateActive(initialDate, todayStr);
     }
 
     function updateQuickDateActive(currentDate, todayStr) {
+        if (!todayStr) {
+            todayStr = window.DateManager ? window.DateManager.getTodayStr() : (() => {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            })();
+        }
         const today = new Date(todayStr);
         const curr = new Date(currentDate);
         const diffDays = Math.round((curr - today) / (1000 * 60 * 60 * 24));
@@ -387,27 +396,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Date change listeners
     reportDateInput.addEventListener('change', (e) => {
-        sessionStorage.setItem('reportDate', e.target.value);
-        const today = new Date().toISOString().split('T')[0];
-        updateQuickDateActive(e.target.value, today);
-        loadDataForDate(e.target.value);
+        const val = e.target.value;
+        if (window.DateManager) {
+            window.DateManager.setDate(val);
+        } else {
+            sessionStorage.setItem('reportDate', val);
+        }
+        const today = window.DateManager ? window.DateManager.getTodayStr() : new Date().toISOString().split('T')[0];
+        updateQuickDateActive(val, today);
+        loadDataForDate(val);
     });
 
     quickDateBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const offset = parseInt(btn.dataset.offset, 10);
-            const target = new Date();
-            target.setDate(target.getDate() + offset);
-            const yyyy = target.getFullYear();
-            const mm = String(target.getMonth() + 1).padStart(2, '0');
-            const dd = String(target.getDate()).padStart(2, '0');
-            const dateStr = `${yyyy}-${mm}-${dd}`;
+            const dateStr = window.DateManager ? window.DateManager.getDateWithOffset(offset) : (() => {
+                const target = new Date();
+                target.setDate(target.getDate() + offset);
+                const yyyy = target.getFullYear();
+                const mm = String(target.getMonth() + 1).padStart(2, '0');
+                const dd = String(target.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            })();
             reportDateInput.value = dateStr;
-            sessionStorage.setItem('reportDate', dateStr);
+            if (window.DateManager) {
+                window.DateManager.setDate(dateStr);
+            } else {
+                sessionStorage.setItem('reportDate', dateStr);
+            }
             quickDateBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             loadDataForDate(dateStr);
         });
+    });
+
+    // 监听全局统一日期变更
+    window.addEventListener('unifiedDateChanged', (e) => {
+        const newDate = e.detail && e.detail.date;
+        if (newDate && reportDateInput.value !== newDate) {
+            reportDateInput.value = newDate;
+            const today = window.DateManager ? window.DateManager.getTodayStr() : '';
+            updateQuickDateActive(newDate, today);
+            loadDataForDate(newDate);
+        }
+    });
+
+    // 页面切回时检查全局日期
+    window.addEventListener('pageshow', () => {
+        if (window.DateManager) {
+            const globalDate = window.DateManager.getDate();
+            if (globalDate && reportDateInput.value !== globalDate) {
+                reportDateInput.value = globalDate;
+                const today = window.DateManager.getTodayStr();
+                updateQuickDateActive(globalDate, today);
+                loadDataForDate(globalDate);
+            }
+        }
     });
 
     refreshBtn.addEventListener('click', () => {

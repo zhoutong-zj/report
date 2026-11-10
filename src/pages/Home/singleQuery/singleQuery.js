@@ -396,15 +396,18 @@ class UserListApp {
     }
 
     /**
-     * 设置日期选择器的默认值为今天（格式：YYYY-MM-DD）
+     * 设置日期选择器的默认值为全局统一日期（格式：YYYY-MM-DD）
      */
     setDefaultDate() {
         const dateInput = document.getElementById('date');
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        dateInput.value = `${year}-${month}-${day}`;
+        const defaultDate = window.DateManager ? window.DateManager.getDate() : (() => {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        })();
+        dateInput.value = defaultDate;
         this.currentFilters.date = dateInput.value;
         this.updateQuickDateActive(dateInput.value);
     }
@@ -471,8 +474,14 @@ class UserListApp {
 
         // 监听日期选择器变动，实时更新过滤条件与快捷按钮
         dateInput.addEventListener('change', (e) => {
-            this.currentFilters.date = e.target.value;
-            this.updateQuickDateActive(e.target.value);
+            const val = e.target.value;
+            this.currentFilters.date = val;
+            if (window.DateManager) {
+                window.DateManager.setDate(val);
+            } else {
+                sessionStorage.setItem('reportDate', val);
+            }
+            this.updateQuickDateActive(val);
         });
 
         // 监听快捷日期按钮点击事件
@@ -480,17 +489,24 @@ class UserListApp {
         quickDateBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const offset = parseInt(btn.dataset.offset, 10);
-                const target = new Date();
-                target.setDate(target.getDate() + offset);
-                const year = target.getFullYear();
-                const month = String(target.getMonth() + 1).padStart(2, '0');
-                const day = String(target.getDate()).padStart(2, '0');
-                const dateStr = `${year}-${month}-${day}`;
+                const dateStr = window.DateManager ? window.DateManager.getDateWithOffset(offset) : (() => {
+                    const target = new Date();
+                    target.setDate(target.getDate() + offset);
+                    const year = target.getFullYear();
+                    const month = String(target.getMonth() + 1).padStart(2, '0');
+                    const day = String(target.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                })();
 
                 if (dateInput.value === dateStr) return;
 
                 dateInput.value = dateStr;
                 this.currentFilters.date = dateStr;
+                if (window.DateManager) {
+                    window.DateManager.setDate(dateStr);
+                } else {
+                    sessionStorage.setItem('reportDate', dateStr);
+                }
                 this.updateQuickDateActive(dateStr);
 
                 // 如果已经输入了用户名，点击快捷日期自动触发搜索
@@ -498,6 +514,34 @@ class UserListApp {
                     this.handleSearch();
                 }
             });
+        });
+
+        // 监听全局统一日期变更
+        window.addEventListener('unifiedDateChanged', (e) => {
+            const newDate = e.detail && e.detail.date;
+            if (newDate && dateInput.value !== newDate) {
+                dateInput.value = newDate;
+                this.currentFilters.date = newDate;
+                this.updateQuickDateActive(newDate);
+                if (usernameInput.value.trim()) {
+                    this.handleSearch();
+                }
+            }
+        });
+
+        // 页面切回时检查全局统一日期
+        window.addEventListener('pageshow', () => {
+            if (window.DateManager) {
+                const globalDate = window.DateManager.getDate();
+                if (globalDate && dateInput.value !== globalDate) {
+                    dateInput.value = globalDate;
+                    this.currentFilters.date = globalDate;
+                    this.updateQuickDateActive(globalDate);
+                    if (usernameInput.value.trim()) {
+                        this.handleSearch();
+                    }
+                }
+            }
         });
 
         // 监听异常类型下拉框变动，实时更新过滤条件并立即本地应用过滤

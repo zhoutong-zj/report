@@ -61,19 +61,6 @@
                     </div>
                 </div>
                 <div class="info-grid">
-                    <div class="info-item" id="locationInfoItem" style="display: none;">
-                        <label>打卡位置 (GPS定位)</label>
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 10px; background-color: #f0f7ff; border: 1px solid #bae7ff; border-radius: 4px;">
-                            <span id="locationCoords" style="font-family: monospace; font-size: 13px; font-weight: 600; color: #0284c7; background: transparent; padding: 0;">-</span>
-                            <button id="viewLocationBtn" class="location-tag-btn" type="button" title="在地图上查看位置">
-                                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                                    <path
-                                        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                                </svg>
-                                查看地图
-                            </button>
-                        </div>
-                    </div>
                     <div class="info-item">
                         <label>登录名</label>
                         <span id="loginName">-</span>
@@ -134,19 +121,6 @@
                         <label>设备SN</label>
                         <span id="deviceSn">-</span>
                     </div>
-                    <div class="info-item" id="locationInfoItem" style="display: none;">
-                        <label>打卡位置</label>
-                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <span id="locationCoords" style="font-family: monospace; font-size: 12px;">-</span>
-                            <button id="viewLocationBtn" class="location-tag-btn" type="button" title="在地图上查看位置">
-                                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                                    <path
-                                        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                                </svg>
-                                查看地图
-                            </button>
-                        </div>
-                    </div>
                     <div class="info-item" id="requestIdItem" style="display: none;">
                         <label>RequestID</label>
                         <span id="requestId">-</span>
@@ -158,6 +132,10 @@
                     <div class="info-item" id="mediaUrlItem" style="display: none;">
                         <label>音视频地址</label>
                         <span id="mediaUrl">-</span>
+                    </div>
+                    <div class="info-item" id="locationInfoItem" style="display: none;">
+                        <label>打卡位置 (GPS定位)</label>
+                        <span id="locationCoords">-</span>
                     </div>
                 </div>
             </div>

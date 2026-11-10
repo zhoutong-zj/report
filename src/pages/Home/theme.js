@@ -264,5 +264,128 @@
         const safeText = v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         return `<span class="version-badge dau-version-badge ${colorClass} ${extraClass}" data-version="${safeText}" title="版本号: ${safeText}">${safeText}</span>`;
     };
+
+    // =========================================================================
+    // 全局统一时间管理器 (Global Date Manager)
+    // 解决项目中各页面日期不同步、时区偏移等问题，确保“选了今日全部都是今日”
+    // =========================================================================
+    const GLOBAL_DATE_KEY = 'global_unified_report_date';
+
+    function getLocalTodayStr() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function isValidDateStr(str) {
+        if (!str || typeof str !== 'string') return false;
+        return /^\d{4}-\d{2}-\d{2}$/.test(str);
+    }
+
+    const DateManager = {
+        STORAGE_KEY: GLOBAL_DATE_KEY,
+
+        /**
+         * 获取当前全局选中的日期，默认为准确的本地系统今日 (YYYY-MM-DD)
+         */
+        getDate: function () {
+            const stored = localStorage.getItem(GLOBAL_DATE_KEY) ||
+                           sessionStorage.getItem('reportDate') ||
+                           sessionStorage.getItem('dauReportDate') ||
+                           sessionStorage.getItem('exceptionReportDate');
+            if (isValidDateStr(stored)) {
+                return stored;
+            }
+            return getLocalTodayStr();
+        },
+
+        /**
+         * 设置全局统一选中的日期，并全站广播同步
+         */
+        setDate: function (dateStr, broadcast = true) {
+            if (!isValidDateStr(dateStr)) return;
+
+            // 持久化存储到各个历史键名，彻底杜绝任何页面读取到旧日期
+            localStorage.setItem(GLOBAL_DATE_KEY, dateStr);
+            sessionStorage.setItem('reportDate', dateStr);
+            sessionStorage.setItem('dauReportDate', dateStr);
+            sessionStorage.setItem('exceptionReportDate', dateStr);
+            sessionStorage.setItem('autoSearchDate', dateStr);
+
+            // 触发当前页面内部监听
+            window.dispatchEvent(new CustomEvent('unifiedDateChanged', { detail: { date: dateStr } }));
+
+            // 跨页面广播
+            if (broadcast) {
+                // 如果在主框架页面中，向 contentFrame 广播
+                const contentFrame = document.getElementById('contentFrame');
+                if (contentFrame && contentFrame.contentWindow) {
+                    try {
+                        contentFrame.contentWindow.postMessage({ action: 'globalDateChange', date: dateStr }, '*');
+                    } catch (_) {}
+                }
+                // 如果是在 iframe 中，向 parent 广播并通知兄弟页面
+                if (window.parent && window.parent !== window) {
+                    try {
+                        window.parent.postMessage({ action: 'globalDateChange', date: dateStr }, '*');
+                    } catch (_) {}
+                }
+            }
+        },
+
+        /**
+         * 计算相对今天偏移指定天数的日期字符串 (0: 今日, -1: 昨天, -2: 前天)
+         */
+        getDateWithOffset: function (offset) {
+            const target = new Date();
+            target.setDate(target.getDate() + (parseInt(offset, 10) || 0));
+            const y = target.getFullYear();
+            const m = String(target.getMonth() + 1).padStart(2, '0');
+            const d = String(target.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        },
+
+        getTodayStr: getLocalTodayStr
+    };
+
+    window.DateManager = DateManager;
+
+    // 监听跨 iframe 的 postMessage 日期同步消息
+    window.addEventListener('message', (event) => {
+        if (!event.data || event.data.action !== 'globalDateChange') return;
+        const newDate = event.data.date;
+        if (isValidDateStr(newDate)) {
+            // 更新本窗口存储
+            localStorage.setItem(GLOBAL_DATE_KEY, newDate);
+            sessionStorage.setItem('reportDate', newDate);
+            sessionStorage.setItem('dauReportDate', newDate);
+            sessionStorage.setItem('exceptionReportDate', newDate);
+            sessionStorage.setItem('autoSearchDate', newDate);
+
+            // 转发给当前页面的 iframe（如果当前是主框架）
+            const contentFrame = document.getElementById('contentFrame');
+            if (contentFrame && contentFrame.contentWindow && event.source !== contentFrame.contentWindow) {
+                try {
+                    contentFrame.contentWindow.postMessage({ action: 'globalDateChange', date: newDate }, '*');
+                } catch (_) {}
+            }
+
+            // 触发事件通知本页面输入框自动更新
+            window.dispatchEvent(new CustomEvent('unifiedDateChanged', { detail: { date: newDate } }));
+        }
+    });
+
+    // 监听 storage 事件（跨浏览器标签页同步）
+    window.addEventListener('storage', (e) => {
+        if (e.key === GLOBAL_DATE_KEY && isValidDateStr(e.newValue)) {
+            sessionStorage.setItem('reportDate', e.newValue);
+            sessionStorage.setItem('dauReportDate', e.newValue);
+            sessionStorage.setItem('exceptionReportDate', e.newValue);
+            sessionStorage.setItem('autoSearchDate', e.newValue);
+            window.dispatchEvent(new CustomEvent('unifiedDateChanged', { detail: { date: e.newValue } }));
+        }
+    });
 })();
 
